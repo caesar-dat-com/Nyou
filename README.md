@@ -90,3 +90,15 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
 *   **Estética Premium**: Interfaz cuidada con detalles dorados y paleta de colores tierra.
 *   **Examen Mental Formal**: Formulario completo que se guarda como documento inmutable (JSON) con fecha y hora.
 *   **Adjuntos**: Capacidad de arrastrar o seleccionar archivos (PDFs, imágenes) que se organizan automáticamente en la carpeta del paciente.
+
+## Linux: acceso directo de escritorio
+
+1. Ejecuta una sola vez:
+   ```bash
+   ./INSTALAR_ACCESO_DIRECTO_LINUX.sh
+   ```
+2. Esto crea `~/.local/share/applications/NAJU.desktop` y una copia en `~/Desktop/NAJU.desktop`.
+3. Al hacer doble clic en el acceso directo:
+   - levanta NAJU en modo desarrollo (`INICIAR_NAJU_LINUX.sh`),
+   - espera a que responda,
+   - y abre el navegador automáticamente.

@@ -31,6 +31,32 @@ import {
 import { buildProfileMap } from "./lib/profile";
 
 type Section = "resumen" | "examenes" | "notas" | "citas" | "archivos";
+type ConsultaTipo = "presencial" | "virtual";
+
+type ConsentDecision = "acepto" | "no_acepto";
+type ConsentData = {
+  created_at: string;
+  psicologo_nombre: string;
+  psicologo_documento: string;
+  psicologo_tp: string;
+  psicologo_correo: string;
+  psicologo_telefono: string;
+  psicologo_ciudad_direccion: string;
+  modalidad_atencion: ConsultaTipo;
+  lugar_plataforma: string;
+  canal_derechos_correo: string;
+  canal_derechos_telefono: string;
+  informe_solicitud: "verbal" | "escrita" | "ambas";
+  informe_plazo_dias: string;
+  informe_medio: "pdf" | "impreso" | "otro";
+  informe_medio_otro: string;
+  informe_costo: string;
+  paciente_nombre: string;
+  paciente_documento: string;
+  decision: ConsentDecision;
+  firma_paciente_data_url: string | null;
+  firma_psicologo_data_url: string | null;
+};
 
 type Toast = { type: "ok" | "err"; msg: string } | null;
 
@@ -86,6 +112,23 @@ function parseMetaJson(file: PatientFile) {
   } catch {
     return null;
   }
+}
+
+function parseConsentJson(raw: string | null | undefined): ConsentData | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ConsentData;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeConsultaTipo(value: unknown): ConsultaTipo {
+  return value === "virtual" ? "virtual" : "presencial";
+}
+
+function consultaTipoLabel(value: ConsultaTipo) {
+  return value === "virtual" ? "Virtual" : "Presencial";
 }
 
 function fileIcon(file: PatientFile) {
@@ -1498,6 +1541,197 @@ function UpdateModal({
   );
 }
 
+function SignaturePad({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (dataUrl: string | null) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#111";
+
+    if (value) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      img.src = value;
+    }
+  }, [value]);
+
+  function getPos(evt: PointerEvent, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawingRef.current = true;
+    canvas.setPointerCapture(e.pointerId);
+    const p = getPos(e.nativeEvent, canvas);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const p = getPos(e.nativeEvent, canvas);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    drawingRef.current = false;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    onChange(canvas.toDataURL("image/png"));
+  }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    onChange(null);
+  }
+
+  return (
+    <div className="field">
+      <div className="label">{label}</div>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "#fff", padding: 8 }}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: "100%", height: 140, display: "block", touchAction: "none", borderRadius: 8 }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" className="pillBtn" onClick={clear}>Limpiar firma</button>
+      </div>
+    </div>
+  );
+}
+
+function ConsentModal({
+  onClose,
+  onAccept,
+}: {
+  onClose: () => void;
+  onAccept: (consent: ConsentData) => void;
+}) {
+  const [v, setV] = useState<ConsentData>({
+    created_at: new Date().toISOString(),
+    psicologo_nombre: "",
+    psicologo_documento: "",
+    psicologo_tp: "",
+    psicologo_correo: "",
+    psicologo_telefono: "",
+    psicologo_ciudad_direccion: "",
+    modalidad_atencion: "presencial",
+    lugar_plataforma: "",
+    canal_derechos_correo: "",
+    canal_derechos_telefono: "",
+    informe_solicitud: "verbal",
+    informe_plazo_dias: "",
+    informe_medio: "pdf",
+    informe_medio_otro: "",
+    informe_costo: "",
+    paciente_nombre: "",
+    paciente_documento: "",
+    decision: "acepto",
+    firma_paciente_data_url: null,
+    firma_psicologo_data_url: null,
+  });
+
+  function set<K extends keyof ConsentData>(k: K, value: ConsentData[K]) {
+    setV((p) => ({ ...p, [k]: value }));
+  }
+
+  const canContinue = Boolean(v.decision === "acepto" && v.paciente_nombre.trim() && v.paciente_documento.trim() && v.firma_paciente_data_url && v.firma_psicologo_data_url);
+
+  return (
+    <Modal title="Consentimiento informado" subtitle="Debes completarlo antes de crear el paciente." onClose={onClose}>
+      <div className="modalBody">
+        <div className="card" style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+{`CONSENTIMIENTO INFORMADO
+
+Este consentimiento informado es para el uso del aplicativo durante las citas.
+
+Al aceptar: autorizas uso de NAJU, grabación de audio y tratamiento de datos para fines terapéuticos.`}
+        </div>
+
+        <div className="formGrid">
+          <div className="field"><div className="label">Psicólogo(a)</div><input className="input" value={v.psicologo_nombre} onChange={(e)=>set("psicologo_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento / T.P.</div><input className="input" value={v.psicologo_documento} onChange={(e)=>set("psicologo_documento", e.target.value)} placeholder="Documento" /></div>
+          <div className="field"><div className="label">T.P.</div><input className="input" value={v.psicologo_tp} onChange={(e)=>set("psicologo_tp", e.target.value)} /></div>
+          <div className="field"><div className="label">Correo profesional</div><input className="input" value={v.psicologo_correo} onChange={(e)=>set("psicologo_correo", e.target.value)} /></div>
+          <div className="field"><div className="label">Teléfono profesional</div><input className="input" value={v.psicologo_telefono} onChange={(e)=>set("psicologo_telefono", e.target.value)} /></div>
+          <div className="field"><div className="label">Ciudad / Dirección</div><input className="input" value={v.psicologo_ciudad_direccion} onChange={(e)=>set("psicologo_ciudad_direccion", e.target.value)} /></div>
+          <div className="field"><div className="label">Modalidad</div><select className="select" value={v.modalidad_atencion} onChange={(e)=>set("modalidad_atencion", normalizeConsultaTipo(e.target.value))}><option value="presencial">Presencial</option><option value="virtual">Virtual</option></select></div>
+          <div className="field"><div className="label">Lugar / plataforma</div><input className="input" value={v.lugar_plataforma} onChange={(e)=>set("lugar_plataforma", e.target.value)} /></div>
+          <div className="field"><div className="label">Nombre del paciente</div><input className="input" value={v.paciente_nombre} onChange={(e)=>set("paciente_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento del paciente</div><input className="input" value={v.paciente_documento} onChange={(e)=>set("paciente_documento", e.target.value)} /></div>
+        </div>
+
+        <div className="field">
+          <div className="label">Decisión (obligatorio)</div>
+          <select className="select" value={v.decision} onChange={(e)=>set("decision", e.target.value === "no_acepto" ? "no_acepto" : "acepto") }>
+            <option value="acepto">ACEPTO uso de la aplicación + grabación de audio</option>
+            <option value="no_acepto">NO ACEPTO grabación (no se registrará en la aplicación)</option>
+          </select>
+          {v.decision === "no_acepto" ? <div className="qrHint err">Si no autoriza audio, no se puede crear paciente en NAJU.</div> : null}
+        </div>
+
+        <div className="formGrid">
+          <SignaturePad label="Firma del paciente" value={v.firma_paciente_data_url} onChange={(x)=>set("firma_paciente_data_url", x)} />
+          <SignaturePad label="Firma del psicólogo(a)" value={v.firma_psicologo_data_url} onChange={(x)=>set("firma_psicologo_data_url", x)} />
+        </div>
+      </div>
+
+      <div className="modalFooter">
+        <button className="pillBtn" onClick={onClose}>Cancelar</button>
+        <button className="pillBtn primary" disabled={!canContinue} onClick={()=>onAccept(v)}>Continuar a crear paciente</button>
+      </div>
+    </Modal>
+  );
+}
+
 function PatientForm({
   initial,
   onSave,
@@ -1534,6 +1768,12 @@ function PatientForm({
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
         notes: v.notes ?? null,
+        personal_history: v.personal_history ?? null,
+        personal_social_situation: v.personal_social_situation ?? null,
+        medical_psych_history: v.medical_psych_history ?? null,
+        family_history: v.family_history ?? null,
+        work_academic_situation: v.work_academic_situation ?? null,
+        judicial_situation: v.judicial_situation ?? null,
       });
     } finally {
       setBusy(false);
@@ -1663,8 +1903,67 @@ function PatientForm({
             placeholder="Notas relevantes del paciente…"
           />
         </div>
-      </div>
 
+        <div className="field">
+          <div className="label">Antecedentes personales (historia vital)</div>
+          <textarea
+            className="textarea"
+            value={v.personal_history ?? ""}
+            onChange={(e) => set("personal_history", e.target.value)}
+            placeholder="Resumen cronológico de la historia vital de la persona..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Personal / Familiar / Social / Ocio</div>
+          <textarea
+            className="textarea"
+            value={v.personal_social_situation ?? ""}
+            onChange={(e) => set("personal_social_situation", e.target.value)}
+            placeholder="Estado civil, hijos, personas a cargo, red social, aficiones, asociaciones..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes personales médicos y psicológicos</div>
+          <textarea
+            className="textarea"
+            value={v.medical_psych_history ?? ""}
+            onChange={(e) => set("medical_psych_history", e.target.value)}
+            placeholder="Enfermedades, accidentes, tratamientos farmacológicos previos..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes familiares</div>
+          <textarea
+            className="textarea"
+            value={v.family_history ?? ""}
+            onChange={(e) => set("family_history", e.target.value)}
+            placeholder="Enfermedades físicas/mentales, hábitos tóxicos familiares..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Laboral / Académica</div>
+          <textarea
+            className="textarea"
+            value={v.work_academic_situation ?? ""}
+            onChange={(e) => set("work_academic_situation", e.target.value)}
+            placeholder="Puesto actual, estudios, tiempo sin trabajar, actitud ante el trabajo..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Judicial</div>
+          <textarea
+            className="textarea"
+            value={v.judicial_situation ?? ""}
+            onChange={(e) => set("judicial_situation", e.target.value)}
+            placeholder="Detenciones, juicios pendientes, denuncias actuales..."
+          />
+        </div>
+      </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onCancel} disabled={busy}>
           Cancelar
@@ -1680,10 +1979,12 @@ function PatientForm({
 
 function MentalExamModal({
   patient,
+  consultaTipoDefault,
   onClose,
   onCreated,
 }: {
   patient: Patient;
+  consultaTipoDefault: ConsultaTipo;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
@@ -1733,6 +2034,7 @@ function MentalExamModal({
   const [insight, setInsight] = useState("Presente");
   const [riesgo, setRiesgo] = useState("Sin riesgo aparente");
   const [obs, setObs] = useState("");
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
 
   async function create() {
     setBusy(true);
@@ -1779,6 +2081,7 @@ function MentalExamModal({
         insight,
         riesgo,
         observaciones: obs || null,
+        consulta_tipo: consultaTipo,
 
         patient_snapshot: {
           id: patient.id,
@@ -1817,6 +2120,14 @@ function MentalExamModal({
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej: ansiedad, insomnio, duelo…"
             />
+          </div>
+
+          <div className="field">
+            <div className="label">Tipo de consulta</div>
+            <select className="select" value={consultaTipo} onChange={(e) => setConsultaTipo(normalizeConsultaTipo(e.target.value))}>
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
+            </select>
           </div>
         </div>
 
@@ -2176,10 +2487,12 @@ function MentalExamModal({
 
 function NoteModal({
   patient,
+  consultaTipoDefault,
   onClose,
   onCreated,
 }: {
   patient: Patient;
+  consultaTipoDefault: ConsultaTipo;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
@@ -2193,6 +2506,7 @@ function NoteModal({
   });
   const [netError, setNetError] = useState<string | null>(null);
   const [hostIp, setHostIp] = useState<string>("");
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
 
   useEffect(() => {
     let alive = true;
@@ -2222,13 +2536,35 @@ function NoteModal({
     if (!hostIp && netIps[0]) setHostIp(netIps[0]);
   }, [netIps, hostIp]);
 
+  const hostValidationError = useMemo(() => {
+    if (consultaTipo === "virtual") return null;
+    const typed = (hostIp || "").trim();
+    if (!typed) return "Selecciona una IP LAN del PC para generar el QR.";
+    const onlyHost = typed.includes(":") ? typed.split(":")[0].trim() : typed;
+    if (netIps.length > 0 && !netIps.includes(onlyHost)) {
+      return "La IP no corresponde a este PC. Elige una IP de la lista detectada.";
+    }
+    return null;
+  }, [consultaTipo, hostIp, netIps]);
+
   const shareUrl = useMemo(() => {
-    const ip = (hostIp || "").trim();
-    const port = String(netPort || "").trim();
-    if (!ip) return "";
-    const qp = new URLSearchParams({ open: "note", patientId: patient.id });
-    return `http://${ip}:${port}/?${qp.toString()}`;
-  }, [hostIp, netPort, patient.id]);
+    if (consultaTipo === "virtual") return "";
+    if (hostValidationError) return "";
+
+    let host = (hostIp || "").trim();
+    let port = String(netPort || window.location.port || "1420").trim();
+
+    if (host.includes(":")) {
+      const [rawHost, rawPort] = host.split(":");
+      host = rawHost.trim();
+      if (rawPort?.trim()) port = rawPort.trim();
+    }
+
+    if (!host) return "";
+    const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
+    const shortPid = encodeURIComponent(patient.id);
+    return `http://${host}:${safePort}/n/${shortPid}`;
+  }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
     if (!shareUrl) return "";
@@ -2344,12 +2680,28 @@ function NoteModal({
       setAudioError(null);
       setTranscribeError(null);
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setAudioError("Grabación no disponible en este navegador.");
-        return;
+      let stream: MediaStream | null = null;
+      if (consultaTipo === "presencial") {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setAudioError("Grabación no disponible en este navegador.");
+          return;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          setAudioError("Este navegador no permite capturar audio del sistema.");
+          return;
+        }
+        const display = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        const hasAudio = display.getAudioTracks().length > 0;
+        if (!hasAudio) {
+          display.getTracks().forEach((track) => track.stop());
+          setAudioError("Para consulta virtual debes activar 'Compartir audio' al seleccionar la pantalla.");
+          return;
+        }
+        stream = new MediaStream(display.getAudioTracks());
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
@@ -2360,11 +2712,11 @@ function NoteModal({
 
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        stream.getTracks().forEach((track) => track.stop());
+        stream?.getTracks().forEach((track) => track.stop());
 
         try {
           const ext = "webm";
-          const file = new File([blob], `grabacion-${fecha}-${Date.now()}.${ext}`, {
+          const file = new File([blob], `grabacion-${consultaTipo}-${fecha}-${Date.now()}.${ext}`, {
             type: blob.type || "audio/webm",
           });
 
@@ -2383,8 +2735,8 @@ function NoteModal({
 
       recorder.start();
       setRecording(true);
-    } catch {
-      setAudioError("No se pudo iniciar la grabación.");
+    } catch (err) {
+      setAudioError(`No se pudo iniciar la grabación: ${errMsg(err)}`);
     }
   }
 
@@ -2443,6 +2795,7 @@ function NoteModal({
         continuidad: continuidad.trim() ? continuidad.trim() : null,
         transcripcion: transcripcion.trim() ? transcripcion.trim() : null,
         audio_data_url: audioRef,
+        consulta_tipo: consultaTipo,
         patient_snapshot: {
           id: patient.id,
           name: patient.name,
@@ -2472,6 +2825,7 @@ function NoteModal({
           style={{ display: "none" }}
         />
 
+        {consultaTipo === "presencial" ? (
         <div className="percent-panel qrCard">
           <div className="qrHeader">
             <div>
@@ -2518,9 +2872,23 @@ function NoteModal({
                     placeholder="Ej: 192.168.1.10"
                   />
                 </div>
+                <div className="qrRow" style={{ marginTop: 8 }}>
+                  <input
+                    className="input"
+                    value={netPort}
+                    onChange={(e) => setNetPort(e.target.value.replace(/[^\d]/g, "").slice(0, 5))}
+                    placeholder="Puerto (ej: 1420)"
+                  />
+                </div>
                 {shareUrl ? <div className="miniHelp" style={{ marginTop: 10 }}>{shareUrl}</div> : null}
-                {netError ? <div className="qrHint err">{netError}</div> : <div className="qrHint">Tip: abre NAJU en este PC como <b>http://localhost:1420</b> y usa la IP LAN para el QR.</div>}
+                {netError || hostValidationError ? <div className="qrHint err">{netError || hostValidationError}</div> : <div className="qrHint">Usa la IP de este PC (no la del router). Si no abre, verifica firewall/puerto {netPort || "1420"} permitido en la red local.</div>}
               </div>
+
+              {netIps.length > 1 ? (
+                <div className="qrHint" style={{ marginTop: 8 }}>
+                  Detecté varias interfaces de red. Si el QR no abre, cambia la IP seleccionada y vuelve a probar.
+                </div>
+              ) : null}
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a className="pillBtn" href={shareUrl || "#"} target="_blank" rel="noreferrer" onClick={(e) => !shareUrl && e.preventDefault()}>
@@ -2533,6 +2901,12 @@ function NoteModal({
             </div>
           </div>
         </div>
+      ) : (
+        <div className="percent-panel qrCard">
+          <div className="qrTitle">QR no aplica en consulta virtual</div>
+          <div className="qrSub">En consultas virtuales se oculta el QR porque no requiere acceso por red local.</div>
+        </div>
+      )}
 
         <div className="formGrid">
           <div className="field">
@@ -2558,6 +2932,14 @@ function NoteModal({
               <option>Bajo</option>
               <option>Moderado</option>
               <option>Alto</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <div className="label">Tipo de consulta</div>
+            <select className="select" value={consultaTipo} onChange={(e) => setConsultaTipo(normalizeConsultaTipo(e.target.value))}>
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
             </select>
           </div>
         </div>
@@ -2597,7 +2979,7 @@ function NoteModal({
             Cargar audio
           </button>
           <button className={`pillBtn ${recording ? "danger" : ""}`} onClick={toggleRecording} type="button" disabled={busy || transcribing}>
-            {recording ? "Detener grabación" : "Grabar audio"}
+            {recording ? "Detener grabación" : consultaTipo === "virtual" ? "Grabar audio del equipo" : "Grabar audio (micrófono)"}
           </button>
           <button className="pillBtn primary" onClick={transcribeAudio} type="button" disabled={!audioFile || busy || transcribing}>
             {transcribing ? "Transcribiendo..." : "Transcribir audio"}
@@ -2673,6 +3055,10 @@ function FilePreviewModal({
             <div className="kv">
               <div className="k">Motivo</div>
               <div className="v">{meta?.motivo_consulta ?? "—"}</div>
+            </div>
+            <div className="kv">
+              <div className="k">Tipo consulta</div>
+              <div className="v">{consultaTipoLabel(normalizeConsultaTipo(meta?.consulta_tipo))}</div>
             </div>
             <div className="previewGrid">
               {[
@@ -3115,6 +3501,10 @@ export default function App() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
+  function beginCreatePatient() {
+    setShowConsent(true);
+  }
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -3134,23 +3524,35 @@ export default function App() {
   const [toast, setToast] = useState<Toast>(null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+  const [pendingConsent, setPendingConsent] = useState<ConsentData | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
+  const [consentPreview, setConsentPreview] = useState<ConsentData | null>(null);
 
   // --- Update (GitHub) ---
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
+  const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
+  const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
 
-  // Deep-link support (used by the QR flow): /?open=note&patientId=...
-  const [pendingOpen, setPendingOpen] = useState<{ kind: "note"; patientId: string } | null>(() => {
+  // Deep-link support (used by the QR flow): /?open=note&patientId=... or /n/<patientId>
+  const [pendingOpen, setPendingOpen] = useState<{ kind: "note"; patientId: string; consultaTipo: ConsultaTipo } | null>(() => {
     try {
       const url = new URL(window.location.href);
       const open = (url.searchParams.get("open") || "").toLowerCase();
       const patientId = (url.searchParams.get("patientId") || "").trim();
-      if (open === "note" && patientId) return { kind: "note", patientId };
+      if (open === "note" && patientId) return { kind: "note", patientId, consultaTipo: normalizeConsultaTipo(url.searchParams.get("consulta_tipo")) };
+
+      const m = url.pathname.match(/^\/n\/([^/]+)$/i);
+      if (m?.[1]) {
+        return { kind: "note", patientId: decodeURIComponent(m[1]), consultaTipo: "presencial" };
+      }
     } catch {
       /* ignore */
     }
@@ -3225,6 +3627,16 @@ export default function App() {
     const photos = files.filter((f) => f.kind === "photo");
     return { attachments, exams, notes, photos };
   }, [files]);
+
+  const filteredNotes = useMemo(() => {
+    if (notesFilterTipo === "all") return fileGroups.notes;
+    return fileGroups.notes.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === notesFilterTipo);
+  }, [fileGroups.notes, notesFilterTipo]);
+
+  const filteredExams = useMemo(() => {
+    if (examsFilterTipo === "all") return fileGroups.exams;
+    return fileGroups.exams.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === examsFilterTipo);
+  }, [fileGroups.exams, examsFilterTipo]);
 
   const [timePreset, setTimePreset] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -3379,7 +3791,7 @@ export default function App() {
 
     try {
       // Remove query params so it doesn't re-trigger on navigation
-      window.history.replaceState(null, "", window.location.pathname);
+      window.history.replaceState(null, "", "/");
     } catch {
       /* ignore */
     }
@@ -3393,6 +3805,7 @@ export default function App() {
       setPage("pacientes");
       setSelectedId(p.id);
       setSection("notas");
+      setConsultaTipoDefault(pendingOpen.consultaTipo);
       setShowNote(true);
     });
   }, [pendingOpen, patients]);
@@ -3419,12 +3832,17 @@ export default function App() {
 
   async function onCreatePatient(input: PatientInput) {
     try {
-      const p = await createPatient(input);
+      const payload: PatientInput = {
+        ...input,
+        consent_json: pendingConsent ? JSON.stringify(pendingConsent) : null,
+      };
+      const p = await createPatient(payload);
       await refreshPatients();
       await refreshAllFiles();
       startVT(() => setSelectedId(p.id));
       pushToast({ type: "ok", msg: "Paciente creado ✅" });
       setShowCreate(false);
+      setPendingConsent(null);
     } catch (e: any) {
       pushToast({ type: "err", msg: `No se pudo crear: ${errMsg(e)}` });
     }
@@ -3586,24 +4004,7 @@ export default function App() {
               </div>
 
               <div className="pillRow">
-                <button className="pillBtn" aria-current={page === "home"} onClick={() => setPage("home")} title="Inicio">
-                  🏠 Inicio
-                </button>
-                <button className="pillBtn" aria-current={page === "pacientes"} onClick={() => setPage("pacientes")} title="Pacientes">
-                  👥 Pacientes
-                </button>
-                <button className="pillBtn" aria-current={page === "agenda"} onClick={() => setPage("agenda")} title="Agenda">
-                  📅 Agenda
-                </button>
-                <button className="pillBtn" aria-current={page === "errores"} onClick={() => setPage("errores")} title="Reporte de errores">
-                  🐞 Errores
-                </button>
-                <button className="pillBtn primary" onClick={() => setShowCreate(true)}>
-                  + Paciente
-                </button>
-                <button className="pillBtn" onClick={toggleTheme} aria-label="Cambiar tema" title="Modo claro / oscuro">
-                  {theme === "dark" ? "☀️" : "🌙"}
-                </button>
+                <button className="pillBtn primary" type="button" onClick={() => setShowMenu(true)}>☰ Menú</button>
               </div>
             </div>
           </div>
@@ -3753,7 +4154,7 @@ export default function App() {
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
                 theme={theme}
-                onAddPatient={() => setShowCreate(true)}
+                onAddPatient={beginCreatePatient}
                 onGoPatients={() => setPage("pacientes")}
                 onGoAgenda={() => setPage("agenda")}
                 onGoErrors={() => setPage("errores")}
@@ -3847,20 +4248,56 @@ export default function App() {
                       <div className="k">Dirección</div>
                       <div className="v">{valOrDash(selected.address)}</div>
                     </div>
-                  </div>
 
-                  <div className="card">
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Notas del perfil</div>
+                    <div className="kv">
+                      <div className="k">Antecedentes personales</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación personal/familiar/social/ocio</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_social_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes médicos y psicológicos</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.medical_psych_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes familiares</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.family_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación laboral/académica</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.work_academic_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación judicial</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
+                    </div>
+
+                    <div style={{ fontWeight: 800, marginTop: 16, marginBottom: 6 }}>Notas del perfil</div>
                     <div style={{ color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                       {valOrDash(selected.notes)}
                     </div>
 
                     <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button className="pillBtn primary" onClick={() => setShowExam(true)}>
+                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                         + Nuevo examen mental
                       </button>
-                      <button className="pillBtn primary" onClick={() => setShowNote(true)}>
+                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                         + Nueva nota
+                      </button>
+                      <button
+                        className="pillBtn"
+                        onClick={() => {
+                          const parsed = parseConsentJson(selected.consent_json);
+                          if (!parsed) {
+                            pushToast({ type: "err", msg: "Este paciente aún no tiene consentimiento registrado." });
+                            return;
+                          }
+                          setConsentPreview(parsed);
+                        }}
+                      >
+                        Ver consentimiento
                       </button>
                       <button className="pillBtn danger" onClick={actionDeleteSelected}>
                         eliminar paciente
@@ -4083,18 +4520,27 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => setShowExam(true)}>
+                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                     + examen mental
                   </button>
                 </div>
 
                 <div style={{ height: 12 }} />
 
+                <div className="field" style={{ maxWidth: 280 }}>
+                  <div className="label">Filtro tipo de consulta</div>
+                  <select className="select" value={examsFilterTipo} onChange={(e) => setExamsFilterTipo((e.target.value as any) || "all")}>
+                    <option value="all">Todas</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </div>
+
                 <div className="list">
-                  {fileGroups.exams.length === 0 ? (
+                  {filteredExams.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay exámenes.</div>
                   ) : (
-                    fileGroups.exams.map((f) => (
+                    filteredExams.map((f) => (
                       <div key={f.id} className="fileRow">
                         <div className="fileIcon">{fileIcon(f)}</div>
                         <div className="fileMeta">
@@ -4158,18 +4604,27 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Notas</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Seguimiento clínico rápido con estado y riesgo.</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => setShowNote(true)}>
+                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                     + Nueva nota
                   </button>
                 </div>
 
                 <div style={{ height: 12 }} />
 
+                <div className="field" style={{ maxWidth: 280 }}>
+                  <div className="label">Filtro tipo de consulta</div>
+                  <select className="select" value={notesFilterTipo} onChange={(e) => setNotesFilterTipo((e.target.value as any) || "all")}>
+                    <option value="all">Todas</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </div>
+
                 <div className="list">
-                  {fileGroups.notes.length === 0 ? (
+                  {filteredNotes.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay notas.</div>
                   ) : (
-                    fileGroups.notes.map((f) => (
+                    filteredNotes.map((f) => (
                       <div key={f.id} className="fileRow">
                         <div className="fileIcon">{fileIcon(f)}</div>
                         <div className="fileMeta">
@@ -4222,12 +4677,23 @@ export default function App() {
         </main>
       </div>
 {/* Modals */}
+      {showConsent ? (
+        <ConsentModal
+          onClose={() => setShowConsent(false)}
+          onAccept={(consent) => {
+            setPendingConsent(consent);
+            setShowConsent(false);
+            setShowCreate(true);
+          }}
+        />
+      ) : null}
+
       {showCreate ? (
-        <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => setShowCreate(false)}>
+        <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => { setShowCreate(false); setPendingConsent(null); }}>
           <PatientForm
-            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null }}
+            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
             onSave={onCreatePatient}
-            onCancel={() => setShowCreate(false)}
+            onCancel={() => { setShowCreate(false); setPendingConsent(null); }}
             saveLabel="Crear paciente"
           />
         </Modal>
@@ -4248,6 +4714,12 @@ export default function App() {
               address: selected.address,
               emergency_contact: selected.emergency_contact,
               notes: selected.notes,
+              personal_history: selected.personal_history,
+              personal_social_situation: selected.personal_social_situation,
+              medical_psych_history: selected.medical_psych_history,
+              family_history: selected.family_history,
+              work_academic_situation: selected.work_academic_situation,
+              judicial_situation: selected.judicial_situation,
             }}
             onSave={onUpdatePatient}
             onCancel={() => setShowEdit(false)}
@@ -4259,6 +4731,7 @@ export default function App() {
       {showExam && selected ? (
         <MentalExamModal
           patient={selected}
+          consultaTipoDefault={consultaTipoDefault}
           onClose={() => setShowExam(false)}
           onCreated={async () => {
             await refreshFiles(selected.id);
@@ -4274,6 +4747,7 @@ export default function App() {
       {showNote && selected ? (
         <NoteModal
           patient={selected}
+          consultaTipoDefault={consultaTipoDefault}
           onClose={() => setShowNote(false)}
           onCreated={async () => {
             await refreshFiles(selected.id);
@@ -4287,6 +4761,35 @@ export default function App() {
       ) : null}
 
       {previewFile ? <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
+
+      {consentPreview ? (
+        <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
+          <div className="modalBody" style={{ display: "grid", gap: 8 }}>
+            <div className="kv"><div className="k">Paciente</div><div className="v">{consentPreview.paciente_nombre} · {consentPreview.paciente_documento}</div></div>
+            <div className="kv"><div className="k">Profesional</div><div className="v">{consentPreview.psicologo_nombre}</div></div>
+            <div className="kv"><div className="k">Modalidad</div><div className="v">{consultaTipoLabel(consentPreview.modalidad_atencion)}</div></div>
+            <div className="kv"><div className="k">Decisión</div><div className="v">{consentPreview.decision === "acepto" ? "ACEPTO" : "NO ACEPTO"}</div></div>
+            <div className="formGrid">
+              {consentPreview.firma_paciente_data_url ? <img src={consentPreview.firma_paciente_data_url} alt="Firma paciente" style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 8, background: "#fff" }} /> : null}
+              {consentPreview.firma_psicologo_data_url ? <img src={consentPreview.firma_psicologo_data_url} alt="Firma profesional" style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 8, background: "#fff" }} /> : null}
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
+      {showMenu ? (
+        <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>
+          <div className="modalBody" style={{ display: "grid", gap: 10 }}>
+            <button className="pillBtn" onClick={() => { setPage("home"); setShowMenu(false); }}>🏠 Inicio</button>
+            <button className="pillBtn" onClick={() => { setPage("pacientes"); setShowMenu(false); }}>👥 Pacientes</button>
+            <button className="pillBtn" onClick={() => { setPage("agenda"); setShowMenu(false); }}>📅 Agenda</button>
+            <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
+            <button className="pillBtn primary" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>+ Paciente</button>
+            <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
+            <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+          </div>
+        </Modal>
+      ) : null}
 
       {showUpdate && updateInfo ? (
         <UpdateModal
