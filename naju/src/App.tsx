@@ -31,6 +31,7 @@ import {
 import { buildProfileMap } from "./lib/profile";
 
 type Section = "resumen" | "examenes" | "notas" | "citas" | "archivos";
+type ConsultaTipo = "presencial" | "virtual";
 
 type Toast = { type: "ok" | "err"; msg: string } | null;
 
@@ -86,6 +87,14 @@ function parseMetaJson(file: PatientFile) {
   } catch {
     return null;
   }
+}
+
+function normalizeConsultaTipo(value: unknown): ConsultaTipo {
+  return value === "virtual" ? "virtual" : "presencial";
+}
+
+function consultaTipoLabel(value: ConsultaTipo) {
+  return value === "virtual" ? "Virtual" : "Presencial";
 }
 
 function fileIcon(file: PatientFile) {
@@ -1534,6 +1543,12 @@ function PatientForm({
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
         notes: v.notes ?? null,
+        personal_history: v.personal_history ?? null,
+        personal_social_situation: v.personal_social_situation ?? null,
+        medical_psych_history: v.medical_psych_history ?? null,
+        family_history: v.family_history ?? null,
+        work_academic_situation: v.work_academic_situation ?? null,
+        judicial_situation: v.judicial_situation ?? null,
       });
     } finally {
       setBusy(false);
@@ -1663,8 +1678,67 @@ function PatientForm({
             placeholder="Notas relevantes del paciente…"
           />
         </div>
-      </div>
 
+        <div className="field">
+          <div className="label">Antecedentes personales (historia vital)</div>
+          <textarea
+            className="textarea"
+            value={v.personal_history ?? ""}
+            onChange={(e) => set("personal_history", e.target.value)}
+            placeholder="Resumen cronológico de la historia vital de la persona..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Personal / Familiar / Social / Ocio</div>
+          <textarea
+            className="textarea"
+            value={v.personal_social_situation ?? ""}
+            onChange={(e) => set("personal_social_situation", e.target.value)}
+            placeholder="Estado civil, hijos, personas a cargo, red social, aficiones, asociaciones..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes personales médicos y psicológicos</div>
+          <textarea
+            className="textarea"
+            value={v.medical_psych_history ?? ""}
+            onChange={(e) => set("medical_psych_history", e.target.value)}
+            placeholder="Enfermedades, accidentes, tratamientos farmacológicos previos..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes familiares</div>
+          <textarea
+            className="textarea"
+            value={v.family_history ?? ""}
+            onChange={(e) => set("family_history", e.target.value)}
+            placeholder="Enfermedades físicas/mentales, hábitos tóxicos familiares..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Laboral / Académica</div>
+          <textarea
+            className="textarea"
+            value={v.work_academic_situation ?? ""}
+            onChange={(e) => set("work_academic_situation", e.target.value)}
+            placeholder="Puesto actual, estudios, tiempo sin trabajar, actitud ante el trabajo..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Judicial</div>
+          <textarea
+            className="textarea"
+            value={v.judicial_situation ?? ""}
+            onChange={(e) => set("judicial_situation", e.target.value)}
+            placeholder="Detenciones, juicios pendientes, denuncias actuales..."
+          />
+        </div>
+      </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onCancel} disabled={busy}>
           Cancelar
@@ -1680,10 +1754,12 @@ function PatientForm({
 
 function MentalExamModal({
   patient,
+  consultaTipoDefault,
   onClose,
   onCreated,
 }: {
   patient: Patient;
+  consultaTipoDefault: ConsultaTipo;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
@@ -1733,6 +1809,7 @@ function MentalExamModal({
   const [insight, setInsight] = useState("Presente");
   const [riesgo, setRiesgo] = useState("Sin riesgo aparente");
   const [obs, setObs] = useState("");
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
 
   async function create() {
     setBusy(true);
@@ -1779,6 +1856,7 @@ function MentalExamModal({
         insight,
         riesgo,
         observaciones: obs || null,
+        consulta_tipo: consultaTipo,
 
         patient_snapshot: {
           id: patient.id,
@@ -1817,6 +1895,14 @@ function MentalExamModal({
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Ej: ansiedad, insomnio, duelo…"
             />
+          </div>
+
+          <div className="field">
+            <div className="label">Tipo de consulta</div>
+            <select className="select" value={consultaTipo} onChange={(e) => setConsultaTipo(normalizeConsultaTipo(e.target.value))}>
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
+            </select>
           </div>
         </div>
 
@@ -2176,10 +2262,12 @@ function MentalExamModal({
 
 function NoteModal({
   patient,
+  consultaTipoDefault,
   onClose,
   onCreated,
 }: {
   patient: Patient;
+  consultaTipoDefault: ConsultaTipo;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
@@ -2193,6 +2281,7 @@ function NoteModal({
   });
   const [netError, setNetError] = useState<string | null>(null);
   const [hostIp, setHostIp] = useState<string>("");
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
 
   useEffect(() => {
     let alive = true;
@@ -2222,13 +2311,35 @@ function NoteModal({
     if (!hostIp && netIps[0]) setHostIp(netIps[0]);
   }, [netIps, hostIp]);
 
+  const hostValidationError = useMemo(() => {
+    if (consultaTipo === "virtual") return null;
+    const typed = (hostIp || "").trim();
+    if (!typed) return "Selecciona una IP LAN del PC para generar el QR.";
+    const onlyHost = typed.includes(":") ? typed.split(":")[0].trim() : typed;
+    if (netIps.length > 0 && !netIps.includes(onlyHost)) {
+      return "La IP no corresponde a este PC. Elige una IP de la lista detectada.";
+    }
+    return null;
+  }, [consultaTipo, hostIp, netIps]);
+
   const shareUrl = useMemo(() => {
-    const ip = (hostIp || "").trim();
-    const port = String(netPort || "").trim();
-    if (!ip) return "";
-    const qp = new URLSearchParams({ open: "note", patientId: patient.id });
-    return `http://${ip}:${port}/?${qp.toString()}`;
-  }, [hostIp, netPort, patient.id]);
+    if (consultaTipo === "virtual") return "";
+    if (hostValidationError) return "";
+
+    let host = (hostIp || "").trim();
+    let port = String(netPort || window.location.port || "1420").trim();
+
+    if (host.includes(":")) {
+      const [rawHost, rawPort] = host.split(":");
+      host = rawHost.trim();
+      if (rawPort?.trim()) port = rawPort.trim();
+    }
+
+    if (!host) return "";
+    const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
+    const shortPid = encodeURIComponent(patient.id);
+    return `http://${host}:${safePort}/n/${shortPid}`;
+  }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
     if (!shareUrl) return "";
@@ -2344,12 +2455,28 @@ function NoteModal({
       setAudioError(null);
       setTranscribeError(null);
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setAudioError("Grabación no disponible en este navegador.");
-        return;
+      let stream: MediaStream | null = null;
+      if (consultaTipo === "presencial") {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setAudioError("Grabación no disponible en este navegador.");
+          return;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        if (!navigator.mediaDevices?.getDisplayMedia) {
+          setAudioError("Este navegador no permite capturar audio del sistema.");
+          return;
+        }
+        const display = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        const hasAudio = display.getAudioTracks().length > 0;
+        if (!hasAudio) {
+          display.getTracks().forEach((track) => track.stop());
+          setAudioError("Para consulta virtual debes activar 'Compartir audio' al seleccionar la pantalla.");
+          return;
+        }
+        stream = new MediaStream(display.getAudioTracks());
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
@@ -2360,11 +2487,11 @@ function NoteModal({
 
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        stream.getTracks().forEach((track) => track.stop());
+        stream?.getTracks().forEach((track) => track.stop());
 
         try {
           const ext = "webm";
-          const file = new File([blob], `grabacion-${fecha}-${Date.now()}.${ext}`, {
+          const file = new File([blob], `grabacion-${consultaTipo}-${fecha}-${Date.now()}.${ext}`, {
             type: blob.type || "audio/webm",
           });
 
@@ -2383,8 +2510,8 @@ function NoteModal({
 
       recorder.start();
       setRecording(true);
-    } catch {
-      setAudioError("No se pudo iniciar la grabación.");
+    } catch (err) {
+      setAudioError(`No se pudo iniciar la grabación: ${errMsg(err)}`);
     }
   }
 
@@ -2443,6 +2570,7 @@ function NoteModal({
         continuidad: continuidad.trim() ? continuidad.trim() : null,
         transcripcion: transcripcion.trim() ? transcripcion.trim() : null,
         audio_data_url: audioRef,
+        consulta_tipo: consultaTipo,
         patient_snapshot: {
           id: patient.id,
           name: patient.name,
@@ -2472,6 +2600,7 @@ function NoteModal({
           style={{ display: "none" }}
         />
 
+        {consultaTipo === "presencial" ? (
         <div className="percent-panel qrCard">
           <div className="qrHeader">
             <div>
@@ -2518,9 +2647,23 @@ function NoteModal({
                     placeholder="Ej: 192.168.1.10"
                   />
                 </div>
+                <div className="qrRow" style={{ marginTop: 8 }}>
+                  <input
+                    className="input"
+                    value={netPort}
+                    onChange={(e) => setNetPort(e.target.value.replace(/[^\d]/g, "").slice(0, 5))}
+                    placeholder="Puerto (ej: 1420)"
+                  />
+                </div>
                 {shareUrl ? <div className="miniHelp" style={{ marginTop: 10 }}>{shareUrl}</div> : null}
-                {netError ? <div className="qrHint err">{netError}</div> : <div className="qrHint">Tip: abre NAJU en este PC como <b>http://localhost:1420</b> y usa la IP LAN para el QR.</div>}
+                {netError || hostValidationError ? <div className="qrHint err">{netError || hostValidationError}</div> : <div className="qrHint">Usa la IP de este PC (no la del router). Si no abre, verifica firewall/puerto {netPort || "1420"} permitido en la red local.</div>}
               </div>
+
+              {netIps.length > 1 ? (
+                <div className="qrHint" style={{ marginTop: 8 }}>
+                  Detecté varias interfaces de red. Si el QR no abre, cambia la IP seleccionada y vuelve a probar.
+                </div>
+              ) : null}
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a className="pillBtn" href={shareUrl || "#"} target="_blank" rel="noreferrer" onClick={(e) => !shareUrl && e.preventDefault()}>
@@ -2533,6 +2676,12 @@ function NoteModal({
             </div>
           </div>
         </div>
+      ) : (
+        <div className="percent-panel qrCard">
+          <div className="qrTitle">QR no aplica en consulta virtual</div>
+          <div className="qrSub">En consultas virtuales se oculta el QR porque no requiere acceso por red local.</div>
+        </div>
+      )}
 
         <div className="formGrid">
           <div className="field">
@@ -2558,6 +2707,14 @@ function NoteModal({
               <option>Bajo</option>
               <option>Moderado</option>
               <option>Alto</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <div className="label">Tipo de consulta</div>
+            <select className="select" value={consultaTipo} onChange={(e) => setConsultaTipo(normalizeConsultaTipo(e.target.value))}>
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
             </select>
           </div>
         </div>
@@ -2597,7 +2754,7 @@ function NoteModal({
             Cargar audio
           </button>
           <button className={`pillBtn ${recording ? "danger" : ""}`} onClick={toggleRecording} type="button" disabled={busy || transcribing}>
-            {recording ? "Detener grabación" : "Grabar audio"}
+            {recording ? "Detener grabación" : consultaTipo === "virtual" ? "Grabar audio del equipo" : "Grabar audio (micrófono)"}
           </button>
           <button className="pillBtn primary" onClick={transcribeAudio} type="button" disabled={!audioFile || busy || transcribing}>
             {transcribing ? "Transcribiendo..." : "Transcribir audio"}
@@ -2673,6 +2830,10 @@ function FilePreviewModal({
             <div className="kv">
               <div className="k">Motivo</div>
               <div className="v">{meta?.motivo_consulta ?? "—"}</div>
+            </div>
+            <div className="kv">
+              <div className="k">Tipo consulta</div>
+              <div className="v">{consultaTipoLabel(normalizeConsultaTipo(meta?.consulta_tipo))}</div>
             </div>
             <div className="previewGrid">
               {[
@@ -3143,14 +3304,23 @@ export default function App() {
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
+  const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
+  const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
 
-  // Deep-link support (used by the QR flow): /?open=note&patientId=...
-  const [pendingOpen, setPendingOpen] = useState<{ kind: "note"; patientId: string } | null>(() => {
+  // Deep-link support (used by the QR flow): /?open=note&patientId=... or /n/<patientId>
+  const [pendingOpen, setPendingOpen] = useState<{ kind: "note"; patientId: string; consultaTipo: ConsultaTipo } | null>(() => {
     try {
       const url = new URL(window.location.href);
       const open = (url.searchParams.get("open") || "").toLowerCase();
       const patientId = (url.searchParams.get("patientId") || "").trim();
-      if (open === "note" && patientId) return { kind: "note", patientId };
+      if (open === "note" && patientId) return { kind: "note", patientId, consultaTipo: normalizeConsultaTipo(url.searchParams.get("consulta_tipo")) };
+
+      const m = url.pathname.match(/^\/n\/([^/]+)$/i);
+      if (m?.[1]) {
+        return { kind: "note", patientId: decodeURIComponent(m[1]), consultaTipo: "presencial" };
+      }
     } catch {
       /* ignore */
     }
@@ -3225,6 +3395,16 @@ export default function App() {
     const photos = files.filter((f) => f.kind === "photo");
     return { attachments, exams, notes, photos };
   }, [files]);
+
+  const filteredNotes = useMemo(() => {
+    if (notesFilterTipo === "all") return fileGroups.notes;
+    return fileGroups.notes.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === notesFilterTipo);
+  }, [fileGroups.notes, notesFilterTipo]);
+
+  const filteredExams = useMemo(() => {
+    if (examsFilterTipo === "all") return fileGroups.exams;
+    return fileGroups.exams.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === examsFilterTipo);
+  }, [fileGroups.exams, examsFilterTipo]);
 
   const [timePreset, setTimePreset] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -3379,7 +3559,7 @@ export default function App() {
 
     try {
       // Remove query params so it doesn't re-trigger on navigation
-      window.history.replaceState(null, "", window.location.pathname);
+      window.history.replaceState(null, "", "/");
     } catch {
       /* ignore */
     }
@@ -3393,6 +3573,7 @@ export default function App() {
       setPage("pacientes");
       setSelectedId(p.id);
       setSection("notas");
+      setConsultaTipoDefault(pendingOpen.consultaTipo);
       setShowNote(true);
     });
   }, [pendingOpen, patients]);
@@ -3586,24 +3767,7 @@ export default function App() {
               </div>
 
               <div className="pillRow">
-                <button className="pillBtn" aria-current={page === "home"} onClick={() => setPage("home")} title="Inicio">
-                  🏠 Inicio
-                </button>
-                <button className="pillBtn" aria-current={page === "pacientes"} onClick={() => setPage("pacientes")} title="Pacientes">
-                  👥 Pacientes
-                </button>
-                <button className="pillBtn" aria-current={page === "agenda"} onClick={() => setPage("agenda")} title="Agenda">
-                  📅 Agenda
-                </button>
-                <button className="pillBtn" aria-current={page === "errores"} onClick={() => setPage("errores")} title="Reporte de errores">
-                  🐞 Errores
-                </button>
-                <button className="pillBtn primary" onClick={() => setShowCreate(true)}>
-                  + Paciente
-                </button>
-                <button className="pillBtn" onClick={toggleTheme} aria-label="Cambiar tema" title="Modo claro / oscuro">
-                  {theme === "dark" ? "☀️" : "🌙"}
-                </button>
+                <button className="pillBtn primary" type="button" onClick={() => setShowMenu(true)}>☰ Menú</button>
               </div>
             </div>
           </div>
@@ -3847,8 +4011,32 @@ export default function App() {
                       <div className="k">Dirección</div>
                       <div className="v">{valOrDash(selected.address)}</div>
                     </div>
-                  </div>
 
+                    <div className="kv">
+                      <div className="k">Antecedentes personales</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación personal/familiar/social/ocio</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_social_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes médicos y psicológicos</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.medical_psych_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes familiares</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.family_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación laboral/académica</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.work_academic_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación judicial</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
+                    </div>
+                  </div>
                   <div className="card">
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Notas del perfil</div>
                     <div style={{ color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
@@ -3856,10 +4044,10 @@ export default function App() {
                     </div>
 
                     <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button className="pillBtn primary" onClick={() => setShowExam(true)}>
+                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                         + Nuevo examen mental
                       </button>
-                      <button className="pillBtn primary" onClick={() => setShowNote(true)}>
+                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                         + Nueva nota
                       </button>
                       <button className="pillBtn danger" onClick={actionDeleteSelected}>
@@ -4083,18 +4271,27 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => setShowExam(true)}>
+                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                     + examen mental
                   </button>
                 </div>
 
                 <div style={{ height: 12 }} />
 
+                <div className="field" style={{ maxWidth: 280 }}>
+                  <div className="label">Filtro tipo de consulta</div>
+                  <select className="select" value={examsFilterTipo} onChange={(e) => setExamsFilterTipo((e.target.value as any) || "all")}>
+                    <option value="all">Todas</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </div>
+
                 <div className="list">
-                  {fileGroups.exams.length === 0 ? (
+                  {filteredExams.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay exámenes.</div>
                   ) : (
-                    fileGroups.exams.map((f) => (
+                    filteredExams.map((f) => (
                       <div key={f.id} className="fileRow">
                         <div className="fileIcon">{fileIcon(f)}</div>
                         <div className="fileMeta">
@@ -4158,18 +4355,27 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Notas</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Seguimiento clínico rápido con estado y riesgo.</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => setShowNote(true)}>
+                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                     + Nueva nota
                   </button>
                 </div>
 
                 <div style={{ height: 12 }} />
 
+                <div className="field" style={{ maxWidth: 280 }}>
+                  <div className="label">Filtro tipo de consulta</div>
+                  <select className="select" value={notesFilterTipo} onChange={(e) => setNotesFilterTipo((e.target.value as any) || "all")}>
+                    <option value="all">Todas</option>
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </div>
+
                 <div className="list">
-                  {fileGroups.notes.length === 0 ? (
+                  {filteredNotes.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay notas.</div>
                   ) : (
-                    fileGroups.notes.map((f) => (
+                    filteredNotes.map((f) => (
                       <div key={f.id} className="fileRow">
                         <div className="fileIcon">{fileIcon(f)}</div>
                         <div className="fileMeta">
@@ -4225,7 +4431,7 @@ export default function App() {
       {showCreate ? (
         <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => setShowCreate(false)}>
           <PatientForm
-            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null }}
+            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
             onSave={onCreatePatient}
             onCancel={() => setShowCreate(false)}
             saveLabel="Crear paciente"
@@ -4248,6 +4454,12 @@ export default function App() {
               address: selected.address,
               emergency_contact: selected.emergency_contact,
               notes: selected.notes,
+              personal_history: selected.personal_history,
+              personal_social_situation: selected.personal_social_situation,
+              medical_psych_history: selected.medical_psych_history,
+              family_history: selected.family_history,
+              work_academic_situation: selected.work_academic_situation,
+              judicial_situation: selected.judicial_situation,
             }}
             onSave={onUpdatePatient}
             onCancel={() => setShowEdit(false)}
@@ -4259,6 +4471,7 @@ export default function App() {
       {showExam && selected ? (
         <MentalExamModal
           patient={selected}
+          consultaTipoDefault={consultaTipoDefault}
           onClose={() => setShowExam(false)}
           onCreated={async () => {
             await refreshFiles(selected.id);
@@ -4274,6 +4487,7 @@ export default function App() {
       {showNote && selected ? (
         <NoteModal
           patient={selected}
+          consultaTipoDefault={consultaTipoDefault}
           onClose={() => setShowNote(false)}
           onCreated={async () => {
             await refreshFiles(selected.id);
@@ -4287,6 +4501,20 @@ export default function App() {
       ) : null}
 
       {previewFile ? <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
+
+      {showMenu ? (
+        <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>
+          <div className="modalBody" style={{ display: "grid", gap: 10 }}>
+            <button className="pillBtn" onClick={() => { setPage("home"); setShowMenu(false); }}>🏠 Inicio</button>
+            <button className="pillBtn" onClick={() => { setPage("pacientes"); setShowMenu(false); }}>👥 Pacientes</button>
+            <button className="pillBtn" onClick={() => { setPage("agenda"); setShowMenu(false); }}>📅 Agenda</button>
+            <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
+            <button className="pillBtn primary" onClick={() => { setShowCreate(true); setShowMenu(false); }}>+ Paciente</button>
+            <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
+            <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+          </div>
+        </Modal>
+      ) : null}
 
       {showUpdate && updateInfo ? (
         <UpdateModal

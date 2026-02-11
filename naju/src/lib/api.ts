@@ -11,6 +11,12 @@ export type Patient = {
   address: string | null;
   emergency_contact: string | null;
   notes: string | null;
+  personal_history: string | null;
+  personal_social_situation: string | null;
+  medical_psych_history: string | null;
+  family_history: string | null;
+  work_academic_situation: string | null;
+  judicial_situation: string | null;
   photo_path: string | null;
   drive_folder_id?: string | null;
   created_at: string;
@@ -29,6 +35,12 @@ export type PatientInput = {
   address?: string | null;
   emergency_contact?: string | null;
   notes?: string | null;
+  personal_history?: string | null;
+  personal_social_situation?: string | null;
+  medical_psych_history?: string | null;
+  family_history?: string | null;
+  work_academic_situation?: string | null;
+  judicial_situation?: string | null;
 };
 
 export type PatientFile = {
@@ -223,6 +235,12 @@ export async function createPatient(input: PatientInput): Promise<Patient> {
     address: input.address ?? null,
     emergency_contact: input.emergency_contact ?? null,
     notes: input.notes ?? null,
+    personal_history: input.personal_history ?? null,
+    personal_social_situation: input.personal_social_situation ?? null,
+    medical_psych_history: input.medical_psych_history ?? null,
+    family_history: input.family_history ?? null,
+    work_academic_situation: input.work_academic_situation ?? null,
+    judicial_situation: input.judicial_situation ?? null,
     photo_path: null,
     drive_folder_id: null,
     created_at: iso,
@@ -251,6 +269,12 @@ export async function updatePatient(patientId: string, input: PatientInput): Pro
     address: input.address ?? null,
     emergency_contact: input.emergency_contact ?? null,
     notes: input.notes ?? null,
+    personal_history: input.personal_history ?? null,
+    personal_social_situation: input.personal_social_situation ?? null,
+    medical_psych_history: input.medical_psych_history ?? null,
+    family_history: input.family_history ?? null,
+    work_academic_situation: input.work_academic_situation ?? null,
+    judicial_situation: input.judicial_situation ?? null,
     updated_at: nowIso(),
   };
   store.patients[idx] = updated;
