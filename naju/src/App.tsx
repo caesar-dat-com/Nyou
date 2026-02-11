@@ -2250,12 +2250,19 @@ function NoteModal({
     if (consultaTipo === "virtual") return "";
     const selectedHost = (hostIp || "").trim();
     const currentHost = window.location.hostname;
-    const host = selectedHost || (currentHost && currentHost !== "localhost" ? currentHost : "");
-    const port = String(netPort || window.location.port || "").trim();
+    let host = selectedHost || (currentHost && currentHost !== "localhost" ? currentHost : "");
+    let port = String(netPort || window.location.port || "1420").trim();
+
+    if (host.includes(":")) {
+      const [rawHost, rawPort] = host.split(":");
+      host = rawHost.trim();
+      if (rawPort?.trim()) port = rawPort.trim();
+    }
+
     if (!host) return "";
-    const proto = window.location.protocol === "https:" ? "https" : "http";
+    const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
     const qp = new URLSearchParams({ open: "note", patientId: patient.id, consulta_tipo: consultaTipo });
-    return `${proto}://${host}${port ? `:${port}` : ""}/?${qp.toString()}`;
+    return `http://${host}:${safePort}/?${qp.toString()}`;
   }, [consultaTipo, hostIp, netPort, patient.id]);
 
   const qrDataUrl = useMemo(() => {
@@ -2564,9 +2571,23 @@ function NoteModal({
                     placeholder="Ej: 192.168.1.10"
                   />
                 </div>
+                <div className="qrRow" style={{ marginTop: 8 }}>
+                  <input
+                    className="input"
+                    value={netPort}
+                    onChange={(e) => setNetPort(e.target.value.replace(/[^\d]/g, "").slice(0, 5))}
+                    placeholder="Puerto (ej: 1420)"
+                  />
+                </div>
                 {shareUrl ? <div className="miniHelp" style={{ marginTop: 10 }}>{shareUrl}</div> : null}
-                {netError ? <div className="qrHint err">{netError}</div> : <div className="qrHint">Tip: abre NAJU en este PC como <b>http://localhost:1420</b> y usa la IP LAN para el QR.</div>}
+                {netError ? <div className="qrHint err">{netError}</div> : <div className="qrHint">Usa la IP de este PC (no la del router). Si no abre, verifica firewall/puerto {netPort || "1420"} permitido en la red local.</div>}
               </div>
+
+              {netIps.length > 1 ? (
+                <div className="qrHint" style={{ marginTop: 8 }}>
+                  Detecté varias interfaces de red. Si el QR no abre, cambia la IP seleccionada y vuelve a probar.
+                </div>
+              ) : null}
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a className="pillBtn" href={shareUrl || "#"} target="_blank" rel="noreferrer" onClick={(e) => !shareUrl && e.preventDefault()}>
