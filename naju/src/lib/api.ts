@@ -17,6 +17,7 @@ export type Patient = {
   family_history: string | null;
   work_academic_situation: string | null;
   judicial_situation: string | null;
+  consent_json: string | null;
   photo_path: string | null;
   drive_folder_id?: string | null;
   created_at: string;
@@ -41,6 +42,7 @@ export type PatientInput = {
   family_history?: string | null;
   work_academic_situation?: string | null;
   judicial_situation?: string | null;
+  consent_json?: string | null;
 };
 
 export type PatientFile = {
@@ -241,6 +243,7 @@ export async function createPatient(input: PatientInput): Promise<Patient> {
     family_history: input.family_history ?? null,
     work_academic_situation: input.work_academic_situation ?? null,
     judicial_situation: input.judicial_situation ?? null,
+    consent_json: input.consent_json ?? null,
     photo_path: null,
     drive_folder_id: null,
     created_at: iso,
@@ -275,6 +278,7 @@ export async function updatePatient(patientId: string, input: PatientInput): Pro
     family_history: input.family_history ?? null,
     work_academic_situation: input.work_academic_situation ?? null,
     judicial_situation: input.judicial_situation ?? null,
+    consent_json: input.consent_json ?? null,
     updated_at: nowIso(),
   };
   store.patients[idx] = updated;

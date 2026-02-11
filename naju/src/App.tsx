@@ -33,6 +33,31 @@ import { buildProfileMap } from "./lib/profile";
 type Section = "resumen" | "examenes" | "notas" | "citas" | "archivos";
 type ConsultaTipo = "presencial" | "virtual";
 
+type ConsentDecision = "acepto" | "no_acepto";
+type ConsentData = {
+  created_at: string;
+  psicologo_nombre: string;
+  psicologo_documento: string;
+  psicologo_tp: string;
+  psicologo_correo: string;
+  psicologo_telefono: string;
+  psicologo_ciudad_direccion: string;
+  modalidad_atencion: ConsultaTipo;
+  lugar_plataforma: string;
+  canal_derechos_correo: string;
+  canal_derechos_telefono: string;
+  informe_solicitud: "verbal" | "escrita" | "ambas";
+  informe_plazo_dias: string;
+  informe_medio: "pdf" | "impreso" | "otro";
+  informe_medio_otro: string;
+  informe_costo: string;
+  paciente_nombre: string;
+  paciente_documento: string;
+  decision: ConsentDecision;
+  firma_paciente_data_url: string | null;
+  firma_psicologo_data_url: string | null;
+};
+
 type Toast = { type: "ok" | "err"; msg: string } | null;
 
 function errMsg(e: any) {
@@ -84,6 +109,15 @@ function parseMetaJson(file: PatientFile) {
   if (!file.meta_json) return null;
   try {
     return JSON.parse(file.meta_json);
+  } catch {
+    return null;
+  }
+}
+
+function parseConsentJson(raw: string | null | undefined): ConsentData | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ConsentData;
   } catch {
     return null;
   }
@@ -1502,6 +1536,197 @@ function UpdateModal({
           La actualización ejecuta <b>git pull</b> y luego <b>npm install</b> en tu carpeta local.
           Cuando termine, NAJU recargará automáticamente.
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+function SignaturePad({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (dataUrl: string | null) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#111";
+
+    if (value) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      img.src = value;
+    }
+  }, [value]);
+
+  function getPos(evt: PointerEvent, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawingRef.current = true;
+    canvas.setPointerCapture(e.pointerId);
+    const p = getPos(e.nativeEvent, canvas);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawingRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const p = getPos(e.nativeEvent, canvas);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    drawingRef.current = false;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    onChange(canvas.toDataURL("image/png"));
+  }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    onChange(null);
+  }
+
+  return (
+    <div className="field">
+      <div className="label">{label}</div>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "#fff", padding: 8 }}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: "100%", height: 140, display: "block", touchAction: "none", borderRadius: 8 }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" className="pillBtn" onClick={clear}>Limpiar firma</button>
+      </div>
+    </div>
+  );
+}
+
+function ConsentModal({
+  onClose,
+  onAccept,
+}: {
+  onClose: () => void;
+  onAccept: (consent: ConsentData) => void;
+}) {
+  const [v, setV] = useState<ConsentData>({
+    created_at: new Date().toISOString(),
+    psicologo_nombre: "",
+    psicologo_documento: "",
+    psicologo_tp: "",
+    psicologo_correo: "",
+    psicologo_telefono: "",
+    psicologo_ciudad_direccion: "",
+    modalidad_atencion: "presencial",
+    lugar_plataforma: "",
+    canal_derechos_correo: "",
+    canal_derechos_telefono: "",
+    informe_solicitud: "verbal",
+    informe_plazo_dias: "",
+    informe_medio: "pdf",
+    informe_medio_otro: "",
+    informe_costo: "",
+    paciente_nombre: "",
+    paciente_documento: "",
+    decision: "acepto",
+    firma_paciente_data_url: null,
+    firma_psicologo_data_url: null,
+  });
+
+  function set<K extends keyof ConsentData>(k: K, value: ConsentData[K]) {
+    setV((p) => ({ ...p, [k]: value }));
+  }
+
+  const canContinue = Boolean(v.decision === "acepto" && v.paciente_nombre.trim() && v.paciente_documento.trim() && v.firma_paciente_data_url && v.firma_psicologo_data_url);
+
+  return (
+    <Modal title="Consentimiento informado" subtitle="Debes completarlo antes de crear el paciente." onClose={onClose}>
+      <div className="modalBody">
+        <div className="card" style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+{`CONSENTIMIENTO INFORMADO
+
+Este consentimiento informado es para el uso del aplicativo durante las citas.
+
+Al aceptar: autorizas uso de NAJU, grabación de audio y tratamiento de datos para fines terapéuticos.`}
+        </div>
+
+        <div className="formGrid">
+          <div className="field"><div className="label">Psicólogo(a)</div><input className="input" value={v.psicologo_nombre} onChange={(e)=>set("psicologo_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento / T.P.</div><input className="input" value={v.psicologo_documento} onChange={(e)=>set("psicologo_documento", e.target.value)} placeholder="Documento" /></div>
+          <div className="field"><div className="label">T.P.</div><input className="input" value={v.psicologo_tp} onChange={(e)=>set("psicologo_tp", e.target.value)} /></div>
+          <div className="field"><div className="label">Correo profesional</div><input className="input" value={v.psicologo_correo} onChange={(e)=>set("psicologo_correo", e.target.value)} /></div>
+          <div className="field"><div className="label">Teléfono profesional</div><input className="input" value={v.psicologo_telefono} onChange={(e)=>set("psicologo_telefono", e.target.value)} /></div>
+          <div className="field"><div className="label">Ciudad / Dirección</div><input className="input" value={v.psicologo_ciudad_direccion} onChange={(e)=>set("psicologo_ciudad_direccion", e.target.value)} /></div>
+          <div className="field"><div className="label">Modalidad</div><select className="select" value={v.modalidad_atencion} onChange={(e)=>set("modalidad_atencion", normalizeConsultaTipo(e.target.value))}><option value="presencial">Presencial</option><option value="virtual">Virtual</option></select></div>
+          <div className="field"><div className="label">Lugar / plataforma</div><input className="input" value={v.lugar_plataforma} onChange={(e)=>set("lugar_plataforma", e.target.value)} /></div>
+          <div className="field"><div className="label">Nombre del paciente</div><input className="input" value={v.paciente_nombre} onChange={(e)=>set("paciente_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento del paciente</div><input className="input" value={v.paciente_documento} onChange={(e)=>set("paciente_documento", e.target.value)} /></div>
+        </div>
+
+        <div className="field">
+          <div className="label">Decisión (obligatorio)</div>
+          <select className="select" value={v.decision} onChange={(e)=>set("decision", e.target.value === "no_acepto" ? "no_acepto" : "acepto") }>
+            <option value="acepto">ACEPTO uso de la aplicación + grabación de audio</option>
+            <option value="no_acepto">NO ACEPTO grabación (no se registrará en la aplicación)</option>
+          </select>
+          {v.decision === "no_acepto" ? <div className="qrHint err">Si no autoriza audio, no se puede crear paciente en NAJU.</div> : null}
+        </div>
+
+        <div className="formGrid">
+          <SignaturePad label="Firma del paciente" value={v.firma_paciente_data_url} onChange={(x)=>set("firma_paciente_data_url", x)} />
+          <SignaturePad label="Firma del psicólogo(a)" value={v.firma_psicologo_data_url} onChange={(x)=>set("firma_psicologo_data_url", x)} />
+        </div>
+      </div>
+
+      <div className="modalFooter">
+        <button className="pillBtn" onClick={onClose}>Cancelar</button>
+        <button className="pillBtn primary" disabled={!canContinue} onClick={()=>onAccept(v)}>Continuar a crear paciente</button>
       </div>
     </Modal>
   );
@@ -3276,6 +3501,10 @@ export default function App() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
 
+  function beginCreatePatient() {
+    setShowConsent(true);
+  }
+
   const [patients, setPatients] = useState<Patient[]>([]);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -3295,10 +3524,13 @@ export default function App() {
   const [toast, setToast] = useState<Toast>(null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
+  const [pendingConsent, setPendingConsent] = useState<ConsentData | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [showNote, setShowNote] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
+  const [consentPreview, setConsentPreview] = useState<ConsentData | null>(null);
 
   // --- Update (GitHub) ---
   const [updateBusy, setUpdateBusy] = useState(false);
@@ -3600,12 +3832,17 @@ export default function App() {
 
   async function onCreatePatient(input: PatientInput) {
     try {
-      const p = await createPatient(input);
+      const payload: PatientInput = {
+        ...input,
+        consent_json: pendingConsent ? JSON.stringify(pendingConsent) : null,
+      };
+      const p = await createPatient(payload);
       await refreshPatients();
       await refreshAllFiles();
       startVT(() => setSelectedId(p.id));
       pushToast({ type: "ok", msg: "Paciente creado ✅" });
       setShowCreate(false);
+      setPendingConsent(null);
     } catch (e: any) {
       pushToast({ type: "err", msg: `No se pudo crear: ${errMsg(e)}` });
     }
@@ -3917,7 +4154,7 @@ export default function App() {
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
                 theme={theme}
-                onAddPatient={() => setShowCreate(true)}
+                onAddPatient={beginCreatePatient}
                 onGoPatients={() => setPage("pacientes")}
                 onGoAgenda={() => setPage("agenda")}
                 onGoErrors={() => setPage("errores")}
@@ -4036,9 +4273,8 @@ export default function App() {
                       <div className="k">Situación judicial</div>
                       <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
                     </div>
-                  </div>
-                  <div className="card">
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Notas del perfil</div>
+
+                    <div style={{ fontWeight: 800, marginTop: 16, marginBottom: 6 }}>Notas del perfil</div>
                     <div style={{ color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                       {valOrDash(selected.notes)}
                     </div>
@@ -4049,6 +4285,19 @@ export default function App() {
                       </button>
                       <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                         + Nueva nota
+                      </button>
+                      <button
+                        className="pillBtn"
+                        onClick={() => {
+                          const parsed = parseConsentJson(selected.consent_json);
+                          if (!parsed) {
+                            pushToast({ type: "err", msg: "Este paciente aún no tiene consentimiento registrado." });
+                            return;
+                          }
+                          setConsentPreview(parsed);
+                        }}
+                      >
+                        Ver consentimiento
                       </button>
                       <button className="pillBtn danger" onClick={actionDeleteSelected}>
                         eliminar paciente
@@ -4428,12 +4677,23 @@ export default function App() {
         </main>
       </div>
 {/* Modals */}
+      {showConsent ? (
+        <ConsentModal
+          onClose={() => setShowConsent(false)}
+          onAccept={(consent) => {
+            setPendingConsent(consent);
+            setShowConsent(false);
+            setShowCreate(true);
+          }}
+        />
+      ) : null}
+
       {showCreate ? (
-        <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => setShowCreate(false)}>
+        <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => { setShowCreate(false); setPendingConsent(null); }}>
           <PatientForm
             initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
             onSave={onCreatePatient}
-            onCancel={() => setShowCreate(false)}
+            onCancel={() => { setShowCreate(false); setPendingConsent(null); }}
             saveLabel="Crear paciente"
           />
         </Modal>
@@ -4502,6 +4762,21 @@ export default function App() {
 
       {previewFile ? <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
 
+      {consentPreview ? (
+        <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
+          <div className="modalBody" style={{ display: "grid", gap: 8 }}>
+            <div className="kv"><div className="k">Paciente</div><div className="v">{consentPreview.paciente_nombre} · {consentPreview.paciente_documento}</div></div>
+            <div className="kv"><div className="k">Profesional</div><div className="v">{consentPreview.psicologo_nombre}</div></div>
+            <div className="kv"><div className="k">Modalidad</div><div className="v">{consultaTipoLabel(consentPreview.modalidad_atencion)}</div></div>
+            <div className="kv"><div className="k">Decisión</div><div className="v">{consentPreview.decision === "acepto" ? "ACEPTO" : "NO ACEPTO"}</div></div>
+            <div className="formGrid">
+              {consentPreview.firma_paciente_data_url ? <img src={consentPreview.firma_paciente_data_url} alt="Firma paciente" style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 8, background: "#fff" }} /> : null}
+              {consentPreview.firma_psicologo_data_url ? <img src={consentPreview.firma_psicologo_data_url} alt="Firma profesional" style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 8, background: "#fff" }} /> : null}
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+
       {showMenu ? (
         <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>
           <div className="modalBody" style={{ display: "grid", gap: 10 }}>
@@ -4509,7 +4784,7 @@ export default function App() {
             <button className="pillBtn" onClick={() => { setPage("pacientes"); setShowMenu(false); }}>👥 Pacientes</button>
             <button className="pillBtn" onClick={() => { setPage("agenda"); setShowMenu(false); }}>📅 Agenda</button>
             <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
-            <button className="pillBtn primary" onClick={() => { setShowCreate(true); setShowMenu(false); }}>+ Paciente</button>
+            <button className="pillBtn primary" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>+ Paciente</button>
             <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
             <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
           </div>
