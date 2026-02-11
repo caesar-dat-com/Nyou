@@ -1543,6 +1543,12 @@ function PatientForm({
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
         notes: v.notes ?? null,
+        personal_history: v.personal_history ?? null,
+        personal_social_situation: v.personal_social_situation ?? null,
+        medical_psych_history: v.medical_psych_history ?? null,
+        family_history: v.family_history ?? null,
+        work_academic_situation: v.work_academic_situation ?? null,
+        judicial_situation: v.judicial_situation ?? null,
       });
     } finally {
       setBusy(false);
@@ -1672,8 +1678,67 @@ function PatientForm({
             placeholder="Notas relevantes del paciente…"
           />
         </div>
-      </div>
 
+        <div className="field">
+          <div className="label">Antecedentes personales (historia vital)</div>
+          <textarea
+            className="textarea"
+            value={v.personal_history ?? ""}
+            onChange={(e) => set("personal_history", e.target.value)}
+            placeholder="Resumen cronológico de la historia vital de la persona..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Personal / Familiar / Social / Ocio</div>
+          <textarea
+            className="textarea"
+            value={v.personal_social_situation ?? ""}
+            onChange={(e) => set("personal_social_situation", e.target.value)}
+            placeholder="Estado civil, hijos, personas a cargo, red social, aficiones, asociaciones..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes personales médicos y psicológicos</div>
+          <textarea
+            className="textarea"
+            value={v.medical_psych_history ?? ""}
+            onChange={(e) => set("medical_psych_history", e.target.value)}
+            placeholder="Enfermedades, accidentes, tratamientos farmacológicos previos..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Antecedentes familiares</div>
+          <textarea
+            className="textarea"
+            value={v.family_history ?? ""}
+            onChange={(e) => set("family_history", e.target.value)}
+            placeholder="Enfermedades físicas/mentales, hábitos tóxicos familiares..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Laboral / Académica</div>
+          <textarea
+            className="textarea"
+            value={v.work_academic_situation ?? ""}
+            onChange={(e) => set("work_academic_situation", e.target.value)}
+            placeholder="Puesto actual, estudios, tiempo sin trabajar, actitud ante el trabajo..."
+          />
+        </div>
+
+        <div className="field">
+          <div className="label">Situación Judicial</div>
+          <textarea
+            className="textarea"
+            value={v.judicial_situation ?? ""}
+            onChange={(e) => set("judicial_situation", e.target.value)}
+            placeholder="Detenciones, juicios pendientes, denuncias actuales..."
+          />
+        </div>
+      </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onCancel} disabled={busy}>
           Cancelar
@@ -2272,8 +2337,8 @@ function NoteModal({
 
     if (!host) return "";
     const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
-    const qp = new URLSearchParams({ open: "note", patientId: patient.id, consulta_tipo: consultaTipo });
-    return `http://${host}:${safePort}/?${qp.toString()}`;
+    const shortPid = encodeURIComponent(patient.id);
+    return `http://${host}:${safePort}/n/${shortPid}`;
   }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
@@ -3244,13 +3309,18 @@ export default function App() {
   const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
   const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
 
-  // Deep-link support (used by the QR flow): /?open=note&patientId=...
+  // Deep-link support (used by the QR flow): /?open=note&patientId=... or /n/<patientId>
   const [pendingOpen, setPendingOpen] = useState<{ kind: "note"; patientId: string; consultaTipo: ConsultaTipo } | null>(() => {
     try {
       const url = new URL(window.location.href);
       const open = (url.searchParams.get("open") || "").toLowerCase();
       const patientId = (url.searchParams.get("patientId") || "").trim();
       if (open === "note" && patientId) return { kind: "note", patientId, consultaTipo: normalizeConsultaTipo(url.searchParams.get("consulta_tipo")) };
+
+      const m = url.pathname.match(/^\/n\/([^/]+)$/i);
+      if (m?.[1]) {
+        return { kind: "note", patientId: decodeURIComponent(m[1]), consultaTipo: "presencial" };
+      }
     } catch {
       /* ignore */
     }
@@ -3489,7 +3559,7 @@ export default function App() {
 
     try {
       // Remove query params so it doesn't re-trigger on navigation
-      window.history.replaceState(null, "", window.location.pathname);
+      window.history.replaceState(null, "", "/");
     } catch {
       /* ignore */
     }
@@ -3941,8 +4011,32 @@ export default function App() {
                       <div className="k">Dirección</div>
                       <div className="v">{valOrDash(selected.address)}</div>
                     </div>
-                  </div>
 
+                    <div className="kv">
+                      <div className="k">Antecedentes personales</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación personal/familiar/social/ocio</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_social_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes médicos y psicológicos</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.medical_psych_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes familiares</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.family_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación laboral/académica</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.work_academic_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación judicial</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
+                    </div>
+                  </div>
                   <div className="card">
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Notas del perfil</div>
                     <div style={{ color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
@@ -4337,7 +4431,7 @@ export default function App() {
       {showCreate ? (
         <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => setShowCreate(false)}>
           <PatientForm
-            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null }}
+            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
             onSave={onCreatePatient}
             onCancel={() => setShowCreate(false)}
             saveLabel="Crear paciente"
@@ -4360,6 +4454,12 @@ export default function App() {
               address: selected.address,
               emergency_contact: selected.emergency_contact,
               notes: selected.notes,
+              personal_history: selected.personal_history,
+              personal_social_situation: selected.personal_social_situation,
+              medical_psych_history: selected.medical_psych_history,
+              family_history: selected.family_history,
+              work_academic_situation: selected.work_academic_situation,
+              judicial_situation: selected.judicial_situation,
             }}
             onSave={onUpdatePatient}
             onCancel={() => setShowEdit(false)}
