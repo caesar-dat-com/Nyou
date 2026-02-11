@@ -2246,11 +2246,22 @@ function NoteModal({
     if (!hostIp && netIps[0]) setHostIp(netIps[0]);
   }, [netIps, hostIp]);
 
+  const hostValidationError = useMemo(() => {
+    if (consultaTipo === "virtual") return null;
+    const typed = (hostIp || "").trim();
+    if (!typed) return "Selecciona una IP LAN del PC para generar el QR.";
+    const onlyHost = typed.includes(":") ? typed.split(":")[0].trim() : typed;
+    if (netIps.length > 0 && !netIps.includes(onlyHost)) {
+      return "La IP no corresponde a este PC. Elige una IP de la lista detectada.";
+    }
+    return null;
+  }, [consultaTipo, hostIp, netIps]);
+
   const shareUrl = useMemo(() => {
     if (consultaTipo === "virtual") return "";
-    const selectedHost = (hostIp || "").trim();
-    const currentHost = window.location.hostname;
-    let host = selectedHost || (currentHost && currentHost !== "localhost" ? currentHost : "");
+    if (hostValidationError) return "";
+
+    let host = (hostIp || "").trim();
     let port = String(netPort || window.location.port || "1420").trim();
 
     if (host.includes(":")) {
@@ -2263,7 +2274,7 @@ function NoteModal({
     const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
     const qp = new URLSearchParams({ open: "note", patientId: patient.id, consulta_tipo: consultaTipo });
     return `http://${host}:${safePort}/?${qp.toString()}`;
-  }, [consultaTipo, hostIp, netPort, patient.id]);
+  }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
     if (!shareUrl) return "";
@@ -2580,7 +2591,7 @@ function NoteModal({
                   />
                 </div>
                 {shareUrl ? <div className="miniHelp" style={{ marginTop: 10 }}>{shareUrl}</div> : null}
-                {netError ? <div className="qrHint err">{netError}</div> : <div className="qrHint">Usa la IP de este PC (no la del router). Si no abre, verifica firewall/puerto {netPort || "1420"} permitido en la red local.</div>}
+                {netError || hostValidationError ? <div className="qrHint err">{netError || hostValidationError}</div> : <div className="qrHint">Usa la IP de este PC (no la del router). Si no abre, verifica firewall/puerto {netPort || "1420"} permitido en la red local.</div>}
               </div>
 
               {netIps.length > 1 ? (
