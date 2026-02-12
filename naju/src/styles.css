@@ -793,7 +793,7 @@ textarea {
 
 .qrGrid {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 14px;
   align-items: start;
 }
@@ -805,15 +805,16 @@ textarea {
 }
 
 .qrBox {
-  width: 220px;
+  width: 280px;
   max-width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 18px;
-  border: 1px dashed color-mix(in srgb, var(--profile-accent), var(--border) 35%);
-  background: linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.6));
+  border: 1px solid color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  background: #ffffff;
   display: grid;
   place-items: center;
   overflow: hidden;
+  padding: 10px;
 }
 
 @media (max-width: 560px) {
@@ -827,7 +828,8 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: auto;
+  image-rendering: pixelated;
+  background: #fff;
 }
 
 .qrFallback {
@@ -926,6 +928,31 @@ textarea {
 
 .profileCard {
   margin-top: 12px;
+}
+
+
+/* Perfil del paciente: mantener borde solo en contenedor principal */
+.profileCard .panel,
+.profileCard .percent-panel,
+.profileCard .miniHelp {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.profileCard .panel {
+  padding: 0;
+}
+
+.profileCard .percent-panel {
+  padding: 10px 0;
+}
+
+.profileCard .radarCanvasWrap,
+.profileCard .trendWrap {
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .profileHeader {
@@ -1302,6 +1329,15 @@ textarea {
   border-color: rgba(230,231,235,.10);
 }
 
+:root[data-theme="dark"] .profileCard .panel,
+:root[data-theme="dark"] .profileCard .percent-panel,
+:root[data-theme="dark"] .profileCard .miniHelp,
+:root[data-theme="dark"] .profileCard .radarCanvasWrap,
+:root[data-theme="dark"] .profileCard .trendWrap {
+  background: transparent;
+  border-color: transparent;
+}
+
 :root[data-theme="dark"] .profileBadge {
   background: rgba(15, 23, 42, .72);
   border-color: rgba(230,231,235,.10);
@@ -1334,6 +1370,15 @@ textarea {
 
 :root[data-theme="dark"] .initials{
   color: var(--text);
+}
+
+:root[data-theme="dark"] .profileCard .panel,
+:root[data-theme="dark"] .profileCard .percent-panel,
+:root[data-theme="dark"] .profileCard .miniHelp,
+:root[data-theme="dark"] .profileCard .radarCanvasWrap,
+:root[data-theme="dark"] .profileCard .trendWrap {
+  background: transparent;
+  border-color: transparent;
 }
 
 :root[data-theme="dark"] .profileBadge {
@@ -1551,6 +1596,108 @@ textarea {
   letter-spacing: -0.03em;
   line-height: 1;
   margin: 6px 0 6px;
+}
+
+.hoursSoftCard{
+  border-radius: 30px;
+  padding: 18px;
+  background: color-mix(in oklab, var(--card) 94%, white 6%);
+  border: 1px solid color-mix(in oklab, var(--border) 72%, white 28%);
+  box-shadow:
+    12px 12px 24px color-mix(in oklab, #000 11%, transparent),
+    -10px -10px 24px color-mix(in oklab, #fff 70%, transparent),
+    inset 1px 1px 0 color-mix(in oklab, #fff 65%, transparent);
+  display: grid;
+  gap: 14px;
+}
+
+.hoursSoftTitlePill{
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: .02em;
+  width: fit-content;
+  background: color-mix(in oklab, var(--card) 90%, white 10%);
+  border: 1px solid color-mix(in oklab, var(--border) 66%, white 34%);
+  box-shadow:
+    inset 2px 2px 5px color-mix(in oklab, #fff 62%, transparent),
+    inset -3px -3px 7px color-mix(in oklab, #000 7%, transparent),
+    3px 3px 8px color-mix(in oklab, #000 8%, transparent);
+}
+
+.hoursSoftSpotify{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  width: fit-content;
+  background: color-mix(in oklab, var(--card) 87%, white 13%);
+  border: 1px solid color-mix(in oklab, var(--border) 68%, white 32%);
+  box-shadow:
+    inset 2px 2px 4px color-mix(in oklab, #fff 56%, transparent),
+    inset -3px -3px 7px color-mix(in oklab, #000 8%, transparent);
+}
+.hoursSoftSpotifyLabel{ font-size: 12px; font-weight: 800; color: var(--muted); }
+.hoursSoftSpotifyHint{
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: color-mix(in oklab, var(--text) 68%, var(--muted));
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+}
+
+.hoursSoftRows{
+  display: grid;
+  gap: 10px;
+}
+
+.hoursSoftRow{
+  border-radius: 18px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: color-mix(in oklab, var(--card) 92%, white 8%);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, white 30%);
+  box-shadow:
+    5px 5px 10px color-mix(in oklab, #000 8%, transparent),
+    -4px -4px 9px color-mix(in oklab, #fff 60%, transparent),
+    inset 1px 1px 0 color-mix(in oklab, #fff 65%, transparent);
+}
+
+.hoursSoftKey{
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.hoursSoftVal{
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.02em;
+}
+
+:root[data-theme="dark"] .hoursSoftCard{
+  background: color-mix(in oklab, var(--card) 90%, #111 10%);
+  border-color: color-mix(in oklab, var(--border) 85%, #222 15%);
+  box-shadow:
+    12px 12px 24px color-mix(in oklab, #000 40%, transparent),
+    -8px -8px 18px color-mix(in oklab, #fff 8%, transparent),
+    inset 1px 1px 0 color-mix(in oklab, #fff 10%, transparent);
+}
+:root[data-theme="dark"] .hoursSoftTitlePill,
+:root[data-theme="dark"] .hoursSoftSpotify,
+:root[data-theme="dark"] .hoursSoftRow{
+  background: color-mix(in oklab, var(--card) 82%, #141414 18%);
+  border-color: color-mix(in oklab, var(--border) 86%, #202020 14%);
+  box-shadow:
+    inset 1px 1px 3px color-mix(in oklab, #fff 10%, transparent),
+    inset -2px -2px 5px color-mix(in oklab, #000 50%, transparent),
+    4px 4px 8px color-mix(in oklab, #000 38%, transparent);
 }
 .kpiBox{
   border: 1px solid var(--border);
