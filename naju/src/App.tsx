@@ -1983,7 +1983,7 @@ function PatientForm({
               className="input"
               value={v.doc_number ?? ""}
               onChange={(e) => set("doc_number", e.target.value)}
-              placeholder="Ej: 1005944430"
+              placeholder="Ej: xxxxxxx"
             />
           </div>
 
