@@ -4475,6 +4475,16 @@ export default function App() {
                       <div className="k">Situación judicial</div>
                       <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
                     </div>
+                    <div className="kv">
+                      <div className="k">Situación judicial</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
+                    </div>
+
+                    {selected.notes?.trim() ? (
+                      <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                        {selected.notes}
+                      </div>
+                    ) : null}
 
                     {selected.notes?.trim() ? (
                       <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
