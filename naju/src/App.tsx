@@ -60,6 +60,177 @@ type ConsentData = {
 
 type Toast = { type: "ok" | "err"; msg: string } | null;
 
+const CONSENTIMIENTO_INFORMADO_TEXTO = `# CONSENTIMIENTO INFORMADO
+
+**CONSENTIMIENTO INFORMADO**
+
+**Este consentimiento informado es para el uso del aplicativo durante las citas.**
+
+### **1. Identificación del profesional y datos de la atención**
+
+**Psicólogo(a):** ________________________________________________
+
+**Documento:** ____________________ **T.P:** ____________________
+
+**Correo:** ________________________________ **Teléfono:** ____________
+
+**Ciudad / Dirección:** _________________________________________________________________
+
+**Nombre de la aplicación (uso exclusivo profesional):** NAJU
+
+**Modalidad de atención:** ☐ Presencial ☐ Virtual
+
+**Lugar/plataforma de atención:**
+
+_______________________________________________________
+
+### **2. Objeto del consentimiento (qué autoriza usted)**
+
+Al firmar este documento, usted autoriza de forma libre, expresa e informada:
+
+1. **El uso de una aplicación** como herramienta de apoyo clínico durante su proceso terapéutico.
+2. **La grabación de audio de las sesiones** (ver sección 5), como parte del funcionamiento de la aplicación.
+3. **El tratamiento de sus datos personales**, incluidos datos sensibles relacionados con su salud mental, únicamente para fines terapéuticos y administrativos asociados a su atención (ver sección 6).
+
+### **3. Descripción del proceso terapéutico (alcance general)**
+
+El proceso de atención psicológica consistirá en una cantidad de sesiones acordadas previamente entre usted y el profesional, con objetivos terapéuticos definidos y revisables. Durante las sesiones pueden utilizarse métodos y técnicas propias de la psicología (entrevista clínica, psicoeducación, ejercicios terapéuticos, escalas/cuestionarios, seguimiento y tareas entre sesiones), orientados a mejorar su bienestar emocional y psicológico.
+
+Usted entiende que:
+
+- No es posible garantizar resultados específicos.
+- El progreso depende de múltiples factores, incluyendo su participación y continuidad.
+
+### **4. Uso de la aplicación (qué hace y qué NO hace)**
+
+**4.1 Finalidad del uso de la aplicación** La aplicación se utiliza para:
+
+- Registrar y organizar información clínica relevante del proceso.
+- Aplicar y guardar resultados de cuestionarios/escalas.
+- Llevar seguimiento de avances, tareas y evolución.
+- Generar reportes clínicos de su proceso cuando usted lo solicite (ver sección 9).
+
+**4.2 Uso exclusivo del psicólogo** Usted entiende y acepta que:
+
+- La aplicación es de **uso exclusivo del profesional** (psicólogo[a]).
+- El paciente **no** tendrá usuario/contraseña de acceso ni administración del sistema.
+- La información registrada **no** se comparte con terceros (familiares, instituciones, empresas, aseguradoras, etc.) sin su autorización expresa, salvo excepciones legales (ver sección 7).
+
+### **5. Grabación obligatoria de audio (condición para usar la aplicación)**
+
+**5.1 ¿Qué se graba?** Se grabará **audio de la consulta/sesión** durante la atención psicológica.
+
+**5.2 ¿Para qué se graba? (finalidad clínica)** La grabación de audio se realiza con fines estrictamente clínicos y profesionales, tales como:
+
+- Asegurar la fidelidad del registro clínico (notas de sesión).
+- Apoyar el análisis profesional y el seguimiento de su evolución.
+- Respaldar la elaboración de informes clínicos cuando usted los solicite.
+
+**5.3 Quién puede acceder a los audios**
+
+- Únicamente el/la psicólogo(a) responsable de su atención, como parte del proceso clínico.
+- No se entregarán ni compartirá audios a terceros sin su autorización expresa, salvo a un deber legal u orden de autoridad competente.
+
+**5.4 Seguridad y custodia de los audios** Los audios serán almacenados bajo medidas de seguridad razonables (control de acceso, contraseñas, almacenamiento restringido y custodia profesional) y tratados como información clínica reservada.
+
+**5.5 Si usted NO autoriza la grabación de audio** Si usted **no autoriza** la grabación de audio, usted entiende que:
+
+- **NO podrá ser registrado(a) en la aplicación**, porque la grabación de audio es una condición del funcionamiento del sistema.
+- Para continuar la atención sin audio, usted debe **expresar de manera verbal y directa al terapeuta**, antes de iniciar o durante la sesión, lo siguiente (o equivalente):
+    
+    **“No autorizo la grabación de audio y solicitó no ser registrado(a) en la aplicación.”**
+    
+- En ese caso, el profesional utilizará **otro método terapéutico alternativo** sin registro en la aplicación y sin grabación de audio.
+
+**5.6 Si usted revoca la autorización después de haber iniciado** Usted puede retirar su autorización en cualquier momento. Si usted revoca la autorización:
+
+- Desde ese momento, su proceso continuará **sin registro en la aplicación** y **sin grabación de audio**, mediante metodología alternativa.
+- La revocatoria no afecta el tratamiento realizado con anterioridad en los casos permitidos por la normativa aplicable y la custodia clínica correspondiente.
+
+Marque una opción (obligatorio):
+
+☐ **AUTORIZO** la grabación de audio y el uso de la aplicación.
+
+☐ **NO AUTORIZO** la grabación de audio; entiendo que no seré registrado(a) en la aplicación y debo manifestarlo verbalmente al terapeuta para aplicar metodología alternativa.
+
+### **6. Datos personales tratados (incluye datos sensibles)**
+
+En la aplicación podrán registrarse, según necesidad clínica:
+
+- Datos de identificación y contacto.
+- Motivo de consulta, antecedentes relevantes, objetivos terapéuticos.
+- Notas clínicas y seguimiento.
+- Resultados de escalas/cuestionarios y tareas terapéuticas.
+- **Audio de sesiones**, cuando usted autorice.
+
+Usted entiende que parte de la información corresponde a **datos sensibles** y que su tratamiento requiere autorización explícita, de conformidad con la normativa de protección de datos en Colombia.
+
+### **7. Confidencialidad y excepciones (cuándo puede romperse)**
+
+La información clínica es **privada y reservada**. No se divulgará sin su autorización.
+
+Excepciones: la confidencialidad puede levantarse únicamente en los eventos permitidos por la ley, por ejemplo:
+
+- Riesgo grave e inminente para su integridad o la de terceros.
+- Requerimiento legal u orden de autoridad competente, limitándose a lo estrictamente necesario.
+
+### **8. Derechos del paciente sobre sus datos y su información clínica**
+
+Usted tiene derecho a:
+
+- Conocer, actualizar y rectificar sus datos personales.
+- Solicitar prueba de esta autorización.
+- Solicitar información sobre el uso dado a sus datos.
+- Solicitar la supresión de datos y/o revocar la autorización cuando sea procedente.
+
+Canal para ejercer derechos (correo/teléfono):
+
+**Correo:** ________________________________ **Teléfono:** ________________________________
+
+### **9. Derecho a solicitar informe de su proceso terapéutico (generado por la aplicación)**
+
+Usted entiende y acepta que puede solicitar un **informe de su proceso terapéutico**, el cual podrá ser generado a partir de la información registrada en la aplicación y será emitido con:
+
+- Identificación del paciente.
+- Periodo del proceso (fechas).
+- Descripción general del proceso (según pertinencia clínica).
+- Hallazgos, evolución y recomendaciones (según criterio profesional).
+- **Firma del/la psicólogo(a) responsable** y datos profesionales.
+
+**Solicitud del informe:** podrá realizarla ☐ verbal ☐ escrita (marcar) al profesional responsable.
+
+**Plazo de entrega:** máximo ______ días hábiles.
+
+**Medio de entrega:** ☐ PDF ☐ Impreso ☐ Otro: ____________________
+
+**Costo (si aplica):** ____________________
+
+La entrega del informe se hará únicamente al paciente o a quien el paciente autorice de manera expresa, salvo los casos previstos por ley.
+
+### **10. Voluntariedad**
+
+Su participación en el proceso terapéutico y su decisión respecto al uso de la aplicación y grabación de audio son voluntarias. Usted puede:
+
+- Aceptar el uso de la aplicación y el audio; o
+- Rechazarlo y continuar con metodología alternativa (sin app y sin audio), informándolo verbalmente al terapeuta según sección 5.
+
+## **DECLARACIÓN Y FIRMA DE ACEPTACIÓN**
+
+Yo, **________________________________________**, identificado(a) con cédula **________________________**, mayor de edad, declaro que:
+
+1. He leído y comprendido este consentimiento informado.
+2. He recibido explicación clara y pude realizar preguntas.
+3. Entiendo que el uso de la aplicación es exclusivo del psicólogo.
+4. Comprendo que la aplicación implica grabación de audio y he marcado mi decisión.
+5. Conozco mis derechos sobre mis datos y que puedo solicitar informe del proceso terapéutico.
+
+**Decisión (marcar):** ☐ **ACEPTO** uso de la aplicación + grabación de audio.
+☐ **NO ACEPTO** grabación de audio; entiendo que debo expresarlo verbalmente y no seré registrado(a) en la aplicación.
+
+**Firma del paciente:** ________________________________ **Fecha:** ____ / ____ / ______
+
+**Firma del psicólogo(a):** ____________________________ **Fecha:** ____ / ____ / ______`;
+
 function errMsg(e: any) {
   if (!e) return "Error desconocido";
   if (typeof e === "string") return e;
@@ -1552,6 +1723,7 @@ function SignaturePad({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
+  const strokeRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1572,48 +1744,50 @@ function SignaturePad({
 
     if (value) {
       const img = new Image();
-      img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        strokeRef.current = true;
+      };
       img.src = value;
+    } else {
+      strokeRef.current = false;
     }
   }, [value]);
 
-  function getPos(evt: PointerEvent, canvas: HTMLCanvasElement) {
+  function getPos(clientX: number, clientY: number, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect();
-    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+    return { x: clientX - rect.left, y: clientY - rect.top };
   }
 
-  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+  function startStroke(clientX: number, clientY: number) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     drawingRef.current = true;
-    canvas.setPointerCapture(e.pointerId);
-    const p = getPos(e.nativeEvent, canvas);
+    const p = getPos(clientX, clientY, canvas);
     ctx.beginPath();
     ctx.moveTo(p.x, p.y);
   }
 
-  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+  function moveStroke(clientX: number, clientY: number) {
     if (!drawingRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const p = getPos(e.nativeEvent, canvas);
+    const p = getPos(clientX, clientY, canvas);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    strokeRef.current = true;
   }
 
-  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+  function endStroke() {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    drawingRef.current = false;
-    try {
-      canvas.releasePointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
+    if (!strokeRef.current) return;
     onChange(canvas.toDataURL("image/png"));
   }
 
@@ -1625,6 +1799,7 @@ function SignaturePad({
     const rect = canvas.getBoundingClientRect();
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, rect.width, rect.height);
+    strokeRef.current = false;
     onChange(null);
   }
 
@@ -1635,13 +1810,33 @@ function SignaturePad({
         <canvas
           ref={canvasRef}
           style={{ width: "100%", height: 140, display: "block", touchAction: "none", borderRadius: 8 }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerDown={(e) => {
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+            startStroke(e.clientX, e.clientY);
+          }}
+          onPointerMove={(e) => moveStroke(e.clientX, e.clientY)}
+          onPointerUp={(e) => {
+            try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+            endStroke();
+          }}
+          onPointerCancel={endStroke}
+          onMouseDown={(e) => startStroke(e.clientX, e.clientY)}
+          onMouseMove={(e) => moveStroke(e.clientX, e.clientY)}
+          onMouseUp={endStroke}
+          onMouseLeave={endStroke}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            if (t) startStroke(t.clientX, t.clientY);
+          }}
+          onTouchMove={(e) => {
+            const t = e.touches[0];
+            if (t) moveStroke(t.clientX, t.clientY);
+          }}
+          onTouchEnd={endStroke}
         />
       </div>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span className="miniHelp">{value ? "Firma capturada" : "Dibuja la firma con mouse o táctil"}</span>
         <button type="button" className="pillBtn" onClick={clear}>Limpiar firma</button>
       </div>
     </div>
@@ -1683,50 +1878,52 @@ function ConsentModal({
     setV((p) => ({ ...p, [k]: value }));
   }
 
-  const canContinue = Boolean(v.decision === "acepto" && v.paciente_nombre.trim() && v.paciente_documento.trim() && v.firma_paciente_data_url && v.firma_psicologo_data_url);
+  const canContinue = Boolean(
+    v.decision === "acepto" &&
+    v.paciente_nombre.trim().length > 0 &&
+    v.paciente_documento.trim().length > 0 &&
+    v.firma_paciente_data_url &&
+    v.firma_psicologo_data_url
+  );
 
   return (
     <Modal title="Consentimiento informado" subtitle="Debes completarlo antes de crear el paciente." onClose={onClose}>
       <div className="modalBody">
-        <div className="card" style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-{`CONSENTIMIENTO INFORMADO
-
-Este consentimiento informado es para el uso del aplicativo durante las citas.
-
-Al aceptar: autorizas uso de NAJU, grabación de audio y tratamiento de datos para fines terapéuticos.`}
+        <div className="card" style={{ maxHeight: 360, overflow: "auto" }}>
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5, fontFamily: "inherit" }}>{CONSENTIMIENTO_INFORMADO_TEXTO}</pre>
         </div>
 
         <div className="formGrid">
-          <div className="field"><div className="label">Psicólogo(a)</div><input className="input" value={v.psicologo_nombre} onChange={(e)=>set("psicologo_nombre", e.target.value)} /></div>
-          <div className="field"><div className="label">Documento / T.P.</div><input className="input" value={v.psicologo_documento} onChange={(e)=>set("psicologo_documento", e.target.value)} placeholder="Documento" /></div>
-          <div className="field"><div className="label">T.P.</div><input className="input" value={v.psicologo_tp} onChange={(e)=>set("psicologo_tp", e.target.value)} /></div>
-          <div className="field"><div className="label">Correo profesional</div><input className="input" value={v.psicologo_correo} onChange={(e)=>set("psicologo_correo", e.target.value)} /></div>
-          <div className="field"><div className="label">Teléfono profesional</div><input className="input" value={v.psicologo_telefono} onChange={(e)=>set("psicologo_telefono", e.target.value)} /></div>
-          <div className="field"><div className="label">Ciudad / Dirección</div><input className="input" value={v.psicologo_ciudad_direccion} onChange={(e)=>set("psicologo_ciudad_direccion", e.target.value)} /></div>
-          <div className="field"><div className="label">Modalidad</div><select className="select" value={v.modalidad_atencion} onChange={(e)=>set("modalidad_atencion", normalizeConsultaTipo(e.target.value))}><option value="presencial">Presencial</option><option value="virtual">Virtual</option></select></div>
-          <div className="field"><div className="label">Lugar / plataforma</div><input className="input" value={v.lugar_plataforma} onChange={(e)=>set("lugar_plataforma", e.target.value)} /></div>
-          <div className="field"><div className="label">Nombre del paciente</div><input className="input" value={v.paciente_nombre} onChange={(e)=>set("paciente_nombre", e.target.value)} /></div>
-          <div className="field"><div className="label">Documento del paciente</div><input className="input" value={v.paciente_documento} onChange={(e)=>set("paciente_documento", e.target.value)} /></div>
+          <div className="field"><div className="label">Psicólogo(a)</div><input className="input" value={v.psicologo_nombre} onChange={(e) => set("psicologo_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento</div><input className="input" value={v.psicologo_documento} onChange={(e) => set("psicologo_documento", e.target.value)} /></div>
+          <div className="field"><div className="label">T.P.</div><input className="input" value={v.psicologo_tp} onChange={(e) => set("psicologo_tp", e.target.value)} /></div>
+          <div className="field"><div className="label">Correo</div><input className="input" value={v.psicologo_correo} onChange={(e) => set("psicologo_correo", e.target.value)} /></div>
+          <div className="field"><div className="label">Teléfono</div><input className="input" value={v.psicologo_telefono} onChange={(e) => set("psicologo_telefono", e.target.value)} /></div>
+          <div className="field"><div className="label">Ciudad / Dirección</div><input className="input" value={v.psicologo_ciudad_direccion} onChange={(e) => set("psicologo_ciudad_direccion", e.target.value)} /></div>
+          <div className="field"><div className="label">Modalidad de atención</div><select className="select" value={v.modalidad_atencion} onChange={(e) => set("modalidad_atencion", normalizeConsultaTipo(e.target.value))}><option value="presencial">Presencial</option><option value="virtual">Virtual</option></select></div>
+          <div className="field"><div className="label">Lugar/plataforma de atención</div><input className="input" value={v.lugar_plataforma} onChange={(e) => set("lugar_plataforma", e.target.value)} /></div>
+          <div className="field"><div className="label">Nombre del paciente</div><input className="input" value={v.paciente_nombre} onChange={(e) => set("paciente_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento del paciente</div><input className="input" value={v.paciente_documento} onChange={(e) => set("paciente_documento", e.target.value)} /></div>
         </div>
 
         <div className="field">
-          <div className="label">Decisión (obligatorio)</div>
-          <select className="select" value={v.decision} onChange={(e)=>set("decision", e.target.value === "no_acepto" ? "no_acepto" : "acepto") }>
-            <option value="acepto">ACEPTO uso de la aplicación + grabación de audio</option>
-            <option value="no_acepto">NO ACEPTO grabación (no se registrará en la aplicación)</option>
+          <div className="label">Decisión (marcar)</div>
+          <select className="select" value={v.decision} onChange={(e) => set("decision", e.target.value === "no_acepto" ? "no_acepto" : "acepto") }>
+            <option value="acepto">ACEPTO uso de la aplicación + grabación de audio.</option>
+            <option value="no_acepto">NO ACEPTO grabación de audio.</option>
           </select>
-          {v.decision === "no_acepto" ? <div className="qrHint err">Si no autoriza audio, no se puede crear paciente en NAJU.</div> : null}
+          {v.decision === "no_acepto" ? <div className="qrHint err">Con NO ACEPTO no se permite crear paciente en la aplicación.</div> : null}
         </div>
 
         <div className="formGrid">
-          <SignaturePad label="Firma del paciente" value={v.firma_paciente_data_url} onChange={(x)=>set("firma_paciente_data_url", x)} />
-          <SignaturePad label="Firma del psicólogo(a)" value={v.firma_psicologo_data_url} onChange={(x)=>set("firma_psicologo_data_url", x)} />
+          <SignaturePad label="Firma del paciente" value={v.firma_paciente_data_url} onChange={(x) => set("firma_paciente_data_url", x)} />
+          <SignaturePad label="Firma del psicólogo(a)" value={v.firma_psicologo_data_url} onChange={(x) => set("firma_psicologo_data_url", x)} />
         </div>
       </div>
 
       <div className="modalFooter">
         <button className="pillBtn" onClick={onClose}>Cancelar</button>
-        <button className="pillBtn primary" disabled={!canContinue} onClick={()=>onAccept(v)}>Continuar a crear paciente</button>
+        <button className="pillBtn primary" disabled={!canContinue} onClick={() => onAccept(v)}>Continuar a crear paciente</button>
       </div>
     </Modal>
   );
@@ -4215,7 +4412,7 @@ export default function App() {
             ) : section === "resumen" ? (
               <>
                 <div className="grid2">
-                  <div className="card">
+                  <div className="card" style={{ gridColumn: "1 / -1" }}>
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
 
                     <div className="kv">
@@ -4274,12 +4471,13 @@ export default function App() {
                       <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
                     </div>
 
-                    <div style={{ fontWeight: 800, marginTop: 16, marginBottom: 6 }}>Notas del perfil</div>
-                    <div style={{ color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                      {valOrDash(selected.notes)}
-                    </div>
+                    {selected.notes?.trim() ? (
+                      <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                        {selected.notes}
+                      </div>
+                    ) : null}
 
-                    <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div className="actionRow" style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                       <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                         + Nuevo examen mental
                       </button>
