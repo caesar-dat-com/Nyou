@@ -4416,16 +4416,8 @@ export default function App() {
                 allFiles={allFiles}
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
-                theme={theme}
                 onAddPatient={beginCreatePatient}
-                onGoPatients={() => setPage("pacientes")}
                 onGoAgenda={() => setPage("agenda")}
-                onGoErrors={() => setPage("errores")}
-                onToggleTheme={toggleTheme}
-                onOpenThemePicker={() => setShowThemePicker(true)}
-                onJumpToPatientCitas={(pid) => pickPatient(pid, "citas")}
-                onUpdate={handleUpdateClick}
-                updateBusy={updateBusy}
               />
             ) : page === "errores" ? (
               <ErrorCenter
@@ -5068,9 +5060,7 @@ export default function App() {
           <div className="modalBody" style={{ display: "grid", gap: 10 }}>
             <button className="pillBtn" onClick={() => { setPage("home"); setShowMenu(false); }}>🏠 Inicio</button>
             <button className="pillBtn" onClick={() => { setPage("pacientes"); setShowMenu(false); }}>👥 Pacientes</button>
-            <button className="pillBtn" onClick={() => { setPage("agenda"); setShowMenu(false); }}>📅 Agenda</button>
             <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
-            <button className="pillBtn primary" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>+ Paciente</button>
             <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
             <button className="pillBtn" onClick={() => { setShowThemePicker(true); setShowMenu(false); }}>🎨 Cambiar tema de color</button>
             <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>

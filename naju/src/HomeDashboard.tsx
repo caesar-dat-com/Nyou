@@ -9,15 +9,7 @@ export default function HomeDashboard(props: {
   appointments: Appointment[];
   profileByPatientMap: Map<string, ProfileMeta>;
   onAddPatient: () => void;
-  onGoPatients: () => void;
   onGoAgenda: () => void;
-  onGoErrors: () => void;
-  onToggleTheme: () => void;
-  onOpenThemePicker: () => void;
-  theme: "light" | "dark";
-  onJumpToPatientCitas: (patientId: string) => void;
-  onUpdate: () => void;
-  updateBusy: boolean;
 }) {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
 
@@ -159,22 +151,6 @@ export default function HomeDashboard(props: {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
             <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
-            <button className="pillBtn" onClick={props.onGoPatients}>👥 Pacientes</button>
-            <button className="pillBtn" onClick={props.onGoErrors}>🐞 Errores</button>
-            <button
-              className="pillBtn"
-              onClick={props.onUpdate}
-              disabled={props.updateBusy}
-              title="Busca actualizaciones en GitHub y aplica cambios automáticamente (solo funciona si estás corriendo NAJU con el servidor local)."
-            >
-              {props.updateBusy ? "Actualizando…" : "⬇️ Actualizar"}
-            </button>
-            <button className="pillBtn" onClick={props.onToggleTheme} title="Modo claro / oscuro">
-              {props.theme === "dark" ? "☀️" : "🌙"}
-            </button>
-            <button className="pillBtn" onClick={props.onOpenThemePicker} title="Cambiar paleta de colores">
-              🎨 Tema
-            </button>
           </div>
         </div>
       </div>
@@ -184,8 +160,6 @@ export default function HomeDashboard(props: {
           <div style={{ fontWeight: 900, marginBottom: 8 }}>Pacientes</div>
           <div className="kpiBig">{kpis.nPatients}</div>
           <div style={{ color: "var(--muted)", fontSize: 13 }}>Total registrados en NAJU.</div>
-          <div style={{ height: 10 }} />
-          <button className="pillBtn" onClick={props.onGoPatients}>Ver pacientes</button>
         </div>
 
         <div className="card">
@@ -200,8 +174,6 @@ export default function HomeDashboard(props: {
               <div className="kpiValue">{fmtHours(kpis.hours30)}</div>
             </div>
           </div>
-          <div style={{ height: 10 }} />
-          <button className="pillBtn" onClick={props.onGoAgenda}>Ir a agenda</button>
         </div>
 
         <div className="card">
@@ -285,17 +257,10 @@ export default function HomeDashboard(props: {
                     </div>
                     <div className="fileSub">{new Date(a.start_iso).toLocaleString()}</div>
                   </div>
-                  <button className="smallBtn" onClick={() => props.onJumpToPatientCitas(a.patient_id)}>Ir</button>
                 </div>
               ))}
             </div>
           )}
-
-          <div style={{ height: 12 }} />
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button className="pillBtn" onClick={props.onGoAgenda}>Ver agenda</button>
-            <button className="pillBtn" onClick={props.onGoErrors}>Reportar error</button>
-          </div>
         </div>
 
         <div className="card">
