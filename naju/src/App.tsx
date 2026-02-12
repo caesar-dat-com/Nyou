@@ -4330,12 +4330,7 @@ export default function App() {
         {/* Main */}
         <main className="main">
           <div className="mainTop">
-            {page === "home" ? (
-              <div className="mainTitle">
-                <h2>Inicio</h2>
-                <p className="hint">Panel del psicólogo y accesos rápidos.</p>
-              </div>
-            ) : page === "errores" ? (
+            {page === "home" ? null : page === "errores" ? (
               <div className="mainTitle">
                 <h2>Errores</h2>
                 <p className="hint">Registra incidencias y exporta para soporte.</p>

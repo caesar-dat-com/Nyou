@@ -140,19 +140,9 @@ export default function HomeDashboard(props: {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>Inicio</div>
-            <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>
-              Panel del psicólogo: indicadores rápidos, agenda y acciones frecuentes.
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
-            <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
+        <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
       </div>
 
       <div className="grid2">
