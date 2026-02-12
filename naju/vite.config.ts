@@ -238,9 +238,14 @@ function najuStorePlugin(): Plugin {
               afterSha: (after.stdout || "").trim() || null,
               pull: { ok: pull.ok, stdout: pull.stdout, stderr: pull.stderr },
               npm: { ok: npm.ok, stdout: npm.stdout, stderr: npm.stderr },
-              message: updated ? "Actualizado. Recarga la página." : "Ya estabas actualizado.",
+              message: updated
+                ? "Actualizado. Cerrando y relanzando automáticamente…"
+                : "Ya estabas actualizado. Reiniciando servidor…",
             })
           );
+
+          // Fuerza cierre del proceso para que los launchers lo reinicien limpio.
+          setTimeout(() => process.exit(0), 500);
         } catch (e: any) {
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json; charset=utf-8");

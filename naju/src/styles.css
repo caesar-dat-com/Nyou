@@ -1626,29 +1626,6 @@ textarea {
     3px 3px 8px color-mix(in oklab, #000 8%, transparent);
 }
 
-.hoursSoftSpotify{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 8px 12px;
-  width: fit-content;
-  background: color-mix(in oklab, var(--card) 87%, white 13%);
-  border: 1px solid color-mix(in oklab, var(--border) 68%, white 32%);
-  box-shadow:
-    inset 2px 2px 4px color-mix(in oklab, #fff 56%, transparent),
-    inset -3px -3px 7px color-mix(in oklab, #000 8%, transparent);
-}
-.hoursSoftSpotifyLabel{ font-size: 12px; font-weight: 800; color: var(--muted); }
-.hoursSoftSpotifyHint{
-  font-size: 11px;
-  font-weight: 900;
-  border-radius: 999px;
-  padding: 3px 8px;
-  color: color-mix(in oklab, var(--text) 68%, var(--muted));
-  background: color-mix(in oklab, var(--accent) 18%, transparent);
-}
-
 .hoursSoftRows{
   display: grid;
   gap: 10px;
@@ -1690,7 +1667,6 @@ textarea {
     inset 1px 1px 0 color-mix(in oklab, #fff 10%, transparent);
 }
 :root[data-theme="dark"] .hoursSoftTitlePill,
-:root[data-theme="dark"] .hoursSoftSpotify,
 :root[data-theme="dark"] .hoursSoftRow{
   background: color-mix(in oklab, var(--card) 82%, #141414 18%);
   border-color: color-mix(in oklab, var(--border) 86%, #202020 14%);

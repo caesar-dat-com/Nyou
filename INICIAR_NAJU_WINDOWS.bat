@@ -1,31 +1,41 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
-REM NAJU Launcher (Windows)
-REM - Instala dependencias la primera vez
-REM - Inicia el servidor local accesible en la LAN (QR)
-REM - Abre NAJU en el navegador
+set "ROOT_DIR=%~dp0"
+set "APP_DIR=%ROOT_DIR%naju"
+set "PORT=1420"
+set "URL=http://localhost:%PORT%"
 
-cd /d "%~dp0naju"
+cd /d "%ROOT_DIR%"
+
+where git >nul 2>&1
+if %errorlevel%==0 (
+  echo [NAJU] Buscando actualizaciones (git pull --rebase)...
+  git pull --rebase --autostash
+  if errorlevel 1 echo [NAJU] Aviso: no se pudo hacer git pull. Continuo con version local.
+)
+
+cd /d "%APP_DIR%"
 
 echo [NAJU] Verificando / instalando dependencias...
 call npm install
 if errorlevel 1 (
-  echo [NAJU] Error instalando dependencias. Verifica que Node.js este instalado.
+  echo [NAJU] Error instalando dependencias. Verifica Node.js.
   pause
   exit /b 1
 )
 
-echo [NAJU] Iniciando servidor local en 0.0.0.0:1420...
-start "NAJU" cmd /k "npm run dev -- --host 0.0.0.0 --port 1420 --strictPort"
+set "OPEN_BROWSER=1"
 
-REM Dale un instante para levantar
-ping 127.0.0.1 -n 3 >nul
+:run_loop
+echo [NAJU] Iniciando servidor en 0.0.0.0:%PORT%...
+if "%OPEN_BROWSER%"=="1" (
+  start "" "%URL%"
+  set "OPEN_BROWSER=0"
+)
 
-echo [NAJU] Abriendo en el navegador...
-start "" "http://localhost:1420"
+call npm run dev -- --host 0.0.0.0 --port %PORT%
 
-echo.
-echo [NAJU] IMPORTANTE: para QR usa la IP LAN del PC (ej: 192.168.x.x), NO la del router.
-echo [NAJU] Puedes cerrar esta ventana. El servidor queda corriendo en la otra.
-endlocal
+echo [NAJU] Servidor detenido. Reiniciando en 2 segundos...
+timeout /t 2 >nul
+goto run_loop

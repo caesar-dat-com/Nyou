@@ -155,11 +155,6 @@ export default function HomeDashboard(props: {
         <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
           <div className="hoursSoftTitlePill">Horas ocupadas</div>
 
-          <div className="hoursSoftSpotify" aria-hidden="true">
-            <span className="hoursSoftSpotifyLabel">Spotify</span>
-            <span className="hoursSoftSpotifyHint">opcional</span>
-          </div>
-
           <div className="hoursSoftRows">
             <div className="hoursSoftRow">
               <span className="hoursSoftKey">Próx 7 días</span>

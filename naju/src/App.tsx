@@ -400,6 +400,11 @@ async function getAsrPipeline() {
     if (env) {
       env.allowLocalModels = false;
       env.useBrowserCache = true;
+      env.allowRemoteModels = true;
+      if (env.backends?.onnx?.wasm) {
+        env.backends.onnx.wasm.numThreads = 1;
+        env.backends.onnx.wasm.simd = true;
+      }
     }
     return pipeline("automatic-speech-recognition", "Xenova/whisper-tiny", { quantized: true });
   })();
@@ -1668,88 +1673,6 @@ function Modal({
   );
 }
 
-function shortSha(sha: string | null | undefined) {
-  const s = (sha || "").trim();
-  return s ? s.slice(0, 8) : "—";
-}
-
-function UpdateModal({
-  info,
-  busy,
-  onClose,
-  onApply,
-}: {
-  info: any;
-  busy: boolean;
-  onClose: () => void;
-  onApply: () => void;
-}) {
-  const canApply = Boolean(info?.canUpdate !== false);
-  const behind = Boolean(info?.behind);
-
-  return (
-    <Modal
-      title="Actualizar NAJU"
-      subtitle={
-        behind
-          ? "Se detectó una versión más nueva en GitHub."
-          : "Estado de versión y comprobación de GitHub."
-      }
-      onClose={onClose}
-    >
-      <div className="modalBody">
-        <div className="card" style={{ padding: 14 }}>
-          <div className="kv">
-            <div className="k">Versión</div>
-            <div className="v">{String(info?.version || "0.0.0")}</div>
-          </div>
-          <div className="kv">
-            <div className="k">Local</div>
-            <div className="v" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
-              {shortSha(info?.localSha)}
-            </div>
-          </div>
-          <div className="kv">
-            <div className="k">GitHub</div>
-            <div className="v" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
-              {shortSha(info?.remoteSha)}
-            </div>
-          </div>
-          {info?.fetchOk === false ? (
-            <div style={{ marginTop: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.4 }}>
-              No pude consultar GitHub ahora mismo (offline o sin acceso). Puedes intentar de nuevo.
-            </div>
-          ) : null}
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button className="pillBtn" onClick={onClose}>Cerrar</button>
-          <button
-            className="pillBtn primary"
-            onClick={onApply}
-            disabled={busy || !behind || !canApply}
-            title={!canApply ? "Solo se puede aplicar desde este PC (localhost)." : ""}
-          >
-            {busy ? "Actualizando…" : "Aplicar actualización"}
-          </button>
-        </div>
-
-        {!canApply ? (
-          <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
-            Para seguridad, la actualización automática solo se puede ejecutar desde este PC.
-            Si abriste NAJU desde otro dispositivo por QR, vuelve a abrirlo desde el computador.
-          </div>
-        ) : null}
-
-        <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
-          La actualización ejecuta <b>git pull</b> y luego <b>npm install</b> en tu carpeta local.
-          Cuando termine, NAJU recargará automáticamente.
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 function SignaturePad({
   label,
   value,
@@ -2798,7 +2721,8 @@ function NoteModal({
     if (!host) return "";
     const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
     const shortPid = encodeURIComponent(patient.id);
-    return `http://${host}:${safePort}/n/${shortPid}`;
+    const tipo = encodeURIComponent(consultaTipo);
+    return `http://${host}:${safePort}/?open=note&patientId=${shortPid}&consulta_tipo=${tipo}`;
   }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
@@ -3796,8 +3720,7 @@ export default function App() {
 
   // --- Update (GitHub) ---
   const [updateBusy, setUpdateBusy] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<any | null>(null);
-  const [showUpdate, setShowUpdate] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
@@ -3833,18 +3756,27 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }
 
+  async function checkForUpdates(silent = true) {
+    const res = await fetch("/__naju_update_check", { cache: "no-store" });
+    const info = await res.json();
+    if (!info?.ok) throw new Error(info?.error || "No se pudo verificar");
+
+    const available = Boolean(info.behind && info.canUpdate);
+    setUpdateAvailable(available);
+
+    if (!silent && !available) {
+      pushToast({ type: "ok", msg: "Ya estás en la última versión ✅" });
+    }
+
+    return info;
+  }
+
   async function handleUpdateClick() {
     setUpdateBusy(true);
     try {
-      const res = await fetch("/__naju_update_check", { cache: "no-store" });
-      const info = await res.json();
-      if (!info?.ok) throw new Error(info?.error || "No se pudo verificar");
-      if (!info.behind) {
-        pushToast({ type: "ok", msg: "Ya estás en la última versión ✅" });
-        return;
-      }
-      setUpdateInfo(info);
-      setShowUpdate(true);
+      const info = await checkForUpdates(false);
+      if (!info.behind) return;
+      await applyUpdate();
     } catch (e) {
       pushToast({ type: "err", msg: `Actualización no disponible: ${errMsg(e)}` });
     } finally {
@@ -3853,20 +3785,15 @@ export default function App() {
   }
 
   async function applyUpdate() {
-    setUpdateBusy(true);
-    try {
-      const res = await fetch("/__naju_update_apply", { method: "POST" });
-      const out = await res.json();
-      if (!out?.ok) throw new Error(out?.error || out?.detail || "No se pudo actualizar");
-      pushToast({ type: "ok", msg: out?.message || (out?.updated ? "Actualizado ✅" : "Sin cambios") });
-      setShowUpdate(false);
-      // After pulling, Vite usually detects file changes. Force a hard reload just in case.
-      window.setTimeout(() => window.location.reload(), 700);
-    } catch (e) {
-      pushToast({ type: "err", msg: `No se pudo actualizar: ${errMsg(e)}` });
-    } finally {
-      setUpdateBusy(false);
-    }
+    const res = await fetch("/__naju_update_apply", { method: "POST" });
+    const out = await res.json();
+    if (!out?.ok) throw new Error(out?.error || out?.detail || "No se pudo actualizar");
+
+    setUpdateAvailable(false);
+    pushToast({ type: "ok", msg: out?.message || (out?.updated ? "Actualizado ✅" : "Sin cambios") });
+
+    // El proceso de dev se cerrará y el launcher lo reiniciará automáticamente.
+    window.setTimeout(() => window.location.reload(), 1500);
   }
 
   const selected = useMemo(
@@ -4039,6 +3966,30 @@ export default function App() {
         pushToast({ type: "err", msg: `Error cargando pacientes: ${errMsg(e)}` });
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const info = await checkForUpdates(true);
+        if (!alive) return;
+        if (info?.behind && info?.canUpdate) {
+          pushToast({ type: "ok", msg: "Actualización detectada. Aplicando cambios…" });
+          setUpdateBusy(true);
+          await applyUpdate();
+        }
+      } catch {
+        // Silencioso al iniciar: no bloquea el uso de la app.
+      } finally {
+        if (alive) setUpdateBusy(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -5058,18 +5009,11 @@ export default function App() {
             <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
             <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
             <button className="pillBtn" onClick={() => { setShowThemePicker(true); setShowMenu(false); }}>🎨 Cambiar tema de color</button>
-            <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+            {updateAvailable ? (
+              <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+            ) : null}
           </div>
         </Modal>
-      ) : null}
-
-      {showUpdate && updateInfo ? (
-        <UpdateModal
-          info={updateInfo}
-          busy={updateBusy}
-          onClose={() => setShowUpdate(false)}
-          onApply={applyUpdate}
-        />
       ) : null}
 
       {/* Toast simple */}
