@@ -152,16 +152,22 @@ export default function HomeDashboard(props: {
           <div style={{ color: "var(--muted)", fontSize: 13 }}>Total registrados en NAJU.</div>
         </div>
 
-        <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Horas ocupadas</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div className="kpiBox">
-              <div className="kpiLabel">Próximos 7 días</div>
-              <div className="kpiValue">{fmtHours(kpis.hours7)}</div>
+        <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
+          <div className="hoursSoftTitlePill">Horas ocupadas</div>
+
+          <div className="hoursSoftSpotify" aria-hidden="true">
+            <span className="hoursSoftSpotifyLabel">Spotify</span>
+            <span className="hoursSoftSpotifyHint">opcional</span>
+          </div>
+
+          <div className="hoursSoftRows">
+            <div className="hoursSoftRow">
+              <span className="hoursSoftKey">Próx 7 días</span>
+              <span className="hoursSoftVal">{fmtHours(kpis.hours7)}</span>
             </div>
-            <div className="kpiBox">
-              <div className="kpiLabel">Próximos 30 días</div>
-              <div className="kpiValue">{fmtHours(kpis.hours30)}</div>
+            <div className="hoursSoftRow">
+              <span className="hoursSoftKey">Próx 30 días</span>
+              <span className="hoursSoftVal">{fmtHours(kpis.hours30)}</span>
             </div>
           </div>
         </div>
