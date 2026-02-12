@@ -1743,3 +1743,308 @@ textarea {
 }
 .toast.ok{ border-color: rgba(109,123,85,.55); }
 .toast.err{ border-color: rgba(220,80,80,.55); }
+
+
+/* =========================
+   Consentimiento (documento)
+   ========================= */
+
+.consentSticky{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel), transparent 0%);
+  box-shadow: 0 10px 26px rgba(44, 32, 18, .08);
+}
+
+.consentPaper{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow2);
+  padding: clamp(16px, 2.6vw, 28px);
+  max-height: min(70vh, 680px);
+  overflow: auto;
+  line-height: 1.55;
+}
+
+.consentTop{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+}
+
+.consentBrand{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.consentTitle{
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 15px;
+}
+
+.consentMeta{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.consentBadge{
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel2), transparent 0%);
+  white-space: nowrap;
+}
+
+.consentLead{
+  margin: 0 0 12px 0;
+  color: var(--muted);
+}
+
+.consentH{
+  margin: 16px 0 8px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+
+.consentP{
+  margin: 6px 0;
+  color: color-mix(in srgb, var(--text), transparent 10%);
+}
+
+.consentList{
+  margin: 6px 0 6px 18px;
+  color: color-mix(in srgb, var(--text), transparent 10%);
+}
+
+.consentRow{
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px dashed color-mix(in srgb, var(--border), transparent 10%);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--panel2), transparent 35%);
+  margin: 8px 0;
+}
+
+.consentRow .k{ font-weight: 800; color: var(--muted); font-size: 12px; }
+.consentRow .v{ display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+
+.consentGrid2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.consentField{
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--border), transparent 10%);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--panel2), transparent 35%);
+}
+
+.consentField .k{
+  font-weight: 800;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.consentInlineWrap{ display:inline-flex; align-items:center; gap:8px; }
+
+.consentInlineInput{
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted2), transparent 0%);
+  background: transparent;
+  padding: 2px 4px;
+  border-radius: 8px;
+  color: var(--text);
+  min-width: 8ch;
+}
+
+.consentInlineInput:focus{
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--profile-accent), transparent 75%);
+  border-bottom-color: color-mix(in srgb, var(--profile-accent), var(--muted2) 30%);
+}
+
+.consentInlineValue{
+  display: inline-block;
+  padding: 2px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted2), transparent 0%);
+  min-width: 8ch;
+  color: var(--text);
+}
+
+.consentInlinePlaceholder{
+  color: var(--muted2);
+  opacity: .9;
+}
+
+.consentInlineSelect{
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel), transparent 0%);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--text);
+}
+
+.consentChecks{ display:flex; gap: 16px; flex-wrap: wrap; }
+
+.consentCheck{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel), transparent 0%);
+}
+
+.consentCheck .box{ font-size: 16px; }
+.consentCheck.active{
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 40%);
+  box-shadow: 0 10px 20px rgba(44, 32, 18, .08);
+}
+
+.consentCallout{
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+  background: color-mix(in srgb, var(--panel2), transparent 20%);
+}
+
+.consentCallout.err{
+  border-color: color-mix(in srgb, #c04b3a, var(--border) 40%);
+  background: color-mix(in srgb, #c04b3a, transparent 92%);
+}
+
+.consentChoiceGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.consentChoiceCard{
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel), transparent 0%);
+  box-shadow: 0 12px 26px rgba(44, 32, 18, .07);
+  cursor: pointer;
+  transition: transform var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+
+.consentChoiceCard:hover{ transform: translateY(-1px); }
+
+.consentChoiceCard.active{
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  box-shadow: 0 16px 36px rgba(44, 32, 18, .10);
+}
+
+.consentChoiceCard.warn{
+  border-color: color-mix(in srgb, #c04b3a, var(--border) 55%);
+}
+
+.consentChoiceTitle{ font-weight: 1000; letter-spacing: .04em; }
+.consentChoiceSub{ color: var(--muted); margin-top: 4px; font-size: 12px; }
+
+.consentSignGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.consentSignLabel{
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 8px;
+}
+
+.consentSignImg{
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.consentSignEmpty{
+  height: 160px;
+  border: 1px dashed color-mix(in srgb, var(--border), transparent 10%);
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: var(--muted2);
+  background: color-mix(in srgb, var(--panel2), transparent 30%);
+}
+
+.consentFoot{
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+  color: var(--muted2);
+  font-size: 12px;
+}
+
+@media (max-width: 920px){
+  .consentRow{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px){
+  .consentGrid2{ grid-template-columns: 1fr; }
+  .consentChoiceGrid{ grid-template-columns: 1fr; }
+  .consentSignGrid{ grid-template-columns: 1fr; }
+}
+
+:root[data-theme="dark"] .consentPaper{
+  background: rgba(15, 23, 42, .74);
+  border-color: rgba(230,231,235,.14);
+}
+
+:root[data-theme="dark"] .consentSticky{
+  background: rgba(15, 23, 42, .84);
+  border-color: rgba(230,231,235,.14);
+}
+
+:root[data-theme="dark"] .consentInlineSelect,
+:root[data-theme="dark"] .consentCheck,
+:root[data-theme="dark"] .consentChoiceCard{
+  background: rgba(15, 23, 42, .72);
+  border-color: rgba(230,231,235,.14);
+}
+
+:root[data-theme="dark"] .consentRow,
+:root[data-theme="dark"] .consentField,
+:root[data-theme="dark"] .consentCallout{
+  background: rgba(15, 23, 42, .52);
+  border-color: rgba(230,231,235,.12);
+}
