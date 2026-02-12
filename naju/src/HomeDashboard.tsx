@@ -13,6 +13,7 @@ export default function HomeDashboard(props: {
   onGoAgenda: () => void;
   onGoErrors: () => void;
   onToggleTheme: () => void;
+  onOpenThemePicker: () => void;
   theme: "light" | "dark";
   onJumpToPatientCitas: (patientId: string) => void;
   onUpdate: () => void;
@@ -21,6 +22,9 @@ export default function HomeDashboard(props: {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
 
   const now = Date.now();
+
+  const normalizeConsultaTipo = (value: unknown): "presencial" | "virtual" =>
+    value === "virtual" ? "virtual" : "presencial";
 
   const upcoming = useMemo(() => {
     const list = appointments
@@ -51,6 +55,31 @@ export default function HomeDashboard(props: {
     const totalFiles = Array.from(byPatientFiles.values()).reduce((a, b) => a + b, 0);
     const totalNotes = Array.from(byPatientNotes.values()).reduce((a, b) => a + b, 0);
     const totalExams = Array.from(byPatientExams.values()).reduce((a, b) => a + b, 0);
+
+    let notesPresencial = 0;
+    let notesVirtual = 0;
+    let examsPresencial = 0;
+    let examsVirtual = 0;
+    allFiles.forEach((f) => {
+      if (f.kind !== "note" && f.kind !== "exam") return;
+      let meta: any = null;
+      if (f.meta_json) {
+        try {
+          meta = JSON.parse(f.meta_json);
+        } catch {
+          meta = null;
+        }
+      }
+      const tipo = normalizeConsultaTipo(meta?.consulta_tipo);
+      if (f.kind === "note") {
+        if (tipo === "virtual") notesVirtual++;
+        else notesPresencial++;
+      }
+      if (f.kind === "exam") {
+        if (tipo === "virtual") examsVirtual++;
+        else examsPresencial++;
+      }
+    });
 
     const avgFiles = nPatients ? totalFiles / nPatients : 0;
     const avgNotes = nPatients ? totalNotes / nPatients : 0;
@@ -88,6 +117,10 @@ export default function HomeDashboard(props: {
       avgExams,
       principalState,
       topStates: topStates.slice(0, 4),
+      notesPresencial,
+      notesVirtual,
+      examsPresencial,
+      examsVirtual,
     };
   }, [patients, allFiles, appointments, profileByPatientMap, now]);
 
@@ -138,6 +171,9 @@ export default function HomeDashboard(props: {
             </button>
             <button className="pillBtn" onClick={props.onToggleTheme} title="Modo claro / oscuro">
               {props.theme === "dark" ? "☀️" : "🌙"}
+            </button>
+            <button className="pillBtn" onClick={props.onOpenThemePicker} title="Cambiar paleta de colores">
+              🎨 Tema
             </button>
           </div>
         </div>
@@ -192,6 +228,19 @@ export default function HomeDashboard(props: {
             <div className="kpiBox">
               <div className="kpiLabel">Prom. exámenes</div>
               <div className="kpiValue">{fmtAvg(kpis.avgExams)}</div>
+            </div>
+          </div>
+
+          <div style={{ height: 10 }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="kpiBox">
+              <div className="kpiLabel">Notas presenciales / virtuales</div>
+              <div className="kpiValue">{kpis.notesPresencial} / {kpis.notesVirtual}</div>
+            </div>
+            <div className="kpiBox">
+              <div className="kpiLabel">Exámenes presenciales / virtuales</div>
+              <div className="kpiValue">{kpis.examsPresencial} / {kpis.examsVirtual}</div>
             </div>
           </div>
         </div>
