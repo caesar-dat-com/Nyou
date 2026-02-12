@@ -1,26 +1,37 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# NAJU Launcher (Linux)
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$DIR/naju"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$ROOT_DIR/naju"
+PORT="${NAJU_PORT:-1420}"
+URL="http://127.0.0.1:${PORT}"
 
-echo "[NAJU] Verificando / instalando dependencias..."
-npm install
+cd "$APP_DIR"
 
-echo "[NAJU] Iniciando servidor local..."
-npm run dev >/dev/null 2>&1 &
-PID=$!
+if [ ! -d node_modules ]; then
+  echo "[NAJU] Instalando dependencias..."
+  npm install
+fi
 
-sleep 1
+if command -v lsof >/dev/null 2>&1 && lsof -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo "[NAJU] Ya existe un proceso escuchando en $URL"
+else
+  echo "[NAJU] Iniciando servidor..."
+  nohup npm run dev -- --host 0.0.0.0 --port "$PORT" > "$APP_DIR/.naju-dev.log" 2>&1 &
+fi
 
-URL="http://localhost:1420"
+for _ in $(seq 1 25); do
+  if curl -fsS "$URL" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.4
+done
+
 echo "[NAJU] Abriendo $URL"
 if command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$URL" >/dev/null 2>&1 &
-elif command -v gnome-open >/dev/null 2>&1; then
-  gnome-open "$URL" >/dev/null 2>&1 &
+elif command -v gio >/dev/null 2>&1; then
+  gio open "$URL" >/dev/null 2>&1 &
 fi
 
-echo "[NAJU] Servidor PID: $PID (para detener: kill $PID)"
-wait $PID
+echo "[NAJU] Listo. Logs: $APP_DIR/.naju-dev.log"

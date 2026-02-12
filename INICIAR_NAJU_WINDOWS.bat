@@ -16,15 +16,16 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [NAJU] Iniciando servidor local...
-start "NAJU" cmd /k "npm run dev"
+echo [NAJU] Iniciando servidor local en 0.0.0.0:1420...
+start "NAJU" cmd /k "npm run dev -- --host 0.0.0.0 --port 1420 --strictPort"
 
 REM Dale un instante para levantar
-ping 127.0.0.1 -n 2 >nul
+ping 127.0.0.1 -n 3 >nul
 
 echo [NAJU] Abriendo en el navegador...
 start "" "http://localhost:1420"
 
 echo.
+echo [NAJU] IMPORTANTE: para QR usa la IP LAN del PC (ej: 192.168.x.x), NO la del router.
 echo [NAJU] Puedes cerrar esta ventana. El servidor queda corriendo en la otra.
 endlocal
