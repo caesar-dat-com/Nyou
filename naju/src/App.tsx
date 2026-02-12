@@ -400,6 +400,11 @@ async function getAsrPipeline() {
     if (env) {
       env.allowLocalModels = false;
       env.useBrowserCache = true;
+      env.allowRemoteModels = true;
+      if (env.backends?.onnx?.wasm) {
+        env.backends.onnx.wasm.numThreads = 1;
+        env.backends.onnx.wasm.simd = true;
+      }
     }
     return pipeline("automatic-speech-recognition", "Xenova/whisper-tiny", { quantized: true });
   })();
@@ -1668,83 +1673,218 @@ function Modal({
   );
 }
 
-function shortSha(sha: string | null | undefined) {
-  const s = (sha || "").trim();
-  return s ? s.slice(0, 8) : "—";
-}
-
-function UpdateModal({
-  info,
-  busy,
-  onClose,
-  onApply,
+function SignaturePad({
+  label,
+  value,
+  onChange,
 }: {
-  info: any;
-  busy: boolean;
-  onClose: () => void;
-  onApply: () => void;
+  label: string;
+  value: string | null;
+  onChange: (dataUrl: string | null) => void;
 }) {
-  const canApply = Boolean(info?.canUpdate !== false);
-  const behind = Boolean(info?.behind);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const strokeRef = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#111";
+
+    if (value) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        strokeRef.current = true;
+      };
+      img.src = value;
+    } else {
+      strokeRef.current = false;
+    }
+  }, [value]);
+
+  function getPos(clientX: number, clientY: number, canvas: HTMLCanvasElement) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function startStroke(clientX: number, clientY: number) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawingRef.current = true;
+    const p = getPos(clientX, clientY, canvas);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+
+  function moveStroke(clientX: number, clientY: number) {
+    if (!drawingRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const p = getPos(clientX, clientY, canvas);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    strokeRef.current = true;
+  }
+
+  function endStroke() {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!strokeRef.current) return;
+    onChange(canvas.toDataURL("image/png"));
+  }
+
+  function clear() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    strokeRef.current = false;
+    onChange(null);
+  }
 
   return (
-    <Modal
-      title="Actualizar NAJU"
-      subtitle={
-        behind
-          ? "Se detectó una versión más nueva en GitHub."
-          : "Estado de versión y comprobación de GitHub."
-      }
-      onClose={onClose}
-    >
+    <div className="field">
+      <div className="label">{label}</div>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "#fff", padding: 8 }}>
+        <canvas
+          ref={canvasRef}
+          style={{ width: "100%", height: 140, display: "block", touchAction: "none", borderRadius: 8 }}
+          onPointerDown={(e) => {
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+            startStroke(e.clientX, e.clientY);
+          }}
+          onPointerMove={(e) => moveStroke(e.clientX, e.clientY)}
+          onPointerUp={(e) => {
+            try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+            endStroke();
+          }}
+          onPointerCancel={endStroke}
+          onMouseDown={(e) => startStroke(e.clientX, e.clientY)}
+          onMouseMove={(e) => moveStroke(e.clientX, e.clientY)}
+          onMouseUp={endStroke}
+          onMouseLeave={endStroke}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            if (t) startStroke(t.clientX, t.clientY);
+          }}
+          onTouchMove={(e) => {
+            const t = e.touches[0];
+            if (t) moveStroke(t.clientX, t.clientY);
+          }}
+          onTouchEnd={endStroke}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span className="miniHelp">{value ? "Firma capturada" : "Dibuja la firma con mouse o táctil"}</span>
+        <button type="button" className="pillBtn" onClick={clear}>Limpiar firma</button>
+      </div>
+    </div>
+  );
+}
+
+function ConsentModal({
+  onClose,
+  onAccept,
+}: {
+  onClose: () => void;
+  onAccept: (consent: ConsentData) => void;
+}) {
+  const [v, setV] = useState<ConsentData>({
+    created_at: new Date().toISOString(),
+    psicologo_nombre: "",
+    psicologo_documento: "",
+    psicologo_tp: "",
+    psicologo_correo: "",
+    psicologo_telefono: "",
+    psicologo_ciudad_direccion: "",
+    modalidad_atencion: "presencial",
+    lugar_plataforma: "",
+    canal_derechos_correo: "",
+    canal_derechos_telefono: "",
+    informe_solicitud: "verbal",
+    informe_plazo_dias: "",
+    informe_medio: "pdf",
+    informe_medio_otro: "",
+    informe_costo: "",
+    paciente_nombre: "",
+    paciente_documento: "",
+    decision: "acepto",
+    firma_paciente_data_url: null,
+    firma_psicologo_data_url: null,
+  });
+
+  function set<K extends keyof ConsentData>(k: K, value: ConsentData[K]) {
+    setV((p) => ({ ...p, [k]: value }));
+  }
+
+  const canContinue = Boolean(
+    v.decision === "acepto" &&
+    v.paciente_nombre.trim().length > 0 &&
+    v.paciente_documento.trim().length > 0 &&
+    v.firma_paciente_data_url &&
+    v.firma_psicologo_data_url
+  );
+
+  return (
+    <Modal title="Consentimiento informado" subtitle="Debes completarlo antes de crear el paciente." onClose={onClose}>
       <div className="modalBody">
-        <div className="card" style={{ padding: 14 }}>
-          <div className="kv">
-            <div className="k">Versión</div>
-            <div className="v">{String(info?.version || "0.0.0")}</div>
-          </div>
-          <div className="kv">
-            <div className="k">Local</div>
-            <div className="v" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
-              {shortSha(info?.localSha)}
-            </div>
-          </div>
-          <div className="kv">
-            <div className="k">GitHub</div>
-            <div className="v" style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
-              {shortSha(info?.remoteSha)}
-            </div>
-          </div>
-          {info?.fetchOk === false ? (
-            <div style={{ marginTop: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.4 }}>
-              No pude consultar GitHub ahora mismo (offline o sin acceso). Puedes intentar de nuevo.
-            </div>
-          ) : null}
+        <div className="card" style={{ maxHeight: 360, overflow: "auto" }}>
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5, fontFamily: "inherit" }}>{CONSENTIMIENTO_INFORMADO_TEXTO}</pre>
         </div>
 
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button className="pillBtn" onClick={onClose}>Cerrar</button>
-          <button
-            className="pillBtn primary"
-            onClick={onApply}
-            disabled={busy || !behind || !canApply}
-            title={!canApply ? "Solo se puede aplicar desde este PC (localhost)." : ""}
-          >
-            {busy ? "Actualizando…" : "Aplicar actualización"}
-          </button>
+        <div className="formGrid">
+          <div className="field"><div className="label">Psicólogo(a)</div><input className="input" value={v.psicologo_nombre} onChange={(e) => set("psicologo_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento</div><input className="input" value={v.psicologo_documento} onChange={(e) => set("psicologo_documento", e.target.value)} /></div>
+          <div className="field"><div className="label">T.P.</div><input className="input" value={v.psicologo_tp} onChange={(e) => set("psicologo_tp", e.target.value)} /></div>
+          <div className="field"><div className="label">Correo</div><input className="input" value={v.psicologo_correo} onChange={(e) => set("psicologo_correo", e.target.value)} /></div>
+          <div className="field"><div className="label">Teléfono</div><input className="input" value={v.psicologo_telefono} onChange={(e) => set("psicologo_telefono", e.target.value)} /></div>
+          <div className="field"><div className="label">Ciudad / Dirección</div><input className="input" value={v.psicologo_ciudad_direccion} onChange={(e) => set("psicologo_ciudad_direccion", e.target.value)} /></div>
+          <div className="field"><div className="label">Modalidad de atención</div><select className="select" value={v.modalidad_atencion} onChange={(e) => set("modalidad_atencion", normalizeConsultaTipo(e.target.value))}><option value="presencial">Presencial</option><option value="virtual">Virtual</option></select></div>
+          <div className="field"><div className="label">Lugar/plataforma de atención</div><input className="input" value={v.lugar_plataforma} onChange={(e) => set("lugar_plataforma", e.target.value)} /></div>
+          <div className="field"><div className="label">Nombre del paciente</div><input className="input" value={v.paciente_nombre} onChange={(e) => set("paciente_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento del paciente</div><input className="input" value={v.paciente_documento} onChange={(e) => set("paciente_documento", e.target.value)} /></div>
         </div>
 
-        {!canApply ? (
-          <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
-            Para seguridad, la actualización automática solo se puede ejecutar desde este PC.
-            Si abriste NAJU desde otro dispositivo por QR, vuelve a abrirlo desde el computador.
-          </div>
-        ) : null}
-
-        <div style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
-          La actualización ejecuta <b>git pull</b> y luego <b>npm install</b> en tu carpeta local.
-          Cuando termine, NAJU recargará automáticamente.
+        <div className="field">
+          <div className="label">Decisión (marcar)</div>
+          <select className="select" value={v.decision} onChange={(e) => set("decision", e.target.value === "no_acepto" ? "no_acepto" : "acepto") }>
+            <option value="acepto">ACEPTO uso de la aplicación + grabación de audio.</option>
+            <option value="no_acepto">NO ACEPTO grabación de audio.</option>
+          </select>
+          {v.decision === "no_acepto" ? <div className="qrHint err">Con NO ACEPTO no se permite crear paciente en la aplicación.</div> : null}
         </div>
+
+        <div className="formGrid">
+          <SignaturePad label="Firma del paciente" value={v.firma_paciente_data_url} onChange={(x) => set("firma_paciente_data_url", x)} />
+          <SignaturePad label="Firma del psicólogo(a)" value={v.firma_psicologo_data_url} onChange={(x) => set("firma_psicologo_data_url", x)} />
+        </div>
+      </div>
+
+      <div className="modalFooter">
+        <button className="pillBtn" onClick={onClose}>Cancelar</button>
+        <button className="pillBtn primary" disabled={!canContinue} onClick={() => onAccept(v)}>Continuar a crear paciente</button>
       </div>
     </Modal>
   );
@@ -2798,7 +2938,8 @@ function NoteModal({
     if (!host) return "";
     const safePort = /^\d{2,5}$/.test(port) ? port : "1420";
     const shortPid = encodeURIComponent(patient.id);
-    return `http://${host}:${safePort}/n/${shortPid}`;
+    const tipo = encodeURIComponent(consultaTipo);
+    return `http://${host}:${safePort}/?open=note&patientId=${shortPid}&consulta_tipo=${tipo}`;
   }, [consultaTipo, hostIp, netPort, patient.id, hostValidationError]);
 
   const qrDataUrl = useMemo(() => {
@@ -3796,8 +3937,7 @@ export default function App() {
 
   // --- Update (GitHub) ---
   const [updateBusy, setUpdateBusy] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<any | null>(null);
-  const [showUpdate, setShowUpdate] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
@@ -3833,18 +3973,27 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }
 
+  async function checkForUpdates(silent = true) {
+    const res = await fetch("/__naju_update_check", { cache: "no-store" });
+    const info = await res.json();
+    if (!info?.ok) throw new Error(info?.error || "No se pudo verificar");
+
+    const available = Boolean(info.behind && info.canUpdate);
+    setUpdateAvailable(available);
+
+    if (!silent && !available) {
+      pushToast({ type: "ok", msg: "Ya estás en la última versión ✅" });
+    }
+
+    return info;
+  }
+
   async function handleUpdateClick() {
     setUpdateBusy(true);
     try {
-      const res = await fetch("/__naju_update_check", { cache: "no-store" });
-      const info = await res.json();
-      if (!info?.ok) throw new Error(info?.error || "No se pudo verificar");
-      if (!info.behind) {
-        pushToast({ type: "ok", msg: "Ya estás en la última versión ✅" });
-        return;
-      }
-      setUpdateInfo(info);
-      setShowUpdate(true);
+      const info = await checkForUpdates(false);
+      if (!info.behind) return;
+      await applyUpdate();
     } catch (e) {
       pushToast({ type: "err", msg: `Actualización no disponible: ${errMsg(e)}` });
     } finally {
@@ -3853,20 +4002,15 @@ export default function App() {
   }
 
   async function applyUpdate() {
-    setUpdateBusy(true);
-    try {
-      const res = await fetch("/__naju_update_apply", { method: "POST" });
-      const out = await res.json();
-      if (!out?.ok) throw new Error(out?.error || out?.detail || "No se pudo actualizar");
-      pushToast({ type: "ok", msg: out?.message || (out?.updated ? "Actualizado ✅" : "Sin cambios") });
-      setShowUpdate(false);
-      // After pulling, Vite usually detects file changes. Force a hard reload just in case.
-      window.setTimeout(() => window.location.reload(), 700);
-    } catch (e) {
-      pushToast({ type: "err", msg: `No se pudo actualizar: ${errMsg(e)}` });
-    } finally {
-      setUpdateBusy(false);
-    }
+    const res = await fetch("/__naju_update_apply", { method: "POST" });
+    const out = await res.json();
+    if (!out?.ok) throw new Error(out?.error || out?.detail || "No se pudo actualizar");
+
+    setUpdateAvailable(false);
+    pushToast({ type: "ok", msg: out?.message || (out?.updated ? "Actualizado ✅" : "Sin cambios") });
+
+    // El proceso de dev se cerrará y el launcher lo reiniciará automáticamente.
+    window.setTimeout(() => window.location.reload(), 1500);
   }
 
   const selected = useMemo(
@@ -4039,6 +4183,30 @@ export default function App() {
         pushToast({ type: "err", msg: `Error cargando pacientes: ${errMsg(e)}` });
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const info = await checkForUpdates(true);
+        if (!alive) return;
+        if (info?.behind && info?.canUpdate) {
+          pushToast({ type: "ok", msg: "Actualización detectada. Aplicando cambios…" });
+          setUpdateBusy(true);
+          await applyUpdate();
+        }
+      } catch {
+        // Silencioso al iniciar: no bloquea el uso de la app.
+      } finally {
+        if (alive) setUpdateBusy(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -4524,6 +4692,24 @@ export default function App() {
                       <div className="k">Situación judicial</div>
                       <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
                     </div>
+                    <div className="kv">
+                      <div className="k">Antecedentes familiares</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.family_history)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación laboral/académica</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.work_academic_situation)}</div>
+                    </div>
+                    <div className="kv">
+                      <div className="k">Situación judicial</div>
+                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
+                    </div>
+
+                    {selected.notes?.trim() ? (
+                      <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                        {selected.notes}
+                      </div>
+                    ) : null}
 
                     {selected.notes?.trim() ? (
                       <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
@@ -5058,18 +5244,11 @@ export default function App() {
             <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
             <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
             <button className="pillBtn" onClick={() => { setShowThemePicker(true); setShowMenu(false); }}>🎨 Cambiar tema de color</button>
-            <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+            {updateAvailable ? (
+              <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
+            ) : null}
           </div>
         </Modal>
-      ) : null}
-
-      {showUpdate && updateInfo ? (
-        <UpdateModal
-          info={updateInfo}
-          busy={updateBusy}
-          onClose={() => setShowUpdate(false)}
-          onApply={applyUpdate}
-        />
       ) : null}
 
       {/* Toast simple */}
