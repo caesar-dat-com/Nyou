@@ -13,6 +13,7 @@ export default function HomeDashboard(props: {
   onGoAgenda: () => void;
   onGoErrors: () => void;
   onToggleTheme: () => void;
+  onOpenThemePicker: () => void;
   theme: "light" | "dark";
   onJumpToPatientCitas: (patientId: string) => void;
   onUpdate: () => void;
@@ -170,6 +171,9 @@ export default function HomeDashboard(props: {
             </button>
             <button className="pillBtn" onClick={props.onToggleTheme} title="Modo claro / oscuro">
               {props.theme === "dark" ? "☀️" : "🌙"}
+            </button>
+            <button className="pillBtn" onClick={props.onOpenThemePicker} title="Cambiar paleta de colores">
+              🎨 Tema
             </button>
           </div>
         </div>

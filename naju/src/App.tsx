@@ -231,6 +231,44 @@ Yo, **________________________________________**, identificado(a) con cédula **
 
 **Firma del psicólogo(a):** ____________________________ **Fecha:** ____ / ____ / ______`;
 
+type PaletteTokens = {
+  primary: string;
+  background: string;
+  surface: string;
+  accent: string;
+  text: string;
+};
+
+type AppPalette = { name: string; light: PaletteTokens; dark: PaletteTokens };
+
+const APP_PALETTES: Record<string, AppPalette> = {
+  original: {
+    name: "Original/Base",
+    light: { primary: "#8a6a43", background: "#fbf7ef", surface: "#fffdf8", accent: "#c7a45a", text: "#2b241d" },
+    dark: { primary: "#e7d1a2", background: "#0b1120", surface: "#0d1526", accent: "#c7a45a", text: "#e7eaf0" },
+  },
+  cacao: {
+    name: "Cacao Latte",
+    light: { primary: "#774723", background: "#FBF5E9", surface: "#B99268", accent: "#895720", text: "#391809" },
+    dark: { primary: "#B99268", background: "#391809", surface: "#774723", accent: "#FBF5E9", text: "#FBF5E9" },
+  },
+  lavender: {
+    name: "Lavender Depth",
+    light: { primary: "#6C5F8D", background: "#DCD7D4", surface: "#BB96C1", accent: "#9D8DBA", text: "#4C3F6D" },
+    dark: { primary: "#BB96C1", background: "#4C3F6D", surface: "#6C5F8D", accent: "#DCD7D4", text: "#FFFFFF" },
+  },
+  nordic: {
+    name: "Nordic Saffron",
+    light: { primary: "#519CAB", background: "#C3E7F1", surface: "#FFFFFF", accent: "#FFC64F", text: "#20373B" },
+    dark: { primary: "#FFC64F", background: "#20373B", surface: "#2E4A50", accent: "#519CAB", text: "#FFFFFF" },
+  },
+  sage: {
+    name: "Sage Therapy",
+    light: { primary: "#A6C796", background: "#E7F5DC", surface: "#C8E1B8", accent: "#889F7C", text: "#71815F" },
+    dark: { primary: "#C8E1B8", background: "#71815F", surface: "#889F7C", accent: "#E7F5DC", text: "#FFFFFF" },
+  },
+};
+
 function errMsg(e: any) {
   if (!e) return "Error desconocido";
   if (typeof e === "string") return e;
@@ -3682,17 +3720,44 @@ export default function App() {
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
     return prefersDark ? "dark" : "light";
   });
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    // ayuda a que inputs/barras nativas usen el esquema correcto
-    (document.documentElement.style as any).colorScheme = theme;
+  const [colorTheme, setColorTheme] = useState<keyof typeof APP_PALETTES>(() => {
     try {
-      localStorage.setItem("naju_theme", theme);
+      const saved = localStorage.getItem("naju_color_theme") as keyof typeof APP_PALETTES | null;
+      if (saved && APP_PALETTES[saved]) return saved;
     } catch {
       // ignore
     }
-  }, [theme]);
+    return "original";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    (document.documentElement.style as any).colorScheme = theme;
+
+    const palette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
+    const root = document.documentElement.style;
+    root.setProperty("--bg", palette.background);
+    root.setProperty("--bg2", palette.surface);
+    root.setProperty("--panel", palette.surface);
+    root.setProperty("--panel2", palette.surface);
+    root.setProperty("--text", palette.text);
+    root.setProperty("--muted", palette.text);
+    root.setProperty("--muted2", palette.primary);
+    root.setProperty("--border", palette.accent);
+    root.setProperty("--gold", palette.primary);
+    root.setProperty("--gold2", palette.surface);
+    root.setProperty("--earth", palette.primary);
+    root.setProperty("--green", palette.accent);
+    root.setProperty("--green2", palette.surface);
+    root.setProperty("--profile-accent", palette.accent);
+
+    try {
+      localStorage.setItem("naju_theme", theme);
+      localStorage.setItem("naju_color_theme", colorTheme);
+    } catch {
+      // ignore
+    }
+  }, [theme, colorTheme]);
 
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
@@ -3734,6 +3799,7 @@ export default function App() {
   const [updateInfo, setUpdateInfo] = useState<any | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
   const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
   const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
   const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
@@ -4356,6 +4422,7 @@ export default function App() {
                 onGoAgenda={() => setPage("agenda")}
                 onGoErrors={() => setPage("errores")}
                 onToggleTheme={toggleTheme}
+                onOpenThemePicker={() => setShowThemePicker(true)}
                 onJumpToPatientCitas={(pid) => pickPatient(pid, "citas")}
                 onUpdate={handleUpdateClick}
                 updateBusy={updateBusy}
@@ -4975,6 +5042,27 @@ export default function App() {
         </Modal>
       ) : null}
 
+      {showThemePicker ? (
+        <Modal title="Temas de color" subtitle="Selecciona la paleta de colores de NAJU" onClose={() => setShowThemePicker(false)}>
+          <div className="modalBody" style={{ display: "grid", gap: 10 }}>
+            {Object.entries(APP_PALETTES).map(([key, palette]) => (
+              <button
+                key={key}
+                className="pillBtn"
+                style={{ justifyContent: "space-between", display: "flex", alignItems: "center" }}
+                onClick={() => {
+                  setColorTheme(key as keyof typeof APP_PALETTES);
+                  setShowThemePicker(false);
+                }}
+              >
+                <span>{palette.name}</span>
+                <span style={{ opacity: 0.8 }}>{colorTheme === key ? "✅" : ""}</span>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      ) : null}
+
       {showMenu ? (
         <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>
           <div className="modalBody" style={{ display: "grid", gap: 10 }}>
@@ -4984,6 +5072,7 @@ export default function App() {
             <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
             <button className="pillBtn primary" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>+ Paciente</button>
             <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
+            <button className="pillBtn" onClick={() => { setShowThemePicker(true); setShowMenu(false); }}>🎨 Cambiar tema de color</button>
             <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
           </div>
         </Modal>

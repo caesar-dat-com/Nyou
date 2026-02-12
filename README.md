@@ -48,7 +48,7 @@ La aplicación **NO** guarda datos en la carpeta del ejecutable. Lo hace en la r
 
 ## 🛠️ Instalación y Ejecución
 
-Rerquisitos: [Node.js](https://nodejs.org/) y [Rust](https://rustup.rs/) instalados.
+Requisitos: [Node.js](https://nodejs.org/) y [Rust](https://rustup.rs/) instalados.
 
 1.  **Instalar dependencias**:
     ```bash
