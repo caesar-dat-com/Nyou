@@ -793,7 +793,7 @@ textarea {
 
 .qrGrid {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 14px;
   align-items: start;
 }
@@ -805,15 +805,16 @@ textarea {
 }
 
 .qrBox {
-  width: 220px;
+  width: 280px;
   max-width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 18px;
-  border: 1px dashed color-mix(in srgb, var(--profile-accent), var(--border) 35%);
-  background: linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.6));
+  border: 1px solid color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  background: #ffffff;
   display: grid;
   place-items: center;
   overflow: hidden;
+  padding: 10px;
 }
 
 @media (max-width: 560px) {
@@ -827,7 +828,8 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: auto;
+  image-rendering: pixelated;
+  background: #fff;
 }
 
 .qrFallback {
@@ -926,6 +928,31 @@ textarea {
 
 .profileCard {
   margin-top: 12px;
+}
+
+
+/* Perfil del paciente: mantener borde solo en contenedor principal */
+.profileCard .panel,
+.profileCard .percent-panel,
+.profileCard .miniHelp {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.profileCard .panel {
+  padding: 0;
+}
+
+.profileCard .percent-panel {
+  padding: 10px 0;
+}
+
+.profileCard .radarCanvasWrap,
+.profileCard .trendWrap {
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .profileHeader {
@@ -1302,6 +1329,15 @@ textarea {
   border-color: rgba(230,231,235,.10);
 }
 
+:root[data-theme="dark"] .profileCard .panel,
+:root[data-theme="dark"] .profileCard .percent-panel,
+:root[data-theme="dark"] .profileCard .miniHelp,
+:root[data-theme="dark"] .profileCard .radarCanvasWrap,
+:root[data-theme="dark"] .profileCard .trendWrap {
+  background: transparent;
+  border-color: transparent;
+}
+
 :root[data-theme="dark"] .profileBadge {
   background: rgba(15, 23, 42, .72);
   border-color: rgba(230,231,235,.10);
@@ -1334,6 +1370,15 @@ textarea {
 
 :root[data-theme="dark"] .initials{
   color: var(--text);
+}
+
+:root[data-theme="dark"] .profileCard .panel,
+:root[data-theme="dark"] .profileCard .percent-panel,
+:root[data-theme="dark"] .profileCard .miniHelp,
+:root[data-theme="dark"] .profileCard .radarCanvasWrap,
+:root[data-theme="dark"] .profileCard .trendWrap {
+  background: transparent;
+  border-color: transparent;
 }
 
 :root[data-theme="dark"] .profileBadge {
