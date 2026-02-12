@@ -92,7 +92,9 @@ function najuStorePlugin(): Plugin {
         try {
           const ifaces = os.networkInterfaces();
           const ipv4: string[] = [];
+          const skipIface = /^(lo|docker\d*|br-|veth|virbr|vmnet|vboxnet|zt|tailscale|wg\d*|tun\d*|tap\d*)/i;
           for (const k of Object.keys(ifaces)) {
+            if (skipIface.test(k)) continue;
             const list = ifaces[k] || [];
             for (const it of list) {
               if (!it) continue;
@@ -105,6 +107,8 @@ function najuStorePlugin(): Plugin {
             }
           }
 
+          const uniqueIps = Array.from(new Set(ipv4));
+
           const score = (ip: string) => {
             if (ip.startsWith("192.168.")) return 0;
             if (ip.startsWith("10.")) return 1;
@@ -115,13 +119,13 @@ function najuStorePlugin(): Plugin {
             }
             return 9;
           };
-          ipv4.sort((a, b) => score(a) - score(b) || a.localeCompare(b));
+          uniqueIps.sort((a, b) => score(a) - score(b) || a.localeCompare(b));
 
           const port = (server.config.server?.port as any) || 1420;
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.setHeader("Cache-Control", "no-store");
-          res.end(JSON.stringify({ ok: true, port, ips: ipv4 }));
+          res.end(JSON.stringify({ ok: true, port, ips: uniqueIps }));
         } catch {
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -234,9 +238,14 @@ function najuStorePlugin(): Plugin {
               afterSha: (after.stdout || "").trim() || null,
               pull: { ok: pull.ok, stdout: pull.stdout, stderr: pull.stderr },
               npm: { ok: npm.ok, stdout: npm.stdout, stderr: npm.stderr },
-              message: updated ? "Actualizado. Recarga la página." : "Ya estabas actualizado.",
+              message: updated
+                ? "Actualizado. Cerrando y relanzando automáticamente…"
+                : "Ya estabas actualizado. Reiniciando servidor…",
             })
           );
+
+          // Fuerza cierre del proceso para que los launchers lo reinicien limpio.
+          setTimeout(() => process.exit(0), 500);
         } catch (e: any) {
           res.statusCode = 200;
           res.setHeader("Content-Type", "application/json; charset=utf-8");

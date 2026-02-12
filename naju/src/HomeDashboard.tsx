@@ -9,18 +9,14 @@ export default function HomeDashboard(props: {
   appointments: Appointment[];
   profileByPatientMap: Map<string, ProfileMeta>;
   onAddPatient: () => void;
-  onGoPatients: () => void;
   onGoAgenda: () => void;
-  onGoErrors: () => void;
-  onToggleTheme: () => void;
-  theme: "light" | "dark";
-  onJumpToPatientCitas: (patientId: string) => void;
-  onUpdate: () => void;
-  updateBusy: boolean;
 }) {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
 
   const now = Date.now();
+
+  const normalizeConsultaTipo = (value: unknown): "presencial" | "virtual" =>
+    value === "virtual" ? "virtual" : "presencial";
 
   const upcoming = useMemo(() => {
     const list = appointments
@@ -51,6 +47,31 @@ export default function HomeDashboard(props: {
     const totalFiles = Array.from(byPatientFiles.values()).reduce((a, b) => a + b, 0);
     const totalNotes = Array.from(byPatientNotes.values()).reduce((a, b) => a + b, 0);
     const totalExams = Array.from(byPatientExams.values()).reduce((a, b) => a + b, 0);
+
+    let notesPresencial = 0;
+    let notesVirtual = 0;
+    let examsPresencial = 0;
+    let examsVirtual = 0;
+    allFiles.forEach((f) => {
+      if (f.kind !== "note" && f.kind !== "exam") return;
+      let meta: any = null;
+      if (f.meta_json) {
+        try {
+          meta = JSON.parse(f.meta_json);
+        } catch {
+          meta = null;
+        }
+      }
+      const tipo = normalizeConsultaTipo(meta?.consulta_tipo);
+      if (f.kind === "note") {
+        if (tipo === "virtual") notesVirtual++;
+        else notesPresencial++;
+      }
+      if (f.kind === "exam") {
+        if (tipo === "virtual") examsVirtual++;
+        else examsPresencial++;
+      }
+    });
 
     const avgFiles = nPatients ? totalFiles / nPatients : 0;
     const avgNotes = nPatients ? totalNotes / nPatients : 0;
@@ -88,6 +109,10 @@ export default function HomeDashboard(props: {
       avgExams,
       principalState,
       topStates: topStates.slice(0, 4),
+      notesPresencial,
+      notesVirtual,
+      examsPresencial,
+      examsVirtual,
     };
   }, [patients, allFiles, appointments, profileByPatientMap, now]);
 
@@ -115,32 +140,9 @@ export default function HomeDashboard(props: {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>Inicio</div>
-            <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>
-              Panel del psicólogo: indicadores rápidos, agenda y acciones frecuentes.
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
-            <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
-            <button className="pillBtn" onClick={props.onGoPatients}>👥 Pacientes</button>
-            <button className="pillBtn" onClick={props.onGoErrors}>🐞 Errores</button>
-            <button
-              className="pillBtn"
-              onClick={props.onUpdate}
-              disabled={props.updateBusy}
-              title="Busca actualizaciones en GitHub y aplica cambios automáticamente (solo funciona si estás corriendo NAJU con el servidor local)."
-            >
-              {props.updateBusy ? "Actualizando…" : "⬇️ Actualizar"}
-            </button>
-            <button className="pillBtn" onClick={props.onToggleTheme} title="Modo claro / oscuro">
-              {props.theme === "dark" ? "☀️" : "🌙"}
-            </button>
-          </div>
-        </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
+        <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
       </div>
 
       <div className="grid2">
@@ -148,24 +150,21 @@ export default function HomeDashboard(props: {
           <div style={{ fontWeight: 900, marginBottom: 8 }}>Pacientes</div>
           <div className="kpiBig">{kpis.nPatients}</div>
           <div style={{ color: "var(--muted)", fontSize: 13 }}>Total registrados en NAJU.</div>
-          <div style={{ height: 10 }} />
-          <button className="pillBtn" onClick={props.onGoPatients}>Ver pacientes</button>
         </div>
 
-        <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Horas ocupadas</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div className="kpiBox">
-              <div className="kpiLabel">Próximos 7 días</div>
-              <div className="kpiValue">{fmtHours(kpis.hours7)}</div>
+        <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
+          <div className="hoursSoftTitlePill">Horas ocupadas</div>
+
+          <div className="hoursSoftRows">
+            <div className="hoursSoftRow">
+              <span className="hoursSoftKey">Próx 7 días</span>
+              <span className="hoursSoftVal">{fmtHours(kpis.hours7)}</span>
             </div>
-            <div className="kpiBox">
-              <div className="kpiLabel">Próximos 30 días</div>
-              <div className="kpiValue">{fmtHours(kpis.hours30)}</div>
+            <div className="hoursSoftRow">
+              <span className="hoursSoftKey">Próx 30 días</span>
+              <span className="hoursSoftVal">{fmtHours(kpis.hours30)}</span>
             </div>
           </div>
-          <div style={{ height: 10 }} />
-          <button className="pillBtn" onClick={props.onGoAgenda}>Ir a agenda</button>
         </div>
 
         <div className="card">
@@ -192,6 +191,19 @@ export default function HomeDashboard(props: {
             <div className="kpiBox">
               <div className="kpiLabel">Prom. exámenes</div>
               <div className="kpiValue">{fmtAvg(kpis.avgExams)}</div>
+            </div>
+          </div>
+
+          <div style={{ height: 10 }} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="kpiBox">
+              <div className="kpiLabel">Notas presenciales / virtuales</div>
+              <div className="kpiValue">{kpis.notesPresencial} / {kpis.notesVirtual}</div>
+            </div>
+            <div className="kpiBox">
+              <div className="kpiLabel">Exámenes presenciales / virtuales</div>
+              <div className="kpiValue">{kpis.examsPresencial} / {kpis.examsVirtual}</div>
             </div>
           </div>
         </div>
@@ -236,17 +248,10 @@ export default function HomeDashboard(props: {
                     </div>
                     <div className="fileSub">{new Date(a.start_iso).toLocaleString()}</div>
                   </div>
-                  <button className="smallBtn" onClick={() => props.onJumpToPatientCitas(a.patient_id)}>Ir</button>
                 </div>
               ))}
             </div>
           )}
-
-          <div style={{ height: 12 }} />
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button className="pillBtn" onClick={props.onGoAgenda}>Ver agenda</button>
-            <button className="pillBtn" onClick={props.onGoErrors}>Reportar error</button>
-          </div>
         </div>
 
         <div className="card">

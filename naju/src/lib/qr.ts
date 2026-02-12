@@ -1,26 +1,38 @@
 import { QrCode } from "./qrcodegen";
 
-function svgToDataUrl(svg: string) {
-  // Some mobile scanners/browsers are picky with URL-encoded SVGs.
-  // Base64 tends to be the most compatible across iOS/Android/desktop.
-  const utf8 = new TextEncoder().encode(svg);
-  let bin = "";
-  utf8.forEach((b) => (bin += String.fromCharCode(b)));
-  const b64 = btoa(bin);
-  return `data:image/svg+xml;base64,${b64}`;
-}
-
 /**
- * Generates a QR code as an SVG data URL.
- * Offline and dependency-free.
+ * Generates a high-contrast QR PNG data URL.
+ * PNG is usually more reliable than SVG for mobile camera scanners.
  */
 export function makeQrSvgDataUrl(text: string) {
-  // Medium ECC is a good default for phone scanning.
-  const qr = QrCode.encodeText(text, QrCode.Ecc.MEDIUM);
-  // The library outputs an SVG with a 1-module border.
-  // Use a slightly larger quiet zone for better scan reliability.
-  const svg = qr.toSvgString(3, "#ffffff", "#000000");
-  // Scale via CSS width/height; keep viewBox.
-  // We keep original SVG and size it in the caller.
-  return svgToDataUrl(svg);
+  const qr = QrCode.encodeText(text, QrCode.Ecc.HIGH);
+
+  const border = 4; // quiet zone
+  const modulePx = 12; // larger blocks => easier scanning
+  const size = qr.size + border * 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = size * modulePx;
+  canvas.height = size * modulePx;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    // very unlikely fallback
+    return "";
+  }
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#000000";
+  for (let y = 0; y < qr.size; y++) {
+    for (let x = 0; x < qr.size; x++) {
+      if (!qr.getModule(x, y)) continue;
+      const xx = (x + border) * modulePx;
+      const yy = (y + border) * modulePx;
+      ctx.fillRect(xx, yy, modulePx, modulePx);
+    }
+  }
+
+  return canvas.toDataURL("image/png");
 }
