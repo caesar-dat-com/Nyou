@@ -4514,9 +4514,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="pillRow">
-                <button className="pillBtn primary" type="button" onClick={() => setShowMenu(true)}>☰ Menú</button>
-              </div>
+              <div className="pillRow" />
             </div>
           </div>
 
@@ -5318,6 +5316,18 @@ export default function App() {
           </div>
         </Modal>
       ) : null}
+
+      <button
+        className="floatingMenuBtn"
+        type="button"
+        onClick={() => setShowMenu(true)}
+        aria-label="Abrir menú"
+        title="Menú"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
 
       {showMenu ? (
         <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>

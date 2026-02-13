@@ -310,6 +310,41 @@ textarea {
   flex-wrap: wrap;
 }
 
+.floatingMenuBtn{
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(10, 20, 36, .46);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22), inset 0 1px 2px rgba(255,255,255,.14);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 80;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.floatingMenuBtn span{
+  display: block;
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+}
+.floatingMenuBtn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.35);
+  box-shadow: 0 14px 28px rgba(0,0,0,.28), inset 0 1px 2px rgba(255,255,255,.18);
+}
+.floatingMenuBtn:active{ transform: translateY(0); }
+
 .pillBtn {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, .7);
