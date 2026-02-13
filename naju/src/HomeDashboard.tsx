@@ -191,12 +191,6 @@ export default function HomeDashboard(props: {
       </div>
 
       <div className="grid2">
-        <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Pacientes</div>
-          <div className="kpiBig">{kpis.nPatients}</div>
-          <div style={{ color: "var(--muted)", fontSize: 13 }}>Total registrados en NAJU.</div>
-        </div>
-
         <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
           <div className="hoursSoftTitlePill">Horas ocupadas</div>
 
@@ -284,7 +278,13 @@ export default function HomeDashboard(props: {
         </div>
 
         <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Seguimiento</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+            <div style={{ fontWeight: 900 }}>Seguimiento</div>
+            <div style={{ textAlign: "right" }}>
+              <div className="kpiBig" style={{ lineHeight: 1 }}>{kpis.nPatients}</div>
+              <div style={{ color: "var(--muted)", fontSize: 12 }}>Total registrados en NAJU.</div>
+            </div>
+          </div>
 
           <div className="kv">
             <div className="k">Promedio archivos / paciente</div>
@@ -322,9 +322,9 @@ export default function HomeDashboard(props: {
               <div className="kpiValue">{kpis.examsPresencial} / {kpis.examsVirtual}</div>
             </div>
           </div>
-        </div>
 
-        <div className="card">
+          <div style={{ height: 12 }} />
+
           <div style={{ fontWeight: 900, marginBottom: 8 }}>Estado principal</div>
           <div className="kpiBig">{kpis.principalState}</div>
           <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5 }}>
