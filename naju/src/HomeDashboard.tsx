@@ -57,6 +57,15 @@ export default function HomeDashboard(props: {
   const normalizeConsultaTipo = (value: unknown): "presencial" | "virtual" =>
     value === "virtual" ? "virtual" : "presencial";
 
+  const axisMetaFields: Array<{ label: string; key: string; noteKey?: string }> = [
+    { label: "Ánimo", key: "estado_de_animo", noteKey: "estado_animo" },
+    { label: "Afecto", key: "afecto" },
+    { label: "Orientación", key: "orientacion" },
+    { label: "Memoria", key: "memoria" },
+    { label: "Juicio", key: "juicio" },
+    { label: "Riesgo", key: "riesgo" },
+  ];
+
   const kpis = useMemo(() => {
     const nPatients = patients.length;
 
@@ -127,6 +136,29 @@ export default function HomeDashboard(props: {
     const topStates = Array.from(stateCounts.entries()).sort((a, b) => b[1] - a[1]);
     const principalState = topStates[0]?.[0] || "—";
 
+    const principalAxis = axisMetaFields.find((axis) => axis.label === principalState);
+    const principalSubStateCounts = new Map<string, number>();
+
+    if (principalAxis) {
+      allFiles.forEach((file) => {
+        if (file.kind !== "exam" && file.kind !== "note") return;
+        if (!file.meta_json) return;
+        try {
+          const meta = JSON.parse(file.meta_json);
+          const raw = meta?.[principalAxis.key] ?? (principalAxis.noteKey ? meta?.[principalAxis.noteKey] : undefined);
+          const value = typeof raw === "string" ? raw.trim() : "";
+          if (!value) return;
+          principalSubStateCounts.set(value, (principalSubStateCounts.get(value) ?? 0) + 1);
+        } catch {
+          // ignore malformed metadata
+        }
+      });
+    }
+
+    const topPrincipalSubStates = Array.from(principalSubStateCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
     return {
       nPatients,
       hours7,
@@ -136,6 +168,7 @@ export default function HomeDashboard(props: {
       avgExams,
       principalState,
       topStates: topStates.slice(0, 4),
+      topPrincipalSubStates,
       notesPresencial,
       notesVirtual,
       examsPresencial,
@@ -191,7 +224,7 @@ export default function HomeDashboard(props: {
       </div>
 
       <div className="grid2">
-        <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
+        <div className="hoursSoftCard" style={{ order: 2 }} role="region" aria-label="Horas ocupadas">
           <div className="hoursSoftTitlePill">Horas ocupadas</div>
 
           <div className="hoursSoftRows">
@@ -277,7 +310,7 @@ export default function HomeDashboard(props: {
           ) : null}
         </div>
 
-        <div className="card">
+        <div className="card" style={{ order: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
             <div style={{ fontWeight: 900 }}>Seguimiento</div>
             <div style={{ textAlign: "right" }}>
@@ -325,10 +358,22 @@ export default function HomeDashboard(props: {
 
           <div style={{ height: 12 }} />
 
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Estado principal</div>
-          <div className="kpiBig">{kpis.principalState}</div>
+          <div className="mainStateHead">
+            <div style={{ fontWeight: 900 }}>Estado principal</div>
+            {kpis.topPrincipalSubStates.length ? (
+              <div className="mainStateTopSubList" aria-label="Subestados principales">
+                {kpis.topPrincipalSubStates.map(([label, count]) => (
+                  <div key={label} className="mainStateTopSubItem">
+                    <span className="mainStateTopSubLabel">{label}</span>
+                    <span className="mainStateTopSubCount">{count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="kpiBig" style={{ fontSize: 34, lineHeight: 1.1 }}>{kpis.principalState}</div>
           <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5 }}>
-            Etiqueta dominante más frecuente (según exámenes).
+            Etiqueta dominante más frecuente (según exámenes). A su lado verás los 3 subestados más frecuentes de este estado.
           </div>
 
           <div style={{ height: 10 }} />
