@@ -98,6 +98,11 @@ const APP_PALETTES: Record<string, AppPalette> = {
     light: { primary: "#A6C796", background: "#E7F5DC", surface: "#C8E1B8", accent: "#889F7C", text: "#71815F" },
     dark: { primary: "#C8E1B8", background: "#71815F", surface: "#889F7C", accent: "#E7F5DC", text: "#FFFFFF" },
   },
+  caesarCyberpunk: {
+    name: "Caesar Cyberpunk",
+    light: { primary: "#ff3270", background: "#eeffff", surface: "#ffffff", accent: "#00c3ff", text: "#000807" },
+    dark: { primary: "#ff3270", background: "#000807", surface: "#0b1413", accent: "#00c3ff", text: "#eeffff" },
+  },
 };
 
 function errMsg(e: any) {
