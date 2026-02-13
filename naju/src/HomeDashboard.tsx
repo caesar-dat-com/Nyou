@@ -44,7 +44,6 @@ export default function HomeDashboard(props: {
   appointments: Appointment[];
   profileByPatientMap: Map<string, ProfileMeta>;
   onAddPatient: () => void;
-  onGoAgenda: () => void;
 }) {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
   const [monthCursor, setMonthCursor] = useState(() => {
@@ -57,18 +56,6 @@ export default function HomeDashboard(props: {
 
   const normalizeConsultaTipo = (value: unknown): "presencial" | "virtual" =>
     value === "virtual" ? "virtual" : "presencial";
-
-  const upcoming = useMemo(() => {
-    const list = appointments
-      .filter((a) => {
-        const t = new Date(a.start_iso).getTime();
-        return !Number.isNaN(t) && t >= now;
-      })
-      .slice()
-      .sort((a, b) => a.start_iso.localeCompare(b.start_iso));
-    return list.slice(0, 8);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appointments.length]);
 
   const kpis = useMemo(() => {
     const nPatients = patients.length;
@@ -201,7 +188,6 @@ export default function HomeDashboard(props: {
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
-        <button className="pillBtn" onClick={props.onGoAgenda}>📅 Agenda</button>
       </div>
 
       <div className="grid2">
@@ -363,27 +349,6 @@ export default function HomeDashboard(props: {
       </div>
 
       <div className="grid2">
-        <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Próximas citas</div>
-          {upcoming.length === 0 ? (
-            <div style={{ color: "var(--muted)" }}>No hay citas programadas.</div>
-          ) : (
-            <div className="list">
-              {upcoming.map((a) => (
-                <div key={a.id} className="fileRow">
-                  <div className="fileIcon">📅</div>
-                  <div className="fileMeta">
-                    <div className="fileName">
-                      {a.title} · {patientNameById.get(a.patient_id) || "Paciente"}
-                    </div>
-                    <div className="fileSub">{new Date(a.start_iso).toLocaleString()}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
         <div className="card">
           <div style={{ fontWeight: 900, marginBottom: 8 }}>Cómo registrar una sesión</div>
           <div className="helpSteps">
