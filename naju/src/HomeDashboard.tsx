@@ -1,7 +1,42 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Appointment, Patient, PatientFile } from "./lib/api";
 
 type ProfileMeta = { values: number[]; accent: string; label: string | null };
+
+function toDayKeyLocal(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function monthLabel(d: Date) {
+  try {
+    return d.toLocaleString(undefined, { month: "long", year: "numeric" });
+  } catch {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+}
+
+function buildMonthGrid(monthCursor: Date) {
+  const first = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+  const start = new Date(first);
+  const dow = (start.getDay() + 6) % 7; // monday=0
+  start.setDate(start.getDate() - dow);
+
+  const last = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+  const end = new Date(last);
+  const dowEnd = (end.getDay() + 6) % 7;
+  end.setDate(end.getDate() + (6 - dowEnd));
+
+  const days: Date[] = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    days.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { days };
+}
 
 export default function HomeDashboard(props: {
   patients: Patient[];
@@ -12,6 +47,11 @@ export default function HomeDashboard(props: {
   onGoAgenda: () => void;
 }) {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
   const now = Date.now();
 
@@ -122,6 +162,25 @@ export default function HomeDashboard(props: {
     return m;
   }, [patients]);
 
+  const apptByDay = useMemo(() => {
+    const m: Record<string, Appointment[]> = {};
+    appointments.forEach((a) => {
+      const d = new Date(a.start_iso);
+      if (Number.isNaN(d.getTime())) return;
+      const k = toDayKeyLocal(d);
+      (m[k] ||= []).push(a);
+    });
+    Object.keys(m).forEach((k) => m[k].sort((x, y) => Date.parse(x.start_iso) - Date.parse(y.start_iso)));
+    return m;
+  }, [appointments]);
+
+  const { days } = useMemo(() => buildMonthGrid(monthCursor), [monthCursor]);
+
+  const selectedDayAppointments = useMemo(() => {
+    if (!selectedDayKey) return [];
+    return apptByDay[selectedDayKey] || [];
+  }, [apptByDay, selectedDayKey]);
+
   const suggestedAvgFiles = 6; // guía simple (ajustable)
 
   function fmtHours(h: number) {
@@ -165,6 +224,77 @@ export default function HomeDashboard(props: {
               <span className="hoursSoftVal">{fmtHours(kpis.hours30)}</span>
             </div>
           </div>
+
+          <div style={{ height: 10 }} />
+
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ fontWeight: 800, fontSize: 13 }}>Calendario de agenda</div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}>
+                ◀
+              </button>
+              <div className="najuMonthPill">{monthLabel(monthCursor)}</div>
+              <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}>
+                ▶
+              </button>
+            </div>
+          </div>
+
+          <div style={{ height: 8 }} />
+
+          <div className="najuCalHead">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
+              <div key={d} className="najuCalDow">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          <div className="najuCalGrid">
+            {days.map((d) => {
+              const k = toDayKeyLocal(d);
+              const count = (apptByDay[k] || []).length;
+              const inMonth = d.getMonth() === monthCursor.getMonth();
+              const isSel = selectedDayKey === k;
+              return (
+                <button
+                  key={k}
+                  className={"najuCalCell " + (inMonth ? "" : "isDim ") + (isSel ? "isSel" : "")}
+                  onClick={() => setSelectedDayKey(isSel ? null : k)}
+                  title={k}
+                >
+                  <div className="najuCalNum">{d.getDate()}</div>
+                  {count ? <div className="najuCalCount">{count}</div> : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedDayKey ? (
+            <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <b style={{ fontSize: 13 }}>Citas del {selectedDayKey}</b>
+                <button className="smallBtn" onClick={() => setSelectedDayKey(null)}>
+                  Cerrar
+                </button>
+              </div>
+              {selectedDayAppointments.length === 0 ? (
+                <div style={{ color: "var(--muted)", fontSize: 13 }}>Sin citas.</div>
+              ) : (
+                <div className="list">
+                  {selectedDayAppointments.map((a) => (
+                    <div key={a.id} className="fileRow">
+                      <div className="fileIcon">📅</div>
+                      <div className="fileMeta">
+                        <div className="fileName">{a.title} · {patientNameById.get(a.patient_id) || "Paciente"}</div>
+                        <div className="fileSub">{new Date(a.start_iso).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <div className="card">
