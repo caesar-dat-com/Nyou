@@ -268,8 +268,26 @@ textarea {
 
 .brand {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
+}
+.brandLogoBtn{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.5);
+  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.brandLogoBtn:hover{ transform: translateY(-1px); }
+.brandLogo{
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .brand .title {
@@ -291,6 +309,41 @@ textarea {
   align-items: center;
   flex-wrap: wrap;
 }
+
+.floatingMenuBtn{
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(10, 20, 36, .46);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22), inset 0 1px 2px rgba(255,255,255,.14);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 80;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.floatingMenuBtn span{
+  display: block;
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+}
+.floatingMenuBtn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.35);
+  box-shadow: 0 14px 28px rgba(0,0,0,.28), inset 0 1px 2px rgba(255,255,255,.18);
+}
+.floatingMenuBtn:active{ transform: translateY(0); }
 
 .pillBtn {
   border: 1px solid var(--border);
@@ -1706,6 +1759,49 @@ textarea {
   height: 100%;
   background: linear-gradient(90deg, rgba(199,164,90,.9), rgba(109,123,85,.9));
 }
+.mainStateHead{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.mainStateTopSubList{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mainStateTopSubItem{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.6);
+  padding: 6px 10px;
+}
+:root[data-theme="dark"] .mainStateTopSubItem{
+  background: rgba(255,255,255,.06);
+}
+.mainStateTopSubLabel{
+  font-size: 12px;
+  font-weight: 900;
+}
+.mainStateTopSubCount{
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  background: color-mix(in srgb, var(--gold), transparent 70%);
+  color: var(--text);
+}
+
 .stateRow{
   display:flex;
   justify-content: space-between;
