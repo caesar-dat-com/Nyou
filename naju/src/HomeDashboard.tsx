@@ -191,7 +191,7 @@ export default function HomeDashboard(props: {
       </div>
 
       <div className="grid2">
-        <div className="hoursSoftCard" role="region" aria-label="Horas ocupadas">
+        <div className="hoursSoftCard" style={{ order: 2 }} role="region" aria-label="Horas ocupadas">
           <div className="hoursSoftTitlePill">Horas ocupadas</div>
 
           <div className="hoursSoftRows">
@@ -277,7 +277,7 @@ export default function HomeDashboard(props: {
           ) : null}
         </div>
 
-        <div className="card">
+        <div className="card" style={{ order: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
             <div style={{ fontWeight: 900 }}>Seguimiento</div>
             <div style={{ textAlign: "right" }}>
