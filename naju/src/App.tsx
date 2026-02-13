@@ -98,6 +98,11 @@ const APP_PALETTES: Record<string, AppPalette> = {
     light: { primary: "#A6C796", background: "#E7F5DC", surface: "#C8E1B8", accent: "#889F7C", text: "#71815F" },
     dark: { primary: "#C8E1B8", background: "#71815F", surface: "#889F7C", accent: "#E7F5DC", text: "#FFFFFF" },
   },
+  caesarCyberpunk: {
+    name: "Caesar Cyberpunk",
+    light: { primary: "#ff3270", background: "#eeffff", surface: "#ffffff", accent: "#00c3ff", text: "#000807" },
+    dark: { primary: "#ff3270", background: "#000807", surface: "#0b1413", accent: "#00c3ff", text: "#eeffff" },
+  },
 };
 
 function errMsg(e: any) {
@@ -3799,6 +3804,53 @@ function CitasSection(props: CitasSectionProps) {
 }
 
 
+function hexToRgb(hex: string) {
+  const h = hex.replace("#", "").trim();
+  if (h.length === 3) {
+    return {
+      r: parseInt(h[0] + h[0], 16),
+      g: parseInt(h[1] + h[1], 16),
+      b: parseInt(h[2] + h[2], 16),
+    };
+  }
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16),
+  };
+}
+
+async function tintPng(baseUrl: string, size: number, primary: string, accent: string) {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.crossOrigin = "anonymous";
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = baseUrl;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return baseUrl;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.drawImage(img, 0, 0, size, size);
+
+  const p = hexToRgb(primary);
+  const a = hexToRgb(accent);
+  const g = ctx.createLinearGradient(0, 0, size, size);
+  g.addColorStop(0, `rgba(${p.r},${p.g},${p.b},0.95)`);
+  g.addColorStop(1, `rgba(${a.r},${a.g},${a.b},0.95)`);
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = "source-over";
+
+  return canvas.toDataURL("image/png");
+}
+
+
 export default function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
@@ -3819,12 +3871,23 @@ export default function App() {
     }
     return "original";
   });
+  const [logoColorMode, setLogoColorMode] = useState<"theme" | "original">(() => {
+    try {
+      const saved = localStorage.getItem("naju_logo_color_mode");
+      return saved === "original" ? "original" : "theme";
+    } catch {
+      return "theme";
+    }
+  });
+  const [logoSrc, setLogoSrc] = useState("/naju-icon-512.png");
+
+  const activePalette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     (document.documentElement.style as any).colorScheme = theme;
 
-    const palette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
+    const palette = activePalette;
     const root = document.documentElement.style;
     root.setProperty("--bg", palette.background);
     root.setProperty("--bg2", palette.surface);
@@ -3847,7 +3910,65 @@ export default function App() {
     } catch {
       // ignore
     }
-  }, [theme, colorTheme]);
+  }, [theme, colorTheme, activePalette]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let manifestObjectUrl: string | null = null;
+
+    async function applyBrandAssets() {
+      const useOriginal = logoColorMode === "original";
+      const primary = useOriginal ? "#1a5158" : activePalette.primary;
+      const accent = useOriginal ? "#59e2e4" : activePalette.accent;
+      const icon512 = useOriginal
+        ? "/naju-icon-512.png"
+        : await tintPng("/naju-icon-512.png", 512, primary, accent);
+      const icon192 = useOriginal
+        ? "/naju-icon-192.png"
+        : await tintPng("/naju-icon-512.png", 192, primary, accent);
+
+      if (cancelled) return;
+      setLogoSrc(icon512);
+
+      const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (favicon) favicon.href = icon192;
+
+      const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+      if (manifest) {
+        const dynamicManifest = {
+          name: "NAJU",
+          short_name: "NAJU",
+          description: "NAJU — apoyo clínico para psicólogos y pacientes.",
+          start_url: "/",
+          display: "standalone",
+          background_color: activePalette.background,
+          theme_color: activePalette.primary,
+          icons: [
+            { src: icon192, sizes: "192x192", type: "image/png" },
+            { src: icon512, sizes: "512x512", type: "image/png" }
+          ]
+        };
+        manifestObjectUrl = URL.createObjectURL(new Blob([JSON.stringify(dynamicManifest)], { type: "application/manifest+json" }));
+        manifest.href = manifestObjectUrl;
+      }
+
+      const themeMeta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (themeMeta) themeMeta.content = activePalette.primary;
+
+      try {
+        localStorage.setItem("naju_logo_color_mode", logoColorMode);
+      } catch {
+        // ignore
+      }
+    }
+
+    applyBrandAssets();
+
+    return () => {
+      cancelled = true;
+      if (manifestObjectUrl) URL.revokeObjectURL(manifestObjectUrl);
+    };
+  }, [activePalette, logoColorMode]);
 
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
@@ -3858,7 +3979,7 @@ export default function App() {
   }
 
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [query, setQuery] = useState("");
+  const [query] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [files, setFiles] = useState<PatientFile[]>([]);
   const [allFiles, setAllFiles] = useState<PatientFile[]>([]);
@@ -3888,7 +4009,6 @@ export default function App() {
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showThemePicker, setShowThemePicker] = useState(false);
   const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
   const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
   const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
@@ -4376,26 +4496,25 @@ export default function App() {
           <div className="sidebarTop">
             <div className="brandRow">
               <div className="brand">
-                <div className="title">
-                  <span>NAJU</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>Gestor web</span>
+                <button
+                  type="button"
+                  className="brandLogoBtn"
+                  title={logoColorMode === "original" ? "Usar color del tema" : "Volver al color original"}
+                  onClick={() => setLogoColorMode((m) => (m === "original" ? "theme" : "original"))}
+                >
+                  <img src={logoSrc} alt="Logo NAJU" className="brandLogo" />
+                </button>
+                <div>
+                  <div className="title">
+                    <span>NAJU</span>
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>Gestor web</span>
+                  </div>
+                  <div className="subtitle">Pacientes · Exámenes · Archivos (Web)</div>
                 </div>
-                <div className="subtitle">Pacientes · Exámenes · Archivos (Web)</div>
               </div>
 
-              <div className="pillRow">
-                <button className="pillBtn primary" type="button" onClick={() => setShowMenu(true)}>☰ Menú</button>
-              </div>
+              <div className="pillRow" />
             </div>
-          </div>
-
-          <div className="searchWrap">
-            <input
-              className="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por nombre, documento, EPS…"
-            />
           </div>
 
           <div className="patientList">
@@ -5167,40 +5286,101 @@ export default function App() {
         </Modal>
       ) : null}
 
-      {showThemePicker ? (
-        <Modal title="Temas de color" subtitle="Selecciona la paleta de colores de NAJU" onClose={() => setShowThemePicker(false)}>
-          <div className="modalBody" style={{ display: "grid", gap: 10 }}>
-            {Object.entries(APP_PALETTES).map(([key, palette]) => (
-              <button
-                key={key}
-                className="pillBtn"
-                style={{ justifyContent: "space-between", display: "flex", alignItems: "center" }}
-                onClick={() => {
-                  setColorTheme(key as keyof typeof APP_PALETTES);
-                  setShowThemePicker(false);
-                }}
-              >
-                <span>{palette.name}</span>
-                <span style={{ opacity: 0.8 }}>{colorTheme === key ? "✅" : ""}</span>
-              </button>
-            ))}
-          </div>
-        </Modal>
-      ) : null}
+
+      <button
+        className="floatingMenuBtn"
+        type="button"
+        onClick={() => setShowMenu(true)}
+        aria-label="Abrir menú"
+        title="Menú"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
 
       {showMenu ? (
-        <Modal title="Menú" subtitle="Acciones principales de NAJU" onClose={() => setShowMenu(false)}>
-          <div className="modalBody" style={{ display: "grid", gap: 10 }}>
-            <button className="pillBtn" onClick={() => { setPage("home"); setShowMenu(false); }}>🏠 Inicio</button>
-            <button className="pillBtn" onClick={() => { setPage("pacientes"); setShowMenu(false); }}>👥 Pacientes</button>
-            <button className="pillBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>🐞 Errores</button>
-            <button className="pillBtn" onClick={() => { toggleTheme(); setShowMenu(false); }}>{theme === "dark" ? "☀️ Tema claro" : "🌙 Tema oscuro"}</button>
-            <button className="pillBtn" onClick={() => { setShowThemePicker(true); setShowMenu(false); }}>🎨 Cambiar tema de color</button>
-            {updateAvailable ? (
-              <button className="pillBtn" onClick={() => { handleUpdateClick(); setShowMenu(false); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "⬇️ Actualizar"}</button>
-            ) : null}
-          </div>
-        </Modal>
+        <div className="menuGlassOverlay" onClick={() => setShowMenu(false)}>
+          <section className="menuGlassPanel" onClick={(e) => e.stopPropagation()} aria-label="Menú principal">
+            <header className="menuGlassHead">
+              <div>
+                <h3>Menú</h3>
+                <p>Acciones principales de NAJU</p>
+              </div>
+              <button className="menuGlassClose" type="button" onClick={() => setShowMenu(false)} aria-label="Cerrar menú">✕</button>
+            </header>
+
+            <div className="menuGlassSection">
+              <div className="menuSectionTitle">Acciones rápidas</div>
+              <button className="menuQuickBtn" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>
+                <span className="menuIcon" aria-hidden="true">👤＋</span>
+                <span>Nuevo paciente</span>
+              </button>
+            </div>
+
+            <div className="menuGlassSection">
+              <div className="menuSectionTitle">Navegación</div>
+              <div className="menuNavList">
+                {[
+                  { key: "home", label: "Inicio" },
+                  { key: "pacientes", label: "Pacientes" },
+                  { key: "errores", label: "Errores" },
+                  { key: "agenda", label: "Agenda / Citas" },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    className={`menuNavItem ${page === item.key ? "isActive" : ""}`}
+                    onClick={() => {
+                      setPage(item.key as "home" | "pacientes" | "errores" | "agenda");
+                      setShowMenu(false);
+                    }}
+                  >
+                    <svg className="menuNavSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      {item.key === "home" ? <path d="M3 11.5L12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /> : null}
+                      {item.key === "pacientes" ? <><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19c.8-3 2.8-4.5 5.5-4.5S13.7 16 14.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
+                      {item.key === "errores" ? <><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></> : null}
+                      {item.key === "agenda" ? <><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3.8v2.8M16 3.8v2.8M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
+                    </svg>
+                    <span>{item.label}</span>
+                    {page === item.key ? <span className="menuNavCheck">✓</span> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="menuGlassSection">
+              <div className="menuSectionTitle">Preferencias</div>
+              <div className="menuPrefRow">
+                <span>Tema oscuro / claro</span>
+                <button className="menuToggle" type="button" onClick={toggleTheme} aria-label="Cambiar tema">
+                  <span className={`menuToggleKnob ${theme === "dark" ? "isDark" : ""}`} />
+                </button>
+              </div>
+              <div className="menuPaletteRow" aria-label="Cambiar tema de color">
+                {Object.entries(APP_PALETTES).map(([key, palette]) => (
+                  <button
+                    key={key}
+                    className={`menuPaletteDot ${colorTheme === key ? "isActive" : ""}`}
+                    style={{ background: palette[theme].primary }}
+                    onClick={() => setColorTheme(key as keyof typeof APP_PALETTES)}
+                    aria-label={`Tema ${palette.name}`}
+                    title={palette.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="menuGlassSection">
+              <div className="menuSectionTitle">Soporte</div>
+              <button className="menuSupportBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>
+                Ir a centro de soporte
+              </button>
+              {updateAvailable ? (
+                <button className="menuSupportBtn" onClick={() => { handleUpdateClick(); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "Buscar actualización"}</button>
+              ) : null}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {/* Toast simple */}
