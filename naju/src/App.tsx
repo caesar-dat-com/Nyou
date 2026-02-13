@@ -4529,7 +4529,6 @@ export default function App() {
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
                 onAddPatient={beginCreatePatient}
-                onGoAgenda={() => setPage("agenda")}
               />
             ) : page === "errores" ? (
               <ErrorCenter
