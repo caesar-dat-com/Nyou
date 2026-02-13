@@ -268,8 +268,26 @@ textarea {
 
 .brand {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
+}
+.brandLogoBtn{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.5);
+  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.brandLogoBtn:hover{ transform: translateY(-1px); }
+.brandLogo{
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .brand .title {
@@ -1706,6 +1724,49 @@ textarea {
   height: 100%;
   background: linear-gradient(90deg, rgba(199,164,90,.9), rgba(109,123,85,.9));
 }
+.mainStateHead{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.mainStateTopSubList{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mainStateTopSubItem{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.6);
+  padding: 6px 10px;
+}
+:root[data-theme="dark"] .mainStateTopSubItem{
+  background: rgba(255,255,255,.06);
+}
+.mainStateTopSubLabel{
+  font-size: 12px;
+  font-weight: 900;
+}
+.mainStateTopSubCount{
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  background: color-mix(in srgb, var(--gold), transparent 70%);
+  color: var(--text);
+}
+
 .stateRow{
   display:flex;
   justify-content: space-between;
