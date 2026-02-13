@@ -268,8 +268,26 @@ textarea {
 
 .brand {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
+}
+.brandLogoBtn{
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.5);
+  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.brandLogoBtn:hover{ transform: translateY(-1px); }
+.brandLogo{
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: contain;
 }
 
 .brand .title {
