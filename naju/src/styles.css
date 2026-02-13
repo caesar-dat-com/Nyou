@@ -345,6 +345,103 @@ textarea {
 }
 .floatingMenuBtn:active{ transform: translateY(0); }
 
+.menuGlassOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(2, 8, 20, .35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: clamp(12px, 6vw, 72px);
+}
+.menuGlassPanel{
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(88vh, 860px);
+  overflow: auto;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: linear-gradient(160deg, rgba(18,33,56,.72), rgba(12,24,44,.58));
+  box-shadow: 0 20px 44px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22);
+  padding: 18px;
+  color: #eef5ff;
+}
+.menuGlassHead{
+  display:flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.14);
+}
+.menuGlassHead h3{ margin:0; font-size: 34px; line-height: 1; }
+.menuGlassHead p{ margin:6px 0 0; color: rgba(225,236,255,.78); }
+.menuGlassClose{
+  width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.06);
+  color: #fff; cursor: pointer; font-size: 18px;
+}
+.menuGlassSection{ padding-top: 14px; }
+.menuSectionTitle{ font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+.menuQuickBtn,
+.menuSupportBtn{
+  width: 100%;
+  display:flex; align-items:center; gap:10px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.06);
+  color: #eaf2ff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.menuIcon{ font-size: 18px; line-height: 1; }
+.menuNavList{ display:grid; gap: 6px; }
+.menuNavItem{
+  width: 100%;
+  display:flex; align-items:center; gap:10px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: transparent;
+  color: #e9f1ff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.menuNavItem.isActive{
+  background: rgba(222, 208, 157, .18);
+  border-color: rgba(237, 223, 170, .55);
+}
+.menuNavSvg{ width: 18px; height: 18px; flex: 0 0 18px; opacity: .95; }
+.menuNavCheck{ margin-left: auto; opacity: .95; }
+.menuPrefRow{
+  display:flex; align-items:center; justify-content: space-between;
+  gap: 10px;
+  color: rgba(235,244,255,.95);
+}
+.menuToggle{
+  width: 52px; height: 28px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.10);
+  position: relative; cursor: pointer;
+}
+.menuToggleKnob{
+  position: absolute; top: 3px; left: 3px;
+  width: 20px; height: 20px; border-radius: 999px;
+  background: #d7e8ff; transition: transform .2s ease;
+}
+.menuToggleKnob.isDark{ transform: translateX(24px); background: #7fe8cd; }
+.menuPaletteRow{ margin-top: 10px; display:flex; gap: 8px; flex-wrap: wrap; }
+.menuPaletteDot{
+  width: 18px; height: 18px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.42);
+  cursor: pointer;
+}
+.menuPaletteDot.isActive{ box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
+.menuSupportBtn{ margin-bottom: 8px; }
+
 .pillBtn {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, .7);
