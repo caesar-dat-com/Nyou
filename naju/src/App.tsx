@@ -5299,6 +5299,18 @@ export default function App() {
         <span />
       </button>
 
+      <button
+        className="floatingMenuBtn"
+        type="button"
+        onClick={() => setShowMenu(true)}
+        aria-label="Abrir menú"
+        title="Menú"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
       {showMenu ? (
         <div className="menuGlassOverlay" onClick={() => setShowMenu(false)}>
           <section className="menuGlassPanel" onClick={(e) => e.stopPropagation()} aria-label="Menú principal">
