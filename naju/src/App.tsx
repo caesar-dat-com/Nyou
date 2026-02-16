@@ -5384,9 +5384,6 @@ export default function App() {
 
             <div className="menuGlassSection">
               <div className="menuSectionTitle">Soporte</div>
-              <button className="menuSupportBtn" onClick={() => { setPage("errores"); setShowMenu(false); }}>
-                Ir a centro de soporte
-              </button>
               {updateAvailable ? (
                 <button className="menuSupportBtn" onClick={() => { handleUpdateClick(); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "Buscar actualización"}</button>
               ) : null}
