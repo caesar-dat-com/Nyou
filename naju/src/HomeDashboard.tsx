@@ -326,7 +326,7 @@ export default function HomeDashboard(props: {
           </div>
 
           <div className="clinicalInnerCard">
-            <div style={{ color: "var(--muted)", fontSize: 34, fontWeight: 800 }}>Seguimiento de registros</div>
+            <div style={{ color: "var(--muted)", fontSize: 24, fontWeight: 800 }}>Avance actual</div>
             <div style={{ fontSize: 48, fontWeight: 950, lineHeight: 1.1, marginTop: 6 }}>{fmtAvg(kpis.avgFiles)} / {suggestedAvgFiles}</div>
             <div style={{ color: "var(--muted)", fontSize: 24, marginTop: 4 }}>Meta recomendada por paciente</div>
 
@@ -342,14 +342,14 @@ export default function HomeDashboard(props: {
                   <div className="kpiLabel">Prom. notas</div>
                   <div className="kpiValue" style={{ marginTop: 0 }}>{fmtAvg(kpis.avgNotes)}</div>
                 </div>
-                <div className="kpiHint">Meta recomendada por paciente</div>
+                <div className="kpiHint">Promedio por paciente</div>
               </div>
               <div className="kpiBox">
                 <div className="kpiHeadInline">
                   <div className="kpiLabel">Prom. exámenes</div>
                   <div className="kpiValue" style={{ marginTop: 0 }}>{fmtAvg(kpis.avgExams)}</div>
                 </div>
-                <div className="kpiHint">Meta recomendada por paciente</div>
+                <div className="kpiHint">Promedio por paciente</div>
               </div>
             </div>
           </div>
