@@ -9,9 +9,10 @@
     "preview": "node ./node_modules/vite/bin/vite.js preview"
   },
   "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "jspdf": "^4.1.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@xenova/transformers": "^2.17.2"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
