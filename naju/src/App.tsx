@@ -1513,10 +1513,14 @@ function ConsentSignaturePad({
   label,
   value,
   onChange,
+  error,
+  rootRef,
 }: {
   label: string;
   value: string | null;
   onChange: (dataUrl: string | null) => void;
+  error?: string;
+  rootRef?: (el: HTMLDivElement | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -1601,12 +1605,13 @@ function ConsentSignaturePad({
   }
 
   return (
-    <div className="field">
+    <div className="field" ref={rootRef}>
       <div className="label">{label}</div>
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "#fff", padding: 8 }}>
+      <div className={`consentSignatureBox ${error ? "err" : ""}`}>
         <canvas
           ref={canvasRef}
           style={{ width: "100%", height: 140, display: "block", touchAction: "none", borderRadius: 8 }}
+          tabIndex={0}
           onPointerDown={(e) => {
             try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* ignore */ }
             startStroke(e.clientX, e.clientY);
@@ -1636,6 +1641,7 @@ function ConsentSignaturePad({
         <span className="miniHelp">{value ? "Firma capturada" : "Dibuja la firma con mouse o táctil"}</span>
         <button type="button" className="pillBtn" onClick={clear}>Limpiar firma</button>
       </div>
+      {error ? <div className="consentErrorText">{error}</div> : null}
     </div>
   );
 }
@@ -1645,7 +1651,10 @@ function formatConsentDate(iso: string) {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "2-digit" });
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   } catch {
     return iso;
   }
@@ -1657,12 +1666,16 @@ function ConsentInline({
   placeholder,
   widthCh,
   ariaLabel,
+  inputRef,
+  hasError,
 }: {
   value: string;
   onChange?: (v: string) => void;
   placeholder?: string;
   widthCh?: number;
   ariaLabel: string;
+  inputRef?: (el: HTMLInputElement | null) => void;
+  hasError?: boolean;
 }) {
   const style: React.CSSProperties = widthCh ? { width: `${widthCh}ch` } : {};
   if (!onChange) {
@@ -1670,7 +1683,8 @@ function ConsentInline({
   }
   return (
     <input
-      className="consentInlineInput"
+      ref={inputRef}
+      className={`consentInlineInput ${hasError ? "err" : ""}`}
       style={style}
       value={value}
       placeholder={placeholder}
@@ -1749,28 +1763,51 @@ function ConsentChoiceCard({
   );
 }
 
+type ConsentFieldKey =
+  | "psicologo_nombre"
+  | "psicologo_documento"
+  | "psicologo_tp"
+  | "psicologo_correo"
+  | "psicologo_telefono"
+  | "paciente_nombre"
+  | "paciente_documento"
+  | "decision"
+  | "firma_paciente_data_url"
+  | "firma_psicologo_data_url";
+
+type ConsentErrors = Partial<Record<ConsentFieldKey, string>>;
+
+function validateConsent(v: ConsentData): ConsentErrors {
+  const e: ConsentErrors = {};
+  if (!v.psicologo_nombre.trim()) e.psicologo_nombre = "Completa el nombre del profesional.";
+  if (!v.psicologo_documento.trim()) e.psicologo_documento = "Completa el documento del profesional.";
+  if (!v.psicologo_tp.trim()) e.psicologo_tp = "Completa la T.P del profesional.";
+  if (!v.psicologo_correo.trim()) e.psicologo_correo = "Completa el correo del profesional.";
+  if (!v.psicologo_telefono.trim()) e.psicologo_telefono = "Completa el teléfono del profesional.";
+  if (!v.paciente_nombre.trim()) e.paciente_nombre = "Completa el nombre del paciente.";
+  if (!v.paciente_documento.trim()) e.paciente_documento = "Completa el documento del paciente.";
+  if (v.decision !== "acepto") e.decision = "Debes seleccionar ACEPTO para continuar.";
+  if (!v.firma_paciente_data_url) e.firma_paciente_data_url = "La firma del paciente es obligatoria.";
+  if (!v.firma_psicologo_data_url) e.firma_psicologo_data_url = "La firma del profesional es obligatoria.";
+  return e;
+}
+
 function ConsentDocument({
   value,
   set,
-  children,
+  errors,
+  bindField,
 }: {
   value: ConsentData;
   set?: <K extends keyof ConsentData>(k: K, v: ConsentData[K]) => void;
-  children?: React.ReactNode;
+  errors?: ConsentErrors;
+  bindField?: (name: ConsentFieldKey) => (el: HTMLElement | null) => void;
 }) {
   const editable = Boolean(set);
 
   return (
     <div className="consentPaper" role="document" aria-label="Consentimiento informado">
-      <div className="consentTop">
-        <div>
-          <div className="consentTitle">CONSENTIMIENTO INFORMADO</div>
-          <div className="consentSub">Uso del aplicativo durante las citas · NAJU</div>
-        </div>
-        <div className="consentMeta">
-          <div className="pill">Fecha: <b>{formatConsentDate(value.created_at)}</b></div>
-        </div>
-      </div>
+      <div className="consentMetaDate">{formatConsentDate(value.created_at)}</div>
 
       <div className="consentLead">
         Este consentimiento informado es para el uso del aplicativo durante las citas. Los campos subrayados se completan en el momento de la atención.
@@ -1779,25 +1816,30 @@ function ConsentDocument({
       <h3 className="consentH">1. Identificación del profesional y datos de la atención</h3>
 
       <div className="consentGrid2">
-        <div className="consentField">
-          <div className="k">Psicólogo(a)</div>
-          <ConsentInline ariaLabel="Psicólogo(a)" value={value.psicologo_nombre} onChange={editable ? (x) => set!("psicologo_nombre", x) : undefined} placeholder="Nombre completo" />
+        <div className="consentField" ref={bindField?.("psicologo_nombre")}>
+          <div className={`k ${errors?.psicologo_nombre ? "errLabel" : ""}`}>Psicólogo(a) *</div>
+          <ConsentInline ariaLabel="Psicólogo(a)" value={value.psicologo_nombre} onChange={editable ? (x) => set!("psicologo_nombre", x) : undefined} placeholder="Nombre completo" hasError={Boolean(errors?.psicologo_nombre)} inputRef={(el) => bindField?.("psicologo_nombre")(el)} />
+          {errors?.psicologo_nombre ? <div className="consentErrorText">{errors.psicologo_nombre}</div> : null}
         </div>
-        <div className="consentField">
-          <div className="k">Documento</div>
-          <ConsentInline ariaLabel="Documento profesional" value={value.psicologo_documento} onChange={editable ? (x) => set!("psicologo_documento", x) : undefined} placeholder="C.C / ID" widthCh={18} />
+        <div className="consentField" ref={bindField?.("psicologo_documento")}>
+          <div className={`k ${errors?.psicologo_documento ? "errLabel" : ""}`}>Documento *</div>
+          <ConsentInline ariaLabel="Documento profesional" value={value.psicologo_documento} onChange={editable ? (x) => set!("psicologo_documento", x) : undefined} placeholder="C.C / ID" widthCh={18} hasError={Boolean(errors?.psicologo_documento)} inputRef={(el) => bindField?.("psicologo_documento")(el)} />
+          {errors?.psicologo_documento ? <div className="consentErrorText">{errors.psicologo_documento}</div> : null}
         </div>
-        <div className="consentField">
-          <div className="k">T.P</div>
-          <ConsentInline ariaLabel="Tarjeta profesional" value={value.psicologo_tp} onChange={editable ? (x) => set!("psicologo_tp", x) : undefined} placeholder="T.P" widthCh={18} />
+        <div className="consentField" ref={bindField?.("psicologo_tp")}>
+          <div className={`k ${errors?.psicologo_tp ? "errLabel" : ""}`}>T.P *</div>
+          <ConsentInline ariaLabel="Tarjeta profesional" value={value.psicologo_tp} onChange={editable ? (x) => set!("psicologo_tp", x) : undefined} placeholder="T.P" widthCh={18} hasError={Boolean(errors?.psicologo_tp)} inputRef={(el) => bindField?.("psicologo_tp")(el)} />
+          {errors?.psicologo_tp ? <div className="consentErrorText">{errors.psicologo_tp}</div> : null}
         </div>
-        <div className="consentField">
-          <div className="k">Correo</div>
-          <ConsentInline ariaLabel="Correo profesional" value={value.psicologo_correo} onChange={editable ? (x) => set!("psicologo_correo", x) : undefined} placeholder="correo@" />
+        <div className="consentField" ref={bindField?.("psicologo_correo")}>
+          <div className={`k ${errors?.psicologo_correo ? "errLabel" : ""}`}>Correo *</div>
+          <ConsentInline ariaLabel="Correo profesional" value={value.psicologo_correo} onChange={editable ? (x) => set!("psicologo_correo", x) : undefined} placeholder="correo@" hasError={Boolean(errors?.psicologo_correo)} inputRef={(el) => bindField?.("psicologo_correo")(el)} />
+          {errors?.psicologo_correo ? <div className="consentErrorText">{errors.psicologo_correo}</div> : null}
         </div>
-        <div className="consentField">
-          <div className="k">Teléfono</div>
-          <ConsentInline ariaLabel="Teléfono profesional" value={value.psicologo_telefono} onChange={editable ? (x) => set!("psicologo_telefono", x) : undefined} placeholder="+57" widthCh={16} />
+        <div className="consentField" ref={bindField?.("psicologo_telefono")}>
+          <div className={`k ${errors?.psicologo_telefono ? "errLabel" : ""}`}>Teléfono *</div>
+          <ConsentInline ariaLabel="Teléfono profesional" value={value.psicologo_telefono} onChange={editable ? (x) => set!("psicologo_telefono", x) : undefined} placeholder="+57" widthCh={16} hasError={Boolean(errors?.psicologo_telefono)} inputRef={(el) => bindField?.("psicologo_telefono")(el)} />
+          {errors?.psicologo_telefono ? <div className="consentErrorText">{errors.psicologo_telefono}</div> : null}
         </div>
         <div className="consentField" style={{ gridColumn: "1 / -1" }}>
           <div className="k">Ciudad / Dirección</div>
@@ -1837,51 +1879,20 @@ function ConsentDocument({
       </ul>
 
       <h3 className="consentH">4. Uso de la aplicación (qué hace y qué NO hace)</h3>
-      <div className="consentP">
-        La aplicación se utiliza para registrar y organizar información clínica relevante, aplicar y guardar resultados de cuestionarios/escalas, llevar seguimiento de avances, tareas y evolución, y generar reportes clínicos cuando el paciente lo solicite (ver sección 9).
-      </div>
-      <div className="consentP">
-        La aplicación es de uso exclusivo del profesional. El paciente no tendrá usuario/contraseña de acceso ni administración del sistema. La información no se comparte con terceros sin autorización expresa, salvo excepciones legales (ver sección 7).
-      </div>
+      <div className="consentP">La aplicación se utiliza para registrar y organizar información clínica relevante, aplicar y guardar resultados de cuestionarios/escalas, llevar seguimiento de avances, tareas y evolución, y generar reportes clínicos cuando el paciente lo solicite (ver sección 9).</div>
+      <div className="consentP">La aplicación es de uso exclusivo del profesional. El paciente no tendrá usuario/contraseña de acceso ni administración del sistema. La información no se comparte con terceros sin autorización expresa, salvo excepciones legales (ver sección 7).</div>
 
       <h3 className="consentH">5. Grabación obligatoria de audio (condición para usar la aplicación)</h3>
-      <div className="consentP">
-        Se grabará audio de la sesión con fines estrictamente clínicos: fidelidad del registro, apoyo al análisis profesional, y elaboración de informes clínicos cuando usted los solicite.
+      <div className="consentP">Se grabará audio de la sesión con fines estrictamente clínicos: fidelidad del registro, apoyo al análisis profesional, y elaboración de informes clínicos cuando usted los solicite.</div>
+
+      <div className={`consentCallout ${value.decision === "no_acepto" ? "err" : ""}`}>
+        Si usted NO ACEPTA la grabación de audio, el profesional continuará su atención por metodología alternativa, y no se realizará registro en la aplicación.
       </div>
 
-      <div className="consentChoiceGrid">
-        <ConsentChoiceCard
-          active={value.decision === "acepto"}
-          title="AUTORIZO"
-          subtitle="Acepto el uso de la aplicación + grabación de audio."
-          onClick={editable ? () => set!("decision", "acepto") : undefined}
-          tone="ok"
-        />
-        <ConsentChoiceCard
-          active={value.decision === "no_acepto"}
-          title="NO AUTORIZO"
-          subtitle="No autorizo audio; entiendo que no seré registrado(a) en la app."
-          onClick={editable ? () => set!("decision", "no_acepto") : undefined}
-          tone="warn"
-        />
-      </div>
+      <h3 className="consentH">6. Tratamiento de datos personales y sensibles</h3>
+      <div className="consentP">Sus datos serán tratados bajo principios de finalidad, confidencialidad y seguridad, con acceso restringido al profesional tratante. Se conservarán durante el tiempo necesario para la atención y obligaciones legales aplicables.</div>
 
-      {value.decision === "no_acepto" ? (
-        <div className="consentAlert">
-          Con <b>NO AUTORIZO</b>, el proceso continúa con metodología alternativa (sin app y sin audio). Debe manifestarlo verbalmente al terapeuta antes o durante la sesión.
-        </div>
-      ) : null}
-
-      <h3 className="consentH">6. Datos personales tratados (incluye datos sensibles)</h3>
-      <ul className="consentList">
-        <li>Datos de identificación y contacto.</li>
-        <li>Motivo de consulta, antecedentes relevantes, objetivos terapéuticos.</li>
-        <li>Notas clínicas y seguimiento.</li>
-        <li>Resultados de escalas/cuestionarios y tareas terapéuticas.</li>
-        <li>Audio de sesiones, cuando usted autorice.</li>
-      </ul>
-
-      <h3 className="consentH">7. Confidencialidad y excepciones</h3>
+      <h3 className="consentH">7. Confidencialidad y excepciones legales</h3>
       <div className="consentP">La información clínica es privada y reservada. La confidencialidad puede levantarse únicamente en eventos permitidos por la ley (riesgo grave e inminente, requerimiento legal u orden de autoridad competente), limitándose a lo estrictamente necesario.</div>
 
       <h3 className="consentH">8. Derechos del paciente sobre sus datos</h3>
@@ -1901,16 +1912,7 @@ function ConsentDocument({
       <div className="consentRow">
         <div className="k">Solicitud del informe</div>
         <div className="v">
-          <ConsentInlineSelect
-            ariaLabel="Solicitud del informe"
-            value={value.informe_solicitud}
-            onChange={editable ? (x) => set!("informe_solicitud", x) : undefined}
-            options={[
-              { value: "verbal", label: "Verbal" },
-              { value: "escrita", label: "Escrita" },
-              { value: "ambas", label: "Ambas" },
-            ]}
-          />
+          <ConsentInlineSelect ariaLabel="Solicitud del informe" value={value.informe_solicitud} onChange={editable ? (x) => set!("informe_solicitud", x) : undefined} options={[{ value: "verbal", label: "Verbal" }, { value: "escrita", label: "Escrita" }, { value: "ambas", label: "Ambas" }]} />
         </div>
       </div>
       <div className="consentGrid2">
@@ -1920,16 +1922,7 @@ function ConsentDocument({
         </div>
         <div className="consentField">
           <div className="k">Medio de entrega</div>
-          <ConsentInlineSelect
-            ariaLabel="Medio de entrega"
-            value={value.informe_medio}
-            onChange={editable ? (x) => set!("informe_medio", x) : undefined}
-            options={[
-              { value: "pdf", label: "PDF" },
-              { value: "impreso", label: "Impreso" },
-              { value: "otro", label: "Otro" },
-            ]}
-          />
+          <ConsentInlineSelect ariaLabel="Medio de entrega" value={value.informe_medio} onChange={editable ? (x) => set!("informe_medio", x) : undefined} options={[{ value: "pdf", label: "PDF" }, { value: "impreso", label: "Impreso" }, { value: "otro", label: "Otro" }]} />
         </div>
       </div>
       {value.informe_medio === "otro" ? (
@@ -1950,33 +1943,24 @@ function ConsentDocument({
       <h3 className="consentH">10. Voluntariedad</h3>
       <div className="consentP">Usted puede aceptar el uso de la aplicación y el audio, o rechazarlo y continuar con metodología alternativa informándolo verbalmente al terapeuta.</div>
 
-      <h3 className="consentH">DECLARACIÓN Y FIRMA DE ACEPTACIÓN</h3>
-
-      <div className="consentP">
-        Yo, <ConsentInline ariaLabel="Nombre del paciente" value={value.paciente_nombre} onChange={editable ? (x) => set!("paciente_nombre", x) : undefined} placeholder="Nombre completo" widthCh={28} />, identificado(a) con cédula <ConsentInline ariaLabel="Documento del paciente" value={value.paciente_documento} onChange={editable ? (x) => set!("paciente_documento", x) : undefined} placeholder="C.C" widthCh={18} />, declaro que he leído y comprendido este consentimiento informado y que pude realizar preguntas.
-      </div>
-
-      <div className="consentP"><b>Decisión (marcar):</b></div>
-      <div className="consentChoiceGrid" style={{ marginTop: 6 }}>
-        <ConsentChoiceCard
-          active={value.decision === "acepto"}
-          title="ACEPTO"
-          subtitle="Uso de la aplicación + grabación de audio."
-          onClick={editable ? () => set!("decision", "acepto") : undefined}
-        />
-        <ConsentChoiceCard
-          active={value.decision === "no_acepto"}
-          title="NO ACEPTO"
-          subtitle="No autorizo audio y no seré registrado(a) en la app."
-          onClick={editable ? () => set!("decision", "no_acepto") : undefined}
-          tone="warn"
-        />
-      </div>
-
-      {children}
-
       <div className="consentFoot">NAJU · Documento de apoyo para la atención psicológica · Custodia profesional</div>
     </div>
+  );
+}
+
+function ConsentIntroModal({ onClose, onContinue }: { onClose: () => void; onContinue: () => void }) {
+  return (
+    <Modal title="Antes de crear el paciente" onClose={onClose}>
+      <div className="modalBody">
+        <div className="consentIntroBox">
+          Para registrar un paciente en NAJU, es obligatorio aceptar el consentimiento informado. Este consentimiento aplica al uso del aplicativo durante las citas.
+        </div>
+        <div className="consentIntroActions">
+          <button className="pillBtn primary" onClick={onContinue}>Continuar</button>
+          <button type="button" className="consentLinkBtn" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -2010,57 +1994,97 @@ function ConsentModal({
     firma_paciente_data_url: null,
     firma_psicologo_data_url: null,
   });
+  const [errors, setErrors] = useState<ConsentErrors>({});
+  const [openSection, setOpenSection] = useState<"pro" | "pac">("pro");
+  const fieldRefs = useRef<Partial<Record<ConsentFieldKey, HTMLElement | null>>>({});
 
   function set<K extends keyof ConsentData>(k: K, value: ConsentData[K]) {
     setV((p) => ({ ...p, [k]: value }));
+    setErrors((prev) => ({ ...prev, [k]: undefined }));
   }
 
-  const canContinue = Boolean(
-    v.decision === "acepto" &&
-      v.paciente_nombre.trim().length > 0 &&
-      v.paciente_documento.trim().length > 0 &&
-      v.firma_paciente_data_url &&
-      v.firma_psicologo_data_url
-  );
+  function bindField(name: ConsentFieldKey) {
+    return (el: HTMLElement | null) => {
+      fieldRefs.current[name] = el;
+    };
+  }
 
-  const missing = useMemo(() => {
-    const m: string[] = [];
-    if (!v.psicologo_nombre.trim()) m.push("Psicólogo(a)");
-    if (!v.paciente_nombre.trim()) m.push("Paciente");
-    if (!v.paciente_documento.trim()) m.push("Documento paciente");
-    if (v.decision !== "acepto") m.push("Decisión debe ser ACEPTO");
-    if (!v.firma_paciente_data_url) m.push("Firma paciente");
-    if (!v.firma_psicologo_data_url) m.push("Firma profesional");
-    return m;
-  }, [v]);
+  function scrollToField(name: ConsentFieldKey) {
+    const el = fieldRefs.current[name];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if ("focus" in el && typeof (el as any).focus === "function") {
+      try { (el as any).focus(); } catch { /* ignore */ }
+    }
+  }
+
+  function submitConsent() {
+    const nextErrors = validateConsent(v);
+    setErrors(nextErrors);
+    const first = Object.keys(nextErrors)[0] as ConsentFieldKey | undefined;
+    if (first) {
+      setOpenSection(["psicologo_nombre", "psicologo_documento", "psicologo_tp", "psicologo_correo", "psicologo_telefono"].includes(first) ? "pro" : "pac");
+      setTimeout(() => scrollToField(first), 40);
+      return;
+    }
+    onAccept(v);
+  }
 
   return (
-    <Modal title="Consentimiento informado" subtitle="Completa el documento antes de crear el paciente." onClose={onClose}>
-      <div className="modalBody">
-        <div className="consentSticky">
-          <div className="miniHelp">{missing.length ? <>Faltan: <b>{missing.join(" · ")}</b></> : <>Todo listo ✅</>}</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button className="pillBtn" onClick={onClose}>Cancelar</button>
-            <button className="pillBtn primary" disabled={!canContinue} onClick={() => onAccept(v)}>Guardar y continuar</button>
+    <div className="consentFullscreenBackdrop" onMouseDown={onClose}>
+      <div className="consentFullscreen" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="consentFullscreenHead">
+          <h2 className="consentMainTitle">Consentimiento informado</h2>
+          <button className="consentCloseX" onClick={onClose} aria-label="Cerrar consentimiento">✕</button>
+        </div>
+
+        <div className="consentAccordionWrap">
+          <div className="consentAccordion">
+            <button className="consentAccordionHead" onClick={() => setOpenSection("pro")}>Datos del profesional</button>
+            {openSection === "pro" ? <ConsentDocument value={v} set={set} errors={errors} bindField={bindField} /> : null}
+          </div>
+
+          <div className="consentAccordion">
+            <button className="consentAccordionHead" onClick={() => setOpenSection("pac")}>Datos del paciente</button>
+            {openSection === "pac" ? (
+              <div className="consentPaper">
+                <h3 className="consentH">DECLARACIÓN Y FIRMA DE ACEPTACIÓN</h3>
+                <div className="consentP" ref={bindField("paciente_nombre")}>
+                  Yo, <ConsentInline ariaLabel="Nombre del paciente" value={v.paciente_nombre} onChange={(x) => set("paciente_nombre", x)} placeholder="Nombre completo" widthCh={28} hasError={Boolean(errors.paciente_nombre)} inputRef={(el) => bindField("paciente_nombre")(el)} />, identificado(a) con cédula <ConsentInline ariaLabel="Documento del paciente" value={v.paciente_documento} onChange={(x) => set("paciente_documento", x)} placeholder="C.C" widthCh={18} hasError={Boolean(errors.paciente_documento)} inputRef={(el) => bindField("paciente_documento")(el)} />, declaro que he leído y comprendido este consentimiento informado y que pude realizar preguntas.
+                </div>
+                {errors.paciente_nombre ? <div className="consentErrorText">{errors.paciente_nombre}</div> : null}
+                {errors.paciente_documento ? <div className="consentErrorText">{errors.paciente_documento}</div> : null}
+
+                <div className="consentP"><b>Decisión (marcar):</b></div>
+                <div className="consentChoiceGrid" style={{ marginTop: 6 }} ref={bindField("decision")}>
+                  <ConsentChoiceCard active={v.decision === "acepto"} title="ACEPTO" subtitle="Uso de la aplicación + grabación de audio." onClick={() => set("decision", "acepto")} />
+                  <ConsentChoiceCard active={v.decision === "no_acepto"} title="NO ACEPTO" subtitle="No autorizo audio y no seré registrado(a) en la app." onClick={() => set("decision", "no_acepto")} tone="warn" />
+                </div>
+                {errors.decision ? <div className="consentErrorText">{errors.decision}</div> : null}
+
+                <div className="consentSignGrid">
+                  <div>
+                    <div className={`consentSignLabel ${errors.firma_paciente_data_url ? "errLabel" : ""}`}>Firma del paciente *</div>
+                    <ConsentSignaturePad label="" value={v.firma_paciente_data_url} onChange={(x) => set("firma_paciente_data_url", x)} error={errors.firma_paciente_data_url} rootRef={bindField("firma_paciente_data_url")} />
+                  </div>
+                  <div>
+                    <div className={`consentSignLabel ${errors.firma_psicologo_data_url ? "errLabel" : ""}`}>Firma del psicólogo(a) *</div>
+                    <ConsentSignaturePad label="" value={v.firma_psicologo_data_url} onChange={(x) => set("firma_psicologo_data_url", x)} error={errors.firma_psicologo_data_url} rootRef={bindField("firma_psicologo_data_url")} />
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <ConsentDocument value={v} set={set}>
-          <div className="consentSignGrid">
-            <div>
-              <div className="consentSignLabel">Firma del paciente</div>
-              <ConsentSignaturePad label="" value={v.firma_paciente_data_url} onChange={(x) => set("firma_paciente_data_url", x)} />
-            </div>
-            <div>
-              <div className="consentSignLabel">Firma del psicólogo(a)</div>
-              <ConsentSignaturePad label="" value={v.firma_psicologo_data_url} onChange={(x) => set("firma_psicologo_data_url", x)} />
-            </div>
-          </div>
-        </ConsentDocument>
+        <div className="consentFooterCta">
+          <button className="pillBtn primary" onClick={submitConsent}>Guardar y continuar</button>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 }
+
 function PatientForm({
   initial,
   onSave,
@@ -3975,7 +3999,7 @@ export default function App() {
   }
 
   function beginCreatePatient() {
-    setShowConsent(true);
+    setShowConsentIntro(true);
   }
 
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -3997,6 +4021,7 @@ export default function App() {
   const [toast, setToast] = useState<Toast>(null);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showConsentIntro, setShowConsentIntro] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
   const [pendingConsent, setPendingConsent] = useState<ConsentData | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -5174,6 +5199,16 @@ export default function App() {
         </main>
       </div>
 {/* Modals */}
+      {showConsentIntro ? (
+        <ConsentIntroModal
+          onClose={() => setShowConsentIntro(false)}
+          onContinue={() => {
+            setShowConsentIntro(false);
+            setShowConsent(true);
+          }}
+        />
+      ) : null}
+
       {showConsent ? (
         <ConsentModal
           onClose={() => setShowConsent(false)}
@@ -5262,26 +5297,25 @@ export default function App() {
       {consentPreview ? (
         <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
           <div className="modalBody">
-            <ConsentDocument value={consentPreview}>
-              <div className="consentSignGrid">
-                <div>
-                  <div className="consentSignLabel">Firma del paciente</div>
-                  {consentPreview.firma_paciente_data_url ? (
-                    <img src={consentPreview.firma_paciente_data_url} alt="Firma paciente" className="consentSignImg" />
-                  ) : (
-                    <div className="consentSignEmpty">Sin firma</div>
-                  )}
-                </div>
-                <div>
-                  <div className="consentSignLabel">Firma del psicólogo(a)</div>
-                  {consentPreview.firma_psicologo_data_url ? (
-                    <img src={consentPreview.firma_psicologo_data_url} alt="Firma profesional" className="consentSignImg" />
-                  ) : (
-                    <div className="consentSignEmpty">Sin firma</div>
-                  )}
-                </div>
+            <ConsentDocument value={consentPreview} />
+            <div className="consentSignGrid">
+              <div>
+                <div className="consentSignLabel">Firma del paciente</div>
+                {consentPreview.firma_paciente_data_url ? (
+                  <img src={consentPreview.firma_paciente_data_url} alt="Firma paciente" className="consentSignImg" />
+                ) : (
+                  <div className="consentSignEmpty">Sin firma</div>
+                )}
               </div>
-            </ConsentDocument>
+              <div>
+                <div className="consentSignLabel">Firma del psicólogo(a)</div>
+                {consentPreview.firma_psicologo_data_url ? (
+                  <img src={consentPreview.firma_psicologo_data_url} alt="Firma profesional" className="consentSignImg" />
+                ) : (
+                  <div className="consentSignEmpty">Sin firma</div>
+                )}
+              </div>
+            </div>
           </div>
         </Modal>
       ) : null}
