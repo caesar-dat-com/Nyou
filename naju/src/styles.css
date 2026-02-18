@@ -1989,7 +1989,7 @@ textarea {
   font-weight: 900; cursor: pointer;
 }
 
-.consentFooterCta { display: flex; justify-content: flex-end; padding-top: 12px; }
+.consentFooterCta { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; flex-wrap: wrap; }
 
 .consentMetaDate {
   font-size: 13px;

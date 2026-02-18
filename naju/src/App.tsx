@@ -1660,6 +1660,54 @@ function formatConsentDate(iso: string) {
   }
 }
 
+async function downloadConsentPdf(consent: ConsentData) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 44;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const maxWidth = pageWidth - margin * 2;
+  let y = 56;
+
+  const addLine = (label: string, value: string) => {
+    const text = `${label}: ${value || "—"}`;
+    const lines = doc.splitTextToSize(text, maxWidth);
+    if (y + lines.length * 16 > doc.internal.pageSize.getHeight() - 50) {
+      doc.addPage();
+      y = 56;
+    }
+    doc.text(lines, margin, y);
+    y += lines.length * 16;
+  };
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("Consentimiento informado", margin, y);
+  y += 22;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+
+  addLine("Fecha", formatConsentDate(consent.created_at));
+  y += 8;
+  addLine("Psicólogo(a)", consent.psicologo_nombre);
+  addLine("Documento profesional", consent.psicologo_documento);
+  addLine("T.P", consent.psicologo_tp);
+  addLine("Correo profesional", consent.psicologo_correo);
+  addLine("Teléfono profesional", consent.psicologo_telefono);
+  addLine("Ciudad / Dirección", consent.psicologo_ciudad_direccion);
+  addLine("Modalidad", consent.modalidad_atencion === "virtual" ? "Virtual" : "Presencial");
+  addLine("Lugar / plataforma", consent.lugar_plataforma);
+  y += 8;
+  addLine("Paciente", consent.paciente_nombre);
+  addLine("Documento paciente", consent.paciente_documento);
+  addLine("Decisión", consent.decision === "acepto" ? "ACEPTO" : "NO ACEPTO");
+  addLine("Firma paciente", consent.firma_paciente_data_url ? "Capturada" : "No capturada");
+  addLine("Firma profesional", consent.firma_psicologo_data_url ? "Capturada" : "No capturada");
+
+  const safeName = (consent.paciente_nombre || "paciente").trim().toLowerCase().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
+  const filename = `consentimiento_${safeName || "paciente"}_${formatConsentDate(consent.created_at).replace(/\//g, "-")}.pdf`;
+  doc.save(filename);
+}
+
 function ConsentInline({
   value,
   onChange,
@@ -2078,6 +2126,7 @@ function ConsentModal({
         </div>
 
         <div className="consentFooterCta">
+          <button className="pillBtn" type="button" onClick={() => void downloadConsentPdf(v)}>Generar PDF</button>
           <button className="pillBtn primary" onClick={submitConsent}>Guardar y continuar</button>
         </div>
       </div>
@@ -5297,6 +5346,9 @@ export default function App() {
       {consentPreview ? (
         <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
           <div className="modalBody">
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button className="pillBtn" type="button" onClick={() => void downloadConsentPdf(consentPreview)}>Generar PDF</button>
+            </div>
             <ConsentDocument value={consentPreview} />
             <div className="consentSignGrid">
               <div>
