@@ -1825,6 +1825,28 @@ textarea {
     inset -2px -2px 5px color-mix(in oklab, #000 50%, transparent),
     4px 4px 8px color-mix(in oklab, #000 38%, transparent);
 }
+
+.clinicalInnerCard{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255,255,255,.03);
+}
+
+.kpiHeadInline{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpiHint{
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .kpiBox{
   border: 1px solid var(--border);
   background: rgba(255,255,255,.55);
