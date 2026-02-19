@@ -1486,7 +1486,7 @@ function Modal({
   children,
   onClose,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string;
   children: React.ReactNode;
   onClose: () => void;
@@ -1495,10 +1495,12 @@ function Modal({
     <div className="backdrop" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modalHeader">
-          <div>
-            <h3>{title}</h3>
-            {subtitle ? <p>{subtitle}</p> : null}
-          </div>
+          {(title || subtitle) ? (
+            <div>
+              {title ? <h3>{title}</h3> : null}
+              {subtitle ? <p>{subtitle}</p> : null}
+            </div>
+          ) : <div />}
           <button className="pillBtn" onClick={onClose} aria-label="Cerrar">
             Cerrar
           </button>
@@ -2100,13 +2102,45 @@ function PatientForm({
 }) {
   const [v, setV] = useState<PatientInput>(initial);
   const [busy, setBusy] = useState(false);
+  const [isAntecedentsEditing, setIsAntecedentsEditing] = useState(() => !(initial.personal_history ?? "").trim());
+
+  const antecedentsText = v.personal_history ?? "";
+  const antecedentsWordCount = antecedentsText.trim() ? antecedentsText.trim().split(/\s+/).length : 0;
+  const antecedentsLimitReached = antecedentsWordCount > 800;
+  const antecedentsTagOptions = ["Dx previo", "Medicación", "Duelo"];
+  const antecedentsTags = Array.isArray(v.antecedents_tags) ? v.antecedents_tags : [];
 
   function set<K extends keyof PatientInput>(k: K, value: PatientInput[K]) {
     setV((p) => ({ ...p, [k]: value }));
   }
 
+  function todayIsoDate() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function formatReviewDate(value?: string | null) {
+    if (!value) return "—";
+    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return "—";
+    return `${m[3]}/${m[2]}/${m[1]}`;
+  }
+
+  function toggleAntecedentTag(tag: string) {
+    const has = antecedentsTags.includes(tag);
+    const next = has ? antecedentsTags.filter((x) => x !== tag) : [...antecedentsTags, tag];
+    set("antecedents_tags", next);
+  }
+
   async function submit() {
-    if (!v.name?.trim()) return;
+    if (!v.name?.trim() || antecedentsLimitReached) return;
+    const before = (initial.personal_history ?? "").trim();
+    const after = antecedentsText.trim();
+    const antecedentsChanged = before !== after;
+    const reviewedAt = antecedentsChanged ? todayIsoDate() : (initial.antecedents_reviewed_at ?? null);
     setBusy(true);
     try {
       await onSave({
@@ -2120,13 +2154,15 @@ function PatientForm({
         email: v.email ?? null,
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
-        notes: v.notes ?? null,
-        personal_history: v.personal_history ?? null,
-        personal_social_situation: v.personal_social_situation ?? null,
-        medical_psych_history: v.medical_psych_history ?? null,
-        family_history: v.family_history ?? null,
-        work_academic_situation: v.work_academic_situation ?? null,
-        judicial_situation: v.judicial_situation ?? null,
+        notes: null,
+        personal_history: after || null,
+        antecedents_tags: antecedentsTags,
+        antecedents_reviewed_at: reviewedAt,
+        personal_social_situation: null,
+        medical_psych_history: null,
+        family_history: null,
+        work_academic_situation: null,
+        judicial_situation: null,
       });
     } finally {
       setBusy(false);
@@ -2247,74 +2283,48 @@ function PatientForm({
           </div>
         </div>
 
-        <div className="field">
-          <div className="label">Observaciones / notas</div>
+        <div className="antecedentsCard">
+          <div className="antecedentsHead">Antecedentes</div>
           <textarea
-            className="textarea"
-            value={v.notes ?? ""}
-            onChange={(e) => set("notes", e.target.value)}
-            placeholder="Notas relevantes del paciente…"
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Antecedentes personales (historia vital)</div>
-          <textarea
-            className="textarea"
-            value={v.personal_history ?? ""}
+            className="textarea antecedentsTextarea"
+            value={antecedentsText}
             onChange={(e) => set("personal_history", e.target.value)}
-            placeholder="Resumen cronológico de la historia vital de la persona..."
+            placeholder="Narrativa clínica libre de antecedentes..."
+            readOnly={!isAntecedentsEditing}
           />
-        </div>
+          <div className="antecedentsWordCounter">
+            {antecedentsWordCount} / 800 palabras
+          </div>
+          {antecedentsLimitReached ? (
+            <div className="consentErrorText" style={{ marginTop: 6 }}>Límite máximo: 800 palabras.</div>
+          ) : null}
 
-        <div className="field">
-          <div className="label">Situación Personal / Familiar / Social / Ocio</div>
-          <textarea
-            className="textarea"
-            value={v.personal_social_situation ?? ""}
-            onChange={(e) => set("personal_social_situation", e.target.value)}
-            placeholder="Estado civil, hijos, personas a cargo, red social, aficiones, asociaciones..."
-          />
-        </div>
+          <div className="antecedentsTags">
+            {antecedentsTagOptions.map((tag) => {
+              const active = antecedentsTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`softTag ${active ? "isActive" : ""}`}
+                  onClick={() => toggleAntecedentTag(tag)}
+                >
+                  [{tag}]
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="field">
-          <div className="label">Antecedentes personales médicos y psicológicos</div>
-          <textarea
-            className="textarea"
-            value={v.medical_psych_history ?? ""}
-            onChange={(e) => set("medical_psych_history", e.target.value)}
-            placeholder="Enfermedades, accidentes, tratamientos farmacológicos previos..."
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Antecedentes familiares</div>
-          <textarea
-            className="textarea"
-            value={v.family_history ?? ""}
-            onChange={(e) => set("family_history", e.target.value)}
-            placeholder="Enfermedades físicas/mentales, hábitos tóxicos familiares..."
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Situación Laboral / Académica</div>
-          <textarea
-            className="textarea"
-            value={v.work_academic_situation ?? ""}
-            onChange={(e) => set("work_academic_situation", e.target.value)}
-            placeholder="Puesto actual, estudios, tiempo sin trabajar, actitud ante el trabajo..."
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Situación Judicial</div>
-          <textarea
-            className="textarea"
-            value={v.judicial_situation ?? ""}
-            onChange={(e) => set("judicial_situation", e.target.value)}
-            placeholder="Detenciones, juicios pendientes, denuncias actuales..."
-          />
+          <div className="antecedentsFoot">
+            <div>Última revisión: {formatReviewDate(v.antecedents_reviewed_at)}</div>
+            <button
+              type="button"
+              className="pillBtn"
+              onClick={() => setIsAntecedentsEditing((x) => !x)}
+            >
+              {isAntecedentsEditing ? "Bloquear edición" : "Editar antecedentes"}
+            </button>
+          </div>
         </div>
       </div>
       <div className="modalFooter">
@@ -2322,7 +2332,7 @@ function PatientForm({
           Cancelar
         </button>
         {extraRight}
-        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim()}>
+        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim() || antecedentsLimitReached}>
           {busy ? "Guardando..." : saveLabel}
         </button>
       </div>
@@ -5221,9 +5231,9 @@ export default function App() {
       ) : null}
 
       {showCreate ? (
-        <Modal title="Nuevo paciente" subtitle="Crea el perfil base del paciente." onClose={() => { setShowCreate(false); setPendingConsent(null); }}>
+        <Modal onClose={() => { setShowCreate(false); setPendingConsent(null); }}>
           <PatientForm
-            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
+            initial={{ name: "", doc_type: null, doc_number: null, insurer: null, birth_date: null, sex: null, phone: null, email: null, address: null, emergency_contact: null, notes: null, personal_history: null, antecedents_tags: null, antecedents_reviewed_at: null, personal_social_situation: null, medical_psych_history: null, family_history: null, work_academic_situation: null, judicial_situation: null }}
             onSave={onCreatePatient}
             onCancel={() => { setShowCreate(false); setPendingConsent(null); }}
             saveLabel="Crear paciente"
@@ -5247,6 +5257,8 @@ export default function App() {
               emergency_contact: selected.emergency_contact,
               notes: selected.notes,
               personal_history: selected.personal_history,
+              antecedents_tags: selected.antecedents_tags,
+              antecedents_reviewed_at: selected.antecedents_reviewed_at,
               personal_social_situation: selected.personal_social_situation,
               medical_psych_history: selected.medical_psych_history,
               family_history: selected.family_history,

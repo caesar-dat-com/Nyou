@@ -12,6 +12,8 @@ export type Patient = {
   emergency_contact: string | null;
   notes: string | null;
   personal_history: string | null;
+  antecedents_tags: string[] | null;
+  antecedents_reviewed_at: string | null;
   personal_social_situation: string | null;
   medical_psych_history: string | null;
   family_history: string | null;
@@ -37,6 +39,8 @@ export type PatientInput = {
   emergency_contact?: string | null;
   notes?: string | null;
   personal_history?: string | null;
+  antecedents_tags?: string[] | null;
+  antecedents_reviewed_at?: string | null;
   personal_social_situation?: string | null;
   medical_psych_history?: string | null;
   family_history?: string | null;
@@ -238,6 +242,8 @@ export async function createPatient(input: PatientInput): Promise<Patient> {
     emergency_contact: input.emergency_contact ?? null,
     notes: input.notes ?? null,
     personal_history: input.personal_history ?? null,
+    antecedents_tags: Array.isArray(input.antecedents_tags) ? input.antecedents_tags : null,
+    antecedents_reviewed_at: input.antecedents_reviewed_at ?? null,
     personal_social_situation: input.personal_social_situation ?? null,
     medical_psych_history: input.medical_psych_history ?? null,
     family_history: input.family_history ?? null,
@@ -273,6 +279,8 @@ export async function updatePatient(patientId: string, input: PatientInput): Pro
     emergency_contact: input.emergency_contact ?? null,
     notes: input.notes ?? null,
     personal_history: input.personal_history ?? null,
+    antecedents_tags: Array.isArray(input.antecedents_tags) ? input.antecedents_tags : null,
+    antecedents_reviewed_at: input.antecedents_reviewed_at ?? null,
     personal_social_situation: input.personal_social_situation ?? null,
     medical_psych_history: input.medical_psych_history ?? null,
     family_history: input.family_history ?? null,

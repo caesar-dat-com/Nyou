@@ -2372,3 +2372,60 @@ textarea {
   background: rgba(15, 23, 42, .52);
   border-color: rgba(230,231,235,.12);
 }
+
+.antecedentsCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--card) 92%, white 8%);
+  display: grid;
+  gap: 8px;
+}
+
+.antecedentsHead{
+  font-weight: 900;
+  letter-spacing: .01em;
+}
+
+.antecedentsTextarea{
+  min-height: 170px;
+  resize: vertical;
+}
+
+.antecedentsWordCounter{
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.antecedentsTags{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.softTag{
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.softTag.isActive{
+  color: var(--text);
+  background: color-mix(in oklab, var(--gold) 14%, transparent);
+}
+
+.antecedentsFoot{
+  border-top: 1px dashed var(--line);
+  margin-top: 4px;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+}
