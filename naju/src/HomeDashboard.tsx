@@ -311,6 +311,45 @@ export default function HomeDashboard(props: {
         </div>
 
         <div className="card" style={{ order: 1 }}>
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen principal</div>
+
+          <div style={{ borderTop: "1px solid var(--line)", margin: "2px 0 12px" }} />
+
+          <div className="mainStateHead">
+            <div style={{ fontWeight: 900 }}>Estado principal</div>
+            {kpis.topPrincipalSubStates.length ? (
+              <div className="mainStateTopSubList" aria-label="Subestados principales">
+                {kpis.topPrincipalSubStates.map(([label, count]) => (
+                  <div key={label} className="mainStateTopSubItem">
+                    <span className="mainStateTopSubLabel">{label}</span>
+                    <span className="mainStateTopSubCount">{count}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="kpiBig" style={{ fontSize: 34, lineHeight: 1.1 }}>{kpis.principalState}</div>
+          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5 }}>
+            Etiqueta dominante más frecuente (según exámenes). A su lado verás los 3 subestados más frecuentes de este estado.
+          </div>
+
+          <div style={{ height: 10 }} />
+
+          {kpis.topStates.length ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              {kpis.topStates.map(([label, count]) => (
+                <div key={label} className="stateRow">
+                  <div className="stateName">{label}</div>
+                  <div className="stateCount">{count}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "var(--muted)" }}>Aún no hay suficiente información de exámenes.</div>
+          )}
+
+          <div style={{ borderTop: "1px solid var(--line)", margin: "14px 0 12px" }} />
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
             <div style={{ fontWeight: 900, fontSize: 36 }}>Resumen clínico</div>
             <div style={{ textAlign: "right" }}>
