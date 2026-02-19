@@ -351,49 +351,91 @@ export default function HomeDashboard(props: {
           <div style={{ borderTop: "1px solid var(--line)", margin: "14px 0 12px" }} />
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-            <div style={{ fontWeight: 900 }}>Seguimiento</div>
+            <div style={{ fontWeight: 900, fontSize: 36 }}>Resumen clínico</div>
             <div style={{ textAlign: "right" }}>
               <div className="kpiBig" style={{ lineHeight: 1 }}>{kpis.nPatients}</div>
-              <div style={{ color: "var(--muted)", fontSize: 12 }}>Total registrados en NAJU.</div>
+              <div style={{ color: "var(--muted)", fontSize: 12 }}>Total pacientes</div>
             </div>
           </div>
 
-          <div className="kv">
-            <div className="k">Promedio archivos / paciente</div>
-            <div className="v">{fmtAvg(kpis.avgFiles)}</div>
+          <div style={{ borderTop: "1px solid var(--line)", margin: "2px 0 16px" }} />
+
+          <div style={{ fontSize: 36, fontWeight: 700, marginBottom: 10 }}>
+            Seguimiento de <b>registros</b>
           </div>
-          <div className="progress" aria-label="Progreso de documentación">
-            <div className="progressFill" style={{ width: `${progressPct}%` }} />
+
+          <div className="clinicalInnerCard">
+            <div style={{ color: "var(--muted)", fontSize: 24, fontWeight: 800 }}>Avance actual</div>
+            <div style={{ fontSize: 48, fontWeight: 950, lineHeight: 1.1, marginTop: 6 }}>{fmtAvg(kpis.avgFiles)} / {suggestedAvgFiles}</div>
+            <div style={{ color: "var(--muted)", fontSize: 24, marginTop: 4 }}>Meta recomendada por paciente</div>
+
+            <div className="progress" aria-label="Progreso de documentación" style={{ marginTop: 12 }}>
+              <div className="progressFill" style={{ width: `${progressPct}%` }} />
+            </div>
+
+            <div style={{ height: 12 }} />
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="kpiBox">
+                <div className="kpiHeadInline">
+                  <div className="kpiLabel">Prom. notas</div>
+                  <div className="kpiValue" style={{ marginTop: 0 }}>{fmtAvg(kpis.avgNotes)}</div>
+                </div>
+                <div className="kpiHint">Promedio por paciente</div>
+              </div>
+              <div className="kpiBox">
+                <div className="kpiHeadInline">
+                  <div className="kpiLabel">Prom. exámenes</div>
+                  <div className="kpiValue" style={{ marginTop: 0 }}>{fmtAvg(kpis.avgExams)}</div>
+                </div>
+                <div className="kpiHint">Promedio por paciente</div>
+              </div>
+            </div>
           </div>
-          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5, marginTop: 8 }}>
-            Guía sugerida: {suggestedAvgFiles} archivos por paciente (notas, exámenes, adjuntos).
+
+          <div style={{ height: 16 }} />
+
+          <div style={{ fontSize: 36, marginBottom: 4 }}>Estado <b>emocional</b> dominante</div>
+          <div className="kpiBig" style={{ fontSize: 56, lineHeight: 1.05 }}>{kpis.principalState}</div>
+          <div style={{ color: "var(--muted)", fontSize: 24, lineHeight: 1.4 }}>
+            Etiqueta más frecuente según exámenes.
           </div>
+
+          {kpis.topPrincipalSubStates.length ? (
+            <div className="mainStateTopSubList" aria-label="Subestados principales" style={{ marginTop: 10 }}>
+              {kpis.topPrincipalSubStates.map(([label, count]) => (
+                <div key={label} className="mainStateTopSubItem">
+                  <span className="mainStateTopSubLabel">{label}</span>
+                  <span className="mainStateTopSubCount">{count}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div style={{ height: 10 }} />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div className="kpiBox">
-              <div className="kpiLabel">Prom. notas</div>
-              <div className="kpiValue">{fmtAvg(kpis.avgNotes)}</div>
+          {kpis.topStates.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gap: 8 }}>
+                {kpis.topStates.filter((_, idx) => idx % 2 === 0).map(([label, count]) => (
+                  <div key={label} className="stateRow">
+                    <div className="stateName">{label}</div>
+                    <div className="stateCount">{count}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {kpis.topStates.filter((_, idx) => idx % 2 === 1).map(([label, count]) => (
+                  <div key={label} className="stateRow">
+                    <div className="stateName">{label}</div>
+                    <div className="stateCount">{count}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="kpiBox">
-              <div className="kpiLabel">Prom. exámenes</div>
-              <div className="kpiValue">{fmtAvg(kpis.avgExams)}</div>
-            </div>
-          </div>
-
-          <div style={{ height: 10 }} />
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div className="kpiBox">
-              <div className="kpiLabel">Notas presenciales / virtuales</div>
-              <div className="kpiValue">{kpis.notesPresencial} / {kpis.notesVirtual}</div>
-            </div>
-            <div className="kpiBox">
-              <div className="kpiLabel">Exámenes presenciales / virtuales</div>
-              <div className="kpiValue">{kpis.examsPresencial} / {kpis.examsVirtual}</div>
-            </div>
-          </div>
+          ) : (
+            <div style={{ color: "var(--muted)" }}>Aún no hay suficiente información de exámenes.</div>
+          )}
         </div>
       </div>
 
