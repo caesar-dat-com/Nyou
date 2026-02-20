@@ -4199,16 +4199,28 @@ export default function App() {
   );
   const radarSum = useMemo(() => radarValues.reduce((acc, val) => acc + val, 0), [radarValues]);
   const dominantMacro = useMemo(() => {
-    let winner: { label: string; value: number } | null = null;
-    for (let idx = 0; idx < radarValues.length; idx++) {
-      const value = radarValues[idx];
-      if (!winner || value > winner.value) {
-        winner = { label: AXES[idx].label, value };
-      }
+    if (!radarValues.length) return null;
+    const maxValue = Math.max(...radarValues);
+    if (maxValue <= 0) return null;
+
+    const winners = radarValues
+      .map((value, idx) => ({ value, idx }))
+      .filter((item) => Math.abs(item.value - maxValue) < 0.001);
+
+    if (winners.length !== 1) {
+      return {
+        label: "Perfil mixto",
+        value: maxValue,
+        pct: radarSum ? (maxValue / radarSum) * 100 : 0,
+      };
     }
-    if (!winner || winner.value === 0) return null;
-    const pct = radarSum ? (winner.value / radarSum) * 100 : 0;
-    return { ...winner, pct };
+
+    const winner = winners[0];
+    return {
+      label: AXES[winner.idx].label,
+      value: winner.value,
+      pct: radarSum ? (winner.value / radarSum) * 100 : 0,
+    };
   }, [radarValues, radarSum]);
 
   const emotionCounts = useMemo(() => buildEmotionCounts(trendFiles), [trendFiles]);
@@ -4801,12 +4813,7 @@ export default function App() {
 
                 <div className="card profileCard">
                   <div className="profileHeader">
-                    <div>
-                      <div style={{ fontWeight: 800 }}>Perfil del paciente</div>
-                      <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                        Tendencias dinámicas con radar y árbol explicativo del filtro actual.
-                      </div>
-                    </div>
+                    <div style={{ fontWeight: 800 }}>Resumen de tendencias Macro</div>
                     <span className="profileBadge">
                       {dominantMacro ? `Dominante: ${dominantMacro.label}` : "Perfil estable"}
                     </span>
@@ -4814,7 +4821,7 @@ export default function App() {
                   <div className="profileBody">
                     <div className="panel" style={{ gridColumn: "1 / -1" }}>
                       <div className="hd">
-                        <h3>Resumen de tendencias (macro) + explicación (micro)</h3>
+                        <h3>Resumen de tendencias Macro</h3>
                         <span className="pill" id="macroHint">
                           {radarHint}
                         </span>
