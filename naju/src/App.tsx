@@ -4758,6 +4758,10 @@ export default function App() {
                       <div className="v">{valOrDash(selected.birth_date)}</div>
                     </div>
                     <div className="kv">
+                      <div className="k">Sexo</div>
+                      <div className="v">{valOrDash(selected.sex)}</div>
+                    </div>
+                    <div className="kv">
                       <div className="k">Teléfono</div>
                       <div className="v">{valOrDash(selected.phone)}</div>
                     </div>
@@ -4769,55 +4773,12 @@ export default function App() {
                       <div className="k">Dirección</div>
                       <div className="v">{valOrDash(selected.address)}</div>
                     </div>
-
                     <div className="kv">
-                      <div className="k">Antecedentes personales</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_history)}</div>
+                      <div className="k">Contacto de emergencia</div>
+                      <div className="v">{valOrDash(selected.emergency_contact)}</div>
                     </div>
-                    <div className="kv">
-                      <div className="k">Situación personal/familiar/social/ocio</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.personal_social_situation)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Antecedentes médicos y psicológicos</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.medical_psych_history)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Antecedentes familiares</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.family_history)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Situación laboral/académica</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.work_academic_situation)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Situación judicial</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Situación judicial</div>
-                      <div className="v" style={{ whiteSpace: "pre-wrap" }}>{valOrDash(selected.judicial_situation)}</div>
-                    </div>
-
-                    {selected.notes?.trim() ? (
-                      <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                        {selected.notes}
-                      </div>
-                    ) : null}
-
-                    {selected.notes?.trim() ? (
-                      <div style={{ marginTop: 16, color: "var(--muted)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-                        {selected.notes}
-                      </div>
-                    ) : null}
 
                     <div className="actionRow" style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
-                        + Nuevo examen mental
-                      </button>
-                      <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
-                        + Nueva nota
-                      </button>
                       <button
                         className="pillBtn"
                         onClick={() => {
