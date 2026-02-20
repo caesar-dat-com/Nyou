@@ -1129,7 +1129,7 @@ function TrendCanvas({
     // Objetivo: que los nodos/labels no se salgan del canvas, incluso en espacios pequeños.
     const mTop = 56 * dpr;
     const mBottom = 40 * dpr;
-    const mSide = 22 * dpr;
+    const mSide = 30 * dpr;
     const rootR = 18 * dpr;
     const root = { x: width * 0.5, y: mTop + rootR };
     const availH = Math.max(1, height - mTop - mBottom);
@@ -1285,9 +1285,6 @@ function TrendCanvas({
       ctx.textAlign = "left";
       ctx.font = `800 ${Math.round(13 * dpr)}px ui-sans-serif, system-ui`;
       ctx.fillText("Árbol de tendencias", 16 * dpr, 24 * dpr);
-      ctx.fillStyle = muted;
-      ctx.font = `${Math.round(11 * dpr)}px ui-sans-serif, system-ui`;
-      ctx.fillText("Raíz = global • Ramas = macro • Hojas = micro-evidencias", 16 * dpr, 42 * dpr);
       ctx.restore();
 
       hits.length = 0;
@@ -1324,7 +1321,6 @@ function TrendCanvas({
         ringPct: clamp(avg / Math.max(1, max), 0, 1) * progress,
         centerText: `${avg.toFixed(1)}/${max}`,
         label: "Perfil global",
-        sub: "Resumen del filtro actual",
         labelMode: "above",
       });
 
@@ -1367,24 +1363,27 @@ function TrendCanvas({
           const slotLeft = idx === 0 ? mSide : (xs[idx - 1] + x) / 2;
           const slotRight = idx === labels.length - 1 ? width - mSide : (x + xs[idx + 1]) / 2;
           const slotW = Math.max(1, slotRight - slotLeft);
-          const baseOff = clamp(slotW * 0.22, 26 * dpr, 56 * dpr);
+          const baseOff = clamp(slotW * 0.30, 34 * dpr, 86 * dpr);
 
           const dir = j === 0 ? -1 : 1;
           let lx = x + dir * baseOff;
           // Mantener dentro del slot y respetar radios
-          lx = clamp(lx, slotLeft + leafR + 2 * dpr, slotRight - leafR - 2 * dpr);
+          lx = clamp(lx, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           // Asegurar separación mínima con el macro
-          const minSep = macroR + leafR + 10 * dpr;
+          const minSep = macroR + leafR + 14 * dpr;
           if (Math.abs(lx - x) < minSep) {
-            lx = clamp(x + dir * minSep, slotLeft + leafR + 2 * dpr, slotRight - leafR - 2 * dpr);
+            lx = clamp(x + dir * minSep, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           }
 
-          const ly = row2;
+          const ly = row2 + (j === 0 ? -18 * dpr : 18 * dpr);
+          const labelMode = j === 0 ? "above" : "below";
+          const rawLabel = String(value ?? "");
+          const leafLabel = rawLabel.length > 18 ? `${rawLabel.slice(0, 16)}…` : rawLabel;
 
           // Edge macro -> leaf
           drawEdge(x, row1, macroR, lx, ly, leafR, c, (1.2 + pct * 3.6) * dpr, 0.50 * progress);
 
-          // Leaf node (ring shows pct)
+          // Leaf node (ring shows pct). El detalle de conteo se deja para tooltip/hover.
           drawNode({
             x: lx,
             y: ly,
@@ -1392,12 +1391,11 @@ function TrendCanvas({
             color: c,
             ringPct: pct * progress,
             centerText: `${Math.round(pct * 100)}%`,
-            label: String(value),
-            sub: `${count} evidencia(s)`,
-            labelMode: "below",
+            label: leafLabel,
+            labelMode,
           });
 
-          hits.push({ kind: "leaf", x: lx, y: ly, r: leafR, title: `${label} · ${value}`, sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})` });
+          hits.push({ kind: "leaf", x: lx, y: ly, r: leafR, title: `${label} · ${rawLabel}`, sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})` });
         });
       });
 
