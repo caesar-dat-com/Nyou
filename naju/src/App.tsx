@@ -3196,10 +3196,7 @@ function NoteModal({
                 Escanea el QR desde otro celular/tablet en la misma red Wi‑Fi para abrir NAJU directamente en este formulario.
               </div>
             </div>
-            <button className="pillBtn" type="button" onClick={copyShareUrl} disabled={!shareUrl} title="Copiar enlace">
-              Copiar enlace
-            </button>
-          </div>
+</div>
 
           <div className="qrGrid">
             <div className="qrBox">
@@ -3257,7 +3254,7 @@ function NoteModal({
                   Abrir enlace
                 </a>
                 <button className="pillBtn primary" type="button" onClick={copyShareUrl} disabled={!shareUrl}>
-                  Copiar
+                  Copiar enlace
                 </button>
               </div>
             </div>
@@ -4649,18 +4646,18 @@ export default function App() {
             )}
 
             {page === "pacientes" && selected ? (
-            <div className="actionRow">
-              <button className="iconBtn" disabled={!selected} onClick={() => setShowEdit(true)}>
-                ✏️ Editar
-              </button>
-              <button className="iconBtn" disabled={!selected} onClick={actionPickPhoto}>
-                📷 Foto
-              </button>
-              <button className="iconBtn" disabled={!selected} onClick={actionAttachFiles}>
-                📎 Adjuntar
-              </button>
-</div>
-          ) : null}
+              <div className="actionRow">
+                <button className="iconBtn" disabled={!selected} onClick={() => setShowEdit(true)}>
+                  ✏️ Editar
+                </button>
+
+                {section === "resumen" ? (
+                  <button className="iconBtn" disabled={!selected} onClick={actionPickPhoto}>
+                    📷 Foto
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           {page === "pacientes" && selected ? (

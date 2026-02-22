@@ -1,2 +1,43 @@
-# Artefactos locales de entrega
+﻿# Artefactos locales de entrega
 NAJU_ACTUALIZADO.zip
+# === BIBLIOCASTIA (.gitignore) ===
+
+# Datos runtime / temporales (NO versionar)
+app-data-now/
+DATA_APP_NOW/
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+ENV/
+# Jupyter
+.ipynb_checkpoints/
+# Logs
+*.log
+# Secrets / credenciales (ajusta si lo necesitas)
+NOOTEBOKS/keys/
+*.pem
+*.key
+*.p12
+*.pfx
+# IDE
+.vscode/
+.idea/
+# OS
+Thumbs.db
+.DS_Store
+
+# --- NAJU seguridad / limpieza ---
+naju/node_modules/
+naju/patients/store.json
+naju/patients/assets/
+**/token.pickle
+*.zip
+.vscode/
