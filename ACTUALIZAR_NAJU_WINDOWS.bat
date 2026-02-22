@@ -1,21 +1,54 @@
 @echo off
-setlocal
-
-REM Actualiza NAJU desde GitHub (origin/main)
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
-echo [NAJU] Git pull...
-git pull --rebase
+where git >nul 2>&1
 if errorlevel 1 (
-  echo [NAJU] No se pudo actualizar (revisa tu conexion o credenciales de Git).
+  echo [NAJU] Git no esta instalado.
   pause
   exit /b 1
 )
 
-echo [NAJU] npm install...
-cd /d "%~dp0naju"
-call npm install
+set "DIRTY="
+for /f "delims=" %%S in ('git status --porcelain') do set "DIRTY=1"
+if defined DIRTY (
+  echo [NAJU] Hay cambios locales. Haz commit/stash antes de actualizar.
+  git status
+  pause
+  exit /b 1
+)
 
-echo [NAJU] Listo. Ahora ejecuta INICIAR_NAJU_WINDOWS.bat
+echo [NAJU] Fetch...
+git fetch origin
+if errorlevel 1 (
+  echo [NAJU] Error en git fetch.
+  pause
+  exit /b 1
+)
+
+echo [NAJU] Pull (ff-only)...
+git pull --ff-only
+if errorlevel 1 (
+  echo [NAJU] No se pudo actualizar con ff-only.
+  echo [NAJU] Si el remoto fue reescrito, ejecuta RESET_NAJU_WINDOWS.bat
+  pause
+  exit /b 1
+)
+
+echo [NAJU] Dependencias (npm ci/install)...
+cd /d "%~dp0naju"
+if exist "package-lock.json" (
+  call npm ci
+) else (
+  call npm install
+)
+
+if errorlevel 1 (
+  echo [NAJU] Error instalando dependencias.
+  pause
+  exit /b 1
+)
+
+echo [NAJU] OK. Ejecuta INICIAR_NAJU_WINDOWS.bat
 pause
 endlocal
