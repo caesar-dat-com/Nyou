@@ -102,3 +102,23 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
    - levanta NAJU en modo desarrollo (`INICIAR_NAJU_LINUX.sh`),
    - espera a que responda,
    - y abre el navegador automáticamente.
+
+
+---
+
+## Linux (actualización estable)
+
+- **Actualizar (manual):**
+  - `git pull --ff-only`
+  - `./INICIAR_NAJU_LINUX.sh`
+
+- **Opcional (script de actualización segura):**
+  - `./ACTUALIZAR_NAJU_LINUX.sh`
+
+- **Si el repo quedó “raro” (divergencia / force-push):**
+  - `./RESET_NAJU_LINUX.sh`
+
+- Para habilitar LAN/QR:
+  - `NAJU_LAN=1 ./INICIAR_NAJU_LINUX.sh`
+
+> El inicio **ya no hace `git pull --rebase`** automáticamente (eso era lo que rompía el repo en Linux).
