@@ -1660,6 +1660,138 @@ function formatConsentDate(iso: string) {
   }
 }
 
+
+
+async function generateConsentPdf(value: ConsentData) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 42;
+  const maxWidth = doc.internal.pageSize.getWidth() - margin * 2;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let y = margin;
+
+  const ensureSpace = (needed = 18) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const addBlock = (text: string, size = 11, bold = false, gapAfter = 8) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(text, maxWidth) as string[];
+    const lineHeight = Math.max(14, size + 4);
+    ensureSpace(lines.length * lineHeight + gapAfter);
+    doc.text(lines, margin, y);
+    y += lines.length * lineHeight + gapAfter;
+  };
+
+  const addTitle = (text: string) => addBlock(text, 14, true, 10);
+  const addHeading = (text: string) => addBlock(text, 12, true, 6);
+  const field = (v?: string | null) => (v && v.trim() ? v.trim() : "________________");
+
+  const solicitudInforme = value.informe_solicitud === "verbal"
+    ? "Verbal"
+    : value.informe_solicitud === "escrita"
+      ? "Escrita"
+      : "Ambas";
+
+  const medioEntrega = value.informe_medio === "otro"
+    ? `Otro (${field(value.informe_medio_otro)})`
+    : value.informe_medio === "impreso"
+      ? "Impreso"
+      : "PDF";
+
+  addTitle("Consentimiento informado");
+  addBlock(`Fecha: ${formatConsentDate(value.created_at)}`, 10, false, 12);
+  addBlock("Este consentimiento informado es para el uso del aplicativo durante las citas. Los campos subrayados se completan en el momento de la atención.", 10, false, 12);
+
+  addHeading("1. Identificación del profesional y datos de la atención");
+  addBlock(`Psicólogo(a): ${field(value.psicologo_nombre)}`);
+  addBlock(`Documento: ${field(value.psicologo_documento)}`);
+  addBlock(`T.P: ${field(value.psicologo_tp)}`);
+  addBlock(`Correo: ${field(value.psicologo_correo)}`);
+  addBlock(`Teléfono: ${field(value.psicologo_telefono)}`);
+  addBlock(`Ciudad / Dirección: ${field(value.psicologo_ciudad_direccion)}`);
+  addBlock(`Modalidad de atención: ${value.modalidad_atencion === "virtual" ? "Virtual" : "Presencial"}`);
+  addBlock(`Lugar / plataforma: ${field(value.lugar_plataforma)}`);
+
+  addHeading("2. Objeto del consentimiento (qué autoriza usted)");
+  addBlock("1) El uso de una aplicación como herramienta de apoyo clínico durante su proceso terapéutico.");
+  addBlock("2) La grabación de audio de las sesiones (ver sección 5), como parte del funcionamiento de la aplicación.");
+  addBlock("3) El tratamiento de sus datos personales, incluidos datos sensibles relacionados con su salud mental, únicamente para fines terapéuticos y administrativos asociados a su atención (ver sección 6).");
+
+  addHeading("3. Descripción del proceso terapéutico (alcance general)");
+  addBlock("El proceso consistirá en sesiones acordadas entre usted y el profesional, con objetivos terapéuticos definidos y revisables. Durante las sesiones pueden utilizarse métodos y técnicas propias de la psicología (entrevista clínica, psicoeducación, ejercicios terapéuticos, escalas/cuestionarios, seguimiento y tareas entre sesiones).");
+  addBlock("• No es posible garantizar resultados específicos.");
+  addBlock("• El progreso depende de múltiples factores, incluyendo su participación y continuidad.");
+
+  addHeading("4. Uso de la aplicación (qué hace y qué NO hace)");
+  addBlock("La aplicación se utiliza para registrar y organizar información clínica relevante, aplicar y guardar resultados de cuestionarios/escalas, llevar seguimiento de avances, tareas y evolución, y generar reportes clínicos cuando el paciente lo solicite (ver sección 9).");
+  addBlock("La aplicación es de uso exclusivo del profesional. El paciente no tendrá usuario/contraseña de acceso ni administración del sistema. La información no se comparte con terceros sin autorización expresa, salvo excepciones legales (ver sección 7).");
+
+  addHeading("5. Grabación obligatoria de audio (condición para usar la aplicación)");
+  addBlock("Se grabará audio de la sesión con fines estrictamente clínicos: fidelidad del registro, apoyo al análisis profesional, y elaboración de informes clínicos cuando usted los solicite.");
+  addBlock("Si usted NO ACEPTA la grabación de audio, el profesional continuará su atención por metodología alternativa, y no se realizará registro en la aplicación.");
+
+  addHeading("6. Tratamiento de datos personales y sensibles");
+  addBlock("Sus datos serán tratados bajo principios de finalidad, confidencialidad y seguridad, con acceso restringido al profesional tratante. Se conservarán durante el tiempo necesario para la atención y obligaciones legales aplicables.");
+
+  addHeading("7. Confidencialidad y excepciones legales");
+  addBlock("La información clínica es privada y reservada. La confidencialidad puede levantarse únicamente en eventos permitidos por la ley (riesgo grave e inminente, requerimiento legal u orden de autoridad competente), limitándose a lo estrictamente necesario.");
+
+  addHeading("8. Derechos del paciente sobre sus datos");
+  addBlock(`Canal para ejercer derechos (correo): ${field(value.canal_derechos_correo)}`);
+  addBlock(`Canal para ejercer derechos (teléfono): ${field(value.canal_derechos_telefono)}`);
+
+  addHeading("9. Derecho a solicitar informe del proceso terapéutico");
+  addBlock(`Solicitud del informe: ${solicitudInforme}`);
+  addBlock(`Plazo de entrega (días hábiles): ${field(value.informe_plazo_dias)}`);
+  addBlock(`Medio de entrega: ${medioEntrega}`);
+  addBlock(`Costo (si aplica): ${field(value.informe_costo)}`);
+
+  addHeading("10. Voluntariedad");
+  addBlock("Usted puede aceptar el uso de la aplicación y el audio, o rechazarlo y continuar con metodología alternativa informándolo verbalmente al terapeuta.");
+
+  addHeading("DECLARACIÓN Y FIRMA DE ACEPTACIÓN");
+  addBlock(`Yo, ${field(value.paciente_nombre)}, identificado(a) con cédula ${field(value.paciente_documento)}, declaro que he leído y comprendido este consentimiento informado y que pude realizar preguntas.`);
+  addBlock(`Decisión (marcar): ${value.decision === "acepto" ? "ACEPTO - Uso de la aplicación + grabación de audio." : "NO ACEPTO - No autorizo audio y no seré registrado(a) en la app."}`);
+
+  const drawSignature = (label: string, dataUrl: string | null) => {
+    ensureSpace(90);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(label, margin, y);
+    y += 8;
+    doc.setDrawColor(180);
+    doc.rect(margin, y, 240, 64);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.includes("image/jpeg") ? "JPEG" : "PNG";
+        doc.addImage(dataUrl, fmt, margin + 6, y + 6, 228, 52, undefined, "FAST");
+      } catch {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text("No se pudo insertar la firma.", margin + 8, y + 34);
+      }
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("Sin firma", margin + 8, y + 34);
+    }
+    y += 74;
+  };
+
+  drawSignature("Firma del paciente", value.firma_paciente_data_url);
+  drawSignature("Firma del psicólogo(a)", value.firma_psicologo_data_url);
+
+  addBlock("NAJU · Documento de apoyo para la atención psicológica · Custodia profesional", 9, false, 0);
+
+  const safeName = field(value.paciente_nombre).replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "paciente";
+  doc.save(`consentimiento_${safeName}_${formatConsentDate(value.created_at).replace(/\//g, "-")}.pdf`);
+}
+
 function ConsentInline({
   value,
   onChange,
@@ -1920,10 +2052,6 @@ function ConsentDocument({
           <div className="k">Plazo de entrega (días hábiles)</div>
           <ConsentInline ariaLabel="Plazo informe" value={value.informe_plazo_dias} onChange={editable ? (x) => set!("informe_plazo_dias", x) : undefined} placeholder="Ej: 5" widthCh={8} />
         </div>
-        <div className="consentField">
-          <div className="k">Medio de entrega</div>
-          <ConsentInlineSelect ariaLabel="Medio de entrega" value={value.informe_medio} onChange={editable ? (x) => set!("informe_medio", x) : undefined} options={[{ value: "pdf", label: "PDF" }, { value: "impreso", label: "Impreso" }, { value: "otro", label: "Otro" }]} />
-        </div>
       </div>
       {value.informe_medio === "otro" ? (
         <div className="consentRow">
@@ -2036,6 +2164,22 @@ function ConsentModal({
         <div className="consentFullscreenHead">
           <h2 className="consentMainTitle">Consentimiento informado</h2>
           <button className="consentCloseX" onClick={onClose} aria-label="Cerrar consentimiento">✕</button>
+        </div>
+
+        <div className="consentTopOption">
+          <button
+            type="button"
+            className="pillBtn primary"
+            onClick={async () => {
+              try {
+                await generateConsentPdf(v);
+              } catch (e) {
+                alert(`No se pudo generar el PDF: ${errMsg(e)}`);
+              }
+            }}
+          >
+            Generar PDF
+          </button>
         </div>
 
         <div className="consentAccordionWrap">
@@ -5272,6 +5416,22 @@ export default function App() {
       {consentPreview ? (
         <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
           <div className="modalBody">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+              <button
+                type="button"
+                className="pillBtn primary"
+                onClick={async () => {
+                  try {
+                    await generateConsentPdf(consentPreview);
+                    pushToast({ type: "ok", msg: "PDF del consentimiento generado ✅" });
+                  } catch (e) {
+                    pushToast({ type: "err", msg: `No se pudo generar PDF: ${errMsg(e)}` });
+                  }
+                }}
+              >
+                Generar PDF
+              </button>
+            </div>
             <ConsentDocument value={consentPreview} />
             <div className="consentSignGrid">
               <div>
