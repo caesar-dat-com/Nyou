@@ -4696,10 +4696,6 @@ export default function App() {
     const evidence = buildEvidence(trendFiles, profileLabels);
     return evidence.map((bucket) => topItemSubtitleFromBucket(bucket));
   }, [trendFiles, profileLabels]);
-  const radarTopSubtitle = useMemo(
-    () => buildTopPercentSubtitle(profileLabels, radarValues),
-    [profileLabels, radarValues]
-  );
   const radarHint = useMemo(() => {
     if (calcMode === "latest") return "Radar = último registro dentro del filtro";
     if (calcMode === "avg3") return "Radar = promedio de los últimos 3 dentro del filtro";
@@ -5030,10 +5026,6 @@ export default function App() {
                   <div className="profileBody">
                     <div className="panel" style={{ gridColumn: "1 / -1" }}>
                       <div className="hd">
-                        <div className="hdText">
-                          <h3>Resumen de tendencias Macro</h3>
-                          <div className="panel-subtitle">{radarTopSubtitle}</div>
-                        </div>
                         <span className="pill" id="macroHint">
                           {radarHint}
                         </span>
