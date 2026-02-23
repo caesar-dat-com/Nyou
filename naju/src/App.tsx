@@ -1660,6 +1660,100 @@ function formatConsentDate(iso: string) {
   }
 }
 
+
+
+async function generateConsentPdf(value: ConsentData) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 42;
+  const maxWidth = doc.internal.pageSize.getWidth() - margin * 2;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let y = margin;
+
+  const ensureSpace = (needed = 18) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const addBlock = (text: string, size = 11, bold = false, gapAfter = 8) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    const lines = doc.splitTextToSize(text, maxWidth) as string[];
+    const lineHeight = Math.max(14, size + 4);
+    ensureSpace(lines.length * lineHeight + gapAfter);
+    doc.text(lines, margin, y);
+    y += lines.length * lineHeight + gapAfter;
+  };
+
+  const addTitle = (text: string) => addBlock(text, 14, true, 10);
+  const field = (v?: string | null) => (v && v.trim() ? v.trim() : "________________");
+
+  const medioEntrega = value.informe_medio === "otro"
+    ? `Otro (${field(value.informe_medio_otro)})`
+    : value.informe_medio === "impreso"
+      ? "Impreso"
+      : "PDF";
+
+  addTitle("Consentimiento informado");
+  addBlock(`Fecha: ${formatConsentDate(value.created_at)}`, 10, false, 12);
+  addBlock("1. Identificación del profesional y datos de la atención", 12, true, 6);
+  addBlock(`Psicólogo(a): ${field(value.psicologo_nombre)}`);
+  addBlock(`Documento: ${field(value.psicologo_documento)} · T.P: ${field(value.psicologo_tp)}`);
+  addBlock(`Correo: ${field(value.psicologo_correo)} · Teléfono: ${field(value.psicologo_telefono)}`);
+  addBlock(`Ciudad / Dirección: ${field(value.psicologo_ciudad_direccion)}`);
+  addBlock(`Modalidad de atención: ${value.modalidad_atencion === "virtual" ? "Virtual" : "Presencial"}`);
+  addBlock(`Lugar / plataforma: ${field(value.lugar_plataforma)}`);
+
+  addBlock("2. Objeto del consentimiento", 12, true, 6);
+  addBlock("El paciente autoriza el uso de la aplicación como apoyo clínico, la grabación de audio de sesiones y el tratamiento de datos personales/sensibles para fines terapéuticos y administrativos asociados a la atención.");
+
+  addBlock("3. Derechos y canal de contacto", 12, true, 6);
+  addBlock(`Canal derechos (correo): ${field(value.canal_derechos_correo)}`);
+  addBlock(`Canal derechos (teléfono): ${field(value.canal_derechos_telefono)}`);
+
+  addBlock("4. Solicitud de informe terapéutico", 12, true, 6);
+  addBlock(`Solicitud del informe: ${value.informe_solicitud.charAt(0).toUpperCase() + value.informe_solicitud.slice(1)}`);
+  addBlock(`Plazo de entrega (días hábiles): ${field(value.informe_plazo_dias)}`);
+  addBlock(`Medio de entrega: ${medioEntrega}`);
+  addBlock(`Costo (si aplica): ${field(value.informe_costo)}`);
+
+  addBlock("5. Declaración y aceptación", 12, true, 6);
+  addBlock(`Paciente: ${field(value.paciente_nombre)} · Documento: ${field(value.paciente_documento)}`);
+  addBlock(`Decisión: ${value.decision === "acepto" ? "ACEPTO" : "NO ACEPTO"}`);
+
+  const drawSignature = (label: string, dataUrl: string | null) => {
+    ensureSpace(90);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(label, margin, y);
+    y += 8;
+    doc.setDrawColor(180);
+    doc.rect(margin, y, 240, 64);
+    if (dataUrl) {
+      try {
+        const fmt = dataUrl.includes("image/jpeg") ? "JPEG" : "PNG";
+        doc.addImage(dataUrl, fmt, margin + 6, y + 6, 228, 52, undefined, "FAST");
+      } catch {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text("No se pudo insertar la firma.", margin + 8, y + 34);
+      }
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("Sin firma", margin + 8, y + 34);
+    }
+    y += 74;
+  };
+
+  drawSignature("Firma del paciente", value.firma_paciente_data_url);
+  drawSignature("Firma del psicólogo(a)", value.firma_psicologo_data_url);
+
+  const safeName = field(value.paciente_nombre).replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "paciente";
+  doc.save(`consentimiento_${safeName}_${formatConsentDate(value.created_at).replace(/\//g, "-")}.pdf`);
+}
 function ConsentInline({
   value,
   onChange,
@@ -1920,10 +2014,6 @@ function ConsentDocument({
           <div className="k">Plazo de entrega (días hábiles)</div>
           <ConsentInline ariaLabel="Plazo informe" value={value.informe_plazo_dias} onChange={editable ? (x) => set!("informe_plazo_dias", x) : undefined} placeholder="Ej: 5" widthCh={8} />
         </div>
-        <div className="consentField">
-          <div className="k">Medio de entrega</div>
-          <ConsentInlineSelect ariaLabel="Medio de entrega" value={value.informe_medio} onChange={editable ? (x) => set!("informe_medio", x) : undefined} options={[{ value: "pdf", label: "PDF" }, { value: "impreso", label: "Impreso" }, { value: "otro", label: "Otro" }]} />
-        </div>
       </div>
       {value.informe_medio === "otro" ? (
         <div className="consentRow">
@@ -2036,6 +2126,22 @@ function ConsentModal({
         <div className="consentFullscreenHead">
           <h2 className="consentMainTitle">Consentimiento informado</h2>
           <button className="consentCloseX" onClick={onClose} aria-label="Cerrar consentimiento">✕</button>
+        </div>
+
+        <div className="consentTopOption">
+          <button
+            type="button"
+            className="pillBtn primary"
+            onClick={async () => {
+              try {
+                await generateConsentPdf(v);
+              } catch (e) {
+                alert(`No se pudo generar el PDF: ${errMsg(e)}`);
+              }
+            }}
+          >
+            Generar PDF
+          </button>
         </div>
 
         <div className="consentAccordionWrap">
@@ -5272,6 +5378,22 @@ export default function App() {
       {consentPreview ? (
         <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
           <div className="modalBody">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+              <button
+                type="button"
+                className="pillBtn primary"
+                onClick={async () => {
+                  try {
+                    await generateConsentPdf(consentPreview);
+                    pushToast({ type: "ok", msg: "PDF del consentimiento generado ✅" });
+                  } catch (e) {
+                    pushToast({ type: "err", msg: `No se pudo generar PDF: ${errMsg(e)}` });
+                  }
+                }}
+              >
+                Generar PDF
+              </button>
+            </div>
             <ConsentDocument value={consentPreview} />
             <div className="consentSignGrid">
               <div>
