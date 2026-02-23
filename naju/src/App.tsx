@@ -513,6 +513,7 @@ function RadarChart({
   labels,
   values,
   compareValues,
+  axisSubtitles,
   accent,
   max,
   theme,
@@ -520,6 +521,7 @@ function RadarChart({
   labels: string[];
   values: number[];
   compareValues?: number[] | null;
+  axisSubtitles?: string[];
   accent: string;
   max: number;
   theme?: "light" | "dark";
@@ -723,12 +725,25 @@ function RadarChart({
       const labelPx = Math.round(
         Math.max(10 * dpr, Math.min(13 * dpr, Math.min(width, height) / 28))
       );
+      const subLabelPx = Math.max(9 * dpr, Math.round(labelPx * 0.82));
+      const shortText = (text: string, maxChars = 34) => {
+        if (!text) return "";
+        return text.length > maxChars ? `${text.slice(0, Math.max(1, maxChars - 1))}…` : text;
+      };
       ctx.save();
-      ctx.font = `${labelPx}px ui-sans-serif, system-ui`;
-      const maxLabelW = labels.reduce((m, t) => Math.max(m, ctx.measureText(t ?? "").width), 0);
+      let maxLabelW = 0;
+      for (let i = 0; i < N; i++) {
+        const t = shortText(labels[i] ?? "", 18);
+        const sub = shortText(axisSubtitles?.[i] ?? "", 28);
+        ctx.font = `${labelPx}px ui-sans-serif, system-ui`;
+        const tw = ctx.measureText(t).width;
+        ctx.font = `${subLabelPx}px ui-sans-serif, system-ui`;
+        const sw = sub ? ctx.measureText(sub).width : 0;
+        maxLabelW = Math.max(maxLabelW, tw, sw);
+      }
       ctx.restore();
       const basePad = Math.max(26 * dpr, Math.min(width, height) * 0.12);
-      const labelPad = maxLabelW / 2 + 26 * dpr;
+      const labelPad = maxLabelW / 2 + 30 * dpr;
       // Cap de padding para que el radar no se “encoja” demasiado por textos largos.
       const padCap = Math.min(width, height) * 0.22;
       const pad = Math.max(basePad, Math.min(labelPad, padCap));
@@ -771,17 +786,26 @@ function RadarChart({
       }
       ctx.restore();
 
-      // Labels
+      // Labels + subtítulos por arista
       ctx.save();
-      ctx.fillStyle = muted;
-      ctx.font = `${labelPx}px ui-sans-serif, system-ui`;
       for (let i = 0; i < N; i++) {
         const ang = (Math.PI * 2 * i) / N - Math.PI / 2;
-        const lx = cx + Math.cos(ang) * (radius + 18 * dpr);
-        const ly = cy + Math.sin(ang) * (radius + 18 * dpr);
-        const t = labels[i] ?? "";
-        const w = ctx.measureText(t).width;
-        ctx.fillText(t, lx - w / 2, ly + 4 * dpr);
+        const lx = cx + Math.cos(ang) * (radius + 20 * dpr);
+        const ly = cy + Math.sin(ang) * (radius + 20 * dpr);
+        const title = shortText(labels[i] ?? "", 18);
+        const subtitle = shortText(axisSubtitles?.[i] ?? "", 28);
+
+        ctx.fillStyle = muted;
+        ctx.font = `${labelPx}px ui-sans-serif, system-ui`;
+        const tw = ctx.measureText(title).width;
+        ctx.fillText(title, lx - tw / 2, ly + 3 * dpr);
+
+        if (subtitle) {
+          ctx.fillStyle = axis;
+          ctx.font = `${subLabelPx}px ui-sans-serif, system-ui`;
+          const sw = ctx.measureText(subtitle).width;
+          ctx.fillText(subtitle, lx - sw / 2, ly + (3 + subLabelPx + 2 * dpr));
+        }
       }
       ctx.restore();
 
@@ -865,7 +889,7 @@ function RadarChart({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [labels, values, compareValues, accent, max, dominantColor, theme, resizeTick]);
+  }, [labels, values, compareValues, axisSubtitles, accent, max, dominantColor, theme, resizeTick]);
 
   return <canvas ref={canvasRef} className="radarCanvas" aria-label="Perfil radial del paciente" />;
 }
@@ -949,6 +973,18 @@ function ProgressDashes({
       {!footer && max && showScale ? <div className="percentFoot">Escala: 0–{max}</div> : null}
     </div>
   );
+}
+
+function topItemSubtitleFromBucket(bucket: Map<string, number>) {
+  const entries = Array.from(bucket.entries()).filter(([, count]) => count > 0);
+  if (!entries.length) return "";
+  const total = entries.reduce((acc, [, count]) => acc + count, 0);
+  if (total <= 0) return "";
+  const maxCount = Math.max(...entries.map(([, count]) => count));
+  const winners = entries.filter(([, count]) => count === maxCount);
+  return winners
+    .map(([item, count]) => `${item} (${((count / total) * 100).toFixed(0)}%)`)
+    .join(", ");
 }
 
 function buildEvidence(files: PatientFile[], labels: string[]) {
@@ -4656,6 +4692,10 @@ export default function App() {
     return profileByPatientMap.get(selected.id) ?? { values: AXES.map(() => 0), accent: "#c7a45a", label: null };
   }, [profileByPatientMap, selected]);
   const profileLabels = useMemo(() => AXES.map((axis) => axis.label), []);
+  const radarAxisSubtitles = useMemo(() => {
+    const evidence = buildEvidence(trendFiles, profileLabels);
+    return evidence.map((bucket) => topItemSubtitleFromBucket(bucket));
+  }, [trendFiles, profileLabels]);
   const radarTopSubtitle = useMemo(
     () => buildTopPercentSubtitle(profileLabels, radarValues),
     [profileLabels, radarValues]
@@ -5006,6 +5046,7 @@ export default function App() {
                                 labels={profileLabels}
                                 values={radarValues}
                                 compareValues={focusRadarValues}
+                                axisSubtitles={radarAxisSubtitles}
                                 accent={selectedProfile?.accent ?? "#c7a45a"}
                                 max={scaleMax}
                                 theme={theme}
