@@ -883,6 +883,29 @@ function useCanvasSize(canvas: HTMLCanvasElement | null) {
   return { width, height, dpr };
 }
 
+function buildTopPercentSubtitle(labels: string[], values: number[]) {
+  if (!labels.length || !values.length) return "Ítem mayor: --";
+  const pairs = labels
+    .map((label, idx) => ({ label, value: values[idx] ?? 0 }))
+    .filter((item) => item.value > 0);
+  if (!pairs.length) return "Ítem mayor: --";
+
+  const sum = pairs.reduce((acc, item) => acc + item.value, 0);
+  if (sum <= 0) return "Ítem mayor: --";
+
+  const withPct = pairs.map((item) => ({
+    ...item,
+    pct: (item.value / sum) * 100,
+  }));
+  const maxPct = Math.max(...withPct.map((item) => item.pct));
+  if (!(maxPct > 0)) return "Ítem mayor: --";
+
+  const topItems = withPct.filter((item) => Math.abs(item.pct - maxPct) < 0.0001);
+  return `Ítem mayor: ${topItems
+    .map((item) => `${item.label} (${item.pct.toFixed(0)}%)`)
+    .join(", ")}`;
+}
+
 function ProgressDashes({
   title,
   labels,
@@ -901,19 +924,7 @@ function ProgressDashes({
   showScale?: boolean;
 }) {
   const sum = values.reduce((acc, val) => acc + val, 0);
-  const subtitle = useMemo(() => {
-    if (!labels.length || !values.length || sum <= 0) return "Ítem mayor: --";
-    const pcts = labels.map((label, idx) => ({
-      label,
-      pct: (values[idx] / sum) * 100,
-    }));
-    const maxPct = Math.max(...pcts.map((item) => item.pct));
-    if (!(maxPct > 0)) return "Ítem mayor: --";
-    const topItems = pcts.filter((item) => Math.abs(item.pct - maxPct) < 0.0001);
-    return `Ítem mayor: ${topItems
-      .map((item) => `${item.label} (${item.pct.toFixed(0)}%)`)
-      .join(", ")}`;
-  }, [labels, values, sum]);
+  const subtitle = useMemo(() => buildTopPercentSubtitle(labels, values), [labels, values]);
 
   return (
     <div className="percent-panel">
@@ -4645,6 +4656,10 @@ export default function App() {
     return profileByPatientMap.get(selected.id) ?? { values: AXES.map(() => 0), accent: "#c7a45a", label: null };
   }, [profileByPatientMap, selected]);
   const profileLabels = useMemo(() => AXES.map((axis) => axis.label), []);
+  const radarTopSubtitle = useMemo(
+    () => buildTopPercentSubtitle(profileLabels, radarValues),
+    [profileLabels, radarValues]
+  );
   const radarHint = useMemo(() => {
     if (calcMode === "latest") return "Radar = último registro dentro del filtro";
     if (calcMode === "avg3") return "Radar = promedio de los últimos 3 dentro del filtro";
@@ -4975,7 +4990,10 @@ export default function App() {
                   <div className="profileBody">
                     <div className="panel" style={{ gridColumn: "1 / -1" }}>
                       <div className="hd">
-                        <h3>Resumen de tendencias Macro</h3>
+                        <div className="hdText">
+                          <h3>Resumen de tendencias Macro</h3>
+                          <div className="panel-subtitle">{radarTopSubtitle}</div>
+                        </div>
                         <span className="pill" id="macroHint">
                           {radarHint}
                         </span>
