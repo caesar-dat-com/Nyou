@@ -2011,6 +2011,7 @@ textarea {
   cursor: pointer;
 }
 
+.consentTopOption { margin-bottom: 10px; max-width: 240px; }
 .consentAccordionWrap { display: grid; gap: 12px; }
 .consentAccordion { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
 .consentAccordionHead {

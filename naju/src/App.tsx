@@ -1920,10 +1920,6 @@ function ConsentDocument({
           <div className="k">Plazo de entrega (días hábiles)</div>
           <ConsentInline ariaLabel="Plazo informe" value={value.informe_plazo_dias} onChange={editable ? (x) => set!("informe_plazo_dias", x) : undefined} placeholder="Ej: 5" widthCh={8} />
         </div>
-        <div className="consentField">
-          <div className="k">Medio de entrega</div>
-          <ConsentInlineSelect ariaLabel="Medio de entrega" value={value.informe_medio} onChange={editable ? (x) => set!("informe_medio", x) : undefined} options={[{ value: "pdf", label: "PDF" }, { value: "impreso", label: "Impreso" }, { value: "otro", label: "Otro" }]} />
-        </div>
       </div>
       {value.informe_medio === "otro" ? (
         <div className="consentRow">
@@ -2036,6 +2032,18 @@ function ConsentModal({
         <div className="consentFullscreenHead">
           <h2 className="consentMainTitle">Consentimiento informado</h2>
           <button className="consentCloseX" onClick={onClose} aria-label="Cerrar consentimiento">✕</button>
+        </div>
+
+        <div className="consentTopOption">
+          <div className="consentField">
+            <div className="k">Generar PDF</div>
+            <ConsentInlineSelect
+              ariaLabel="Medio de entrega"
+              value={v.informe_medio}
+              onChange={(x) => set("informe_medio", x)}
+              options={[{ value: "pdf", label: "PDF" }, { value: "impreso", label: "Impreso" }, { value: "otro", label: "Otro" }]}
+            />
+          </div>
         </div>
 
         <div className="consentAccordionWrap">
