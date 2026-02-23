@@ -4952,8 +4952,210 @@ export default function App() {
               </div>
             ) : section === "resumen" ? (
               <>
-                <div className="grid2">
-                  <div className="card" style={{ gridColumn: "1 / -1" }}>
+                <div className="resumenSplit">
+                  <div className="card profileCard resumenRadarCard">
+                    <div className="profileHeader">
+                      <div style={{ fontWeight: 800 }}>Resumen de tendencias Macro</div>
+                      <span className="profileBadge">
+                        {dominantMacro ? `Dominante: ${dominantMacro.label}` : "Perfil estable"}
+                      </span>
+                    </div>
+                    <div className="profileBody">
+                      <div className="panel" style={{ gridColumn: "1 / -1" }}>
+                        <div className="hd">
+                          <span className="pill" id="macroHint">
+                            {radarHint}
+                          </span>
+                        </div>
+                        <div className="bd">
+                          <div className="radar-wrap radar-wrap--solo">
+                            <div className="stack">
+                              <div className="radarCanvasWrap">
+                                <RadarChart
+                                  labels={profileLabels}
+                                  values={radarValues}
+                                  compareValues={focusRadarValues}
+                                  axisSubtitles={radarAxisSubtitles}
+                                  accent={selectedProfile?.accent ?? "#c7a45a"}
+                                  max={scaleMax}
+                                  theme={theme}
+                                />
+                              </div>
+                              <div className="miniHelp" id="treeHow">
+                                Árbol: raíz = resumen global · ramas = categorías macro · hojas = micro-evidencias
+                                (examen mental + notas) que explican la tendencia.
+                              </div>
+                              <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <details className="filtersDropdown" open>
+                        <summary>Filtros del gráfico</summary>
+                        <div className="percent-panel">
+                          <div className="field">
+                            <label className="label" htmlFor="timePreset">
+                              Rango de fechas
+                            </label>
+                            <select
+                              id="timePreset"
+                              value={timePreset}
+                              onChange={(e) => setTimePreset(e.target.value)}
+                              className="select"
+                            >
+                              <option value="all">Histórico (todo)</option>
+                              <option value="30d">Últimos 30 días</option>
+                              <option value="90d">Últimos 90 días</option>
+                              <option value="custom">Personalizado</option>
+                            </select>
+                          </div>
+
+                          <div className="row2" style={{ display: timePreset === "custom" ? "grid" : "none" }}>
+                            <div className="field">
+                              <label className="label" htmlFor="dateFrom">
+                                Desde
+                              </label>
+                              <input
+                                id="dateFrom"
+                                type="date"
+                                value={dateFrom}
+                                onChange={(e) => setDateFrom(e.target.value)}
+                                className="input"
+                              />
+                            </div>
+                            <div className="field">
+                              <label className="label" htmlFor="dateTo">
+                                Hasta
+                              </label>
+                              <input
+                                id="dateTo"
+                                type="date"
+                                value={dateTo}
+                                onChange={(e) => setDateTo(e.target.value)}
+                                className="input"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="checks">
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={includeExams}
+                                onChange={(e) => setIncludeExams(e.target.checked)}
+                              />{" "}
+                              Exámenes
+                            </label>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={includeNotes}
+                                onChange={(e) => setIncludeNotes(e.target.checked)}
+                              />{" "}
+                              Notas
+                            </label>
+                          </div>
+
+                          <div className="field">
+                            <label className="label" htmlFor="calcMode">
+                              Cálculo del radar
+                            </label>
+                            <select
+                              id="calcMode"
+                              value={calcMode}
+                              onChange={(e) => setCalcMode(e.target.value)}
+                              className="select"
+                            >
+                              <option value="aggregate">Agregado (promedio del filtro)</option>
+                              <option value="avg3">Promedio últimos 3 (del filtro)</option>
+                              <option value="latest">Último registro (del filtro)</option>
+                            </select>
+                          </div>
+
+                          <div className="field">
+                            <label className="label" htmlFor="focusRecord">
+                              Comparar con un registro (archivo)
+                            </label>
+                            <select
+                              id="focusRecord"
+                              value={focusRecord}
+                              onChange={(e) => setFocusRecord(e.target.value)}
+                              className="select"
+                            >
+                              <option value="">(sin comparación)</option>
+                              {focusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="field">
+                            <label className="label" htmlFor="scale">
+                              Escala
+                            </label>
+                            <select
+                              id="scale"
+                              value={scale}
+                              onChange={(e) => setScale(e.target.value)}
+                              className="select"
+                            >
+                              <option value="10">0 a 10</option>
+                              <option value="5">0 a 5</option>
+                            </select>
+                          </div>
+
+                          <button className="pillBtn" onClick={resetTrendFilters} style={{ width: "100%" }}>
+                            reset filtros
+                          </button>
+                        </div>
+                      </details>
+
+                      <ProgressDashes
+                        title="Peso relativo (macro)"
+                        labels={profileLabels}
+                        values={radarValues}
+                        max={scaleMax}
+                        colors={PROFILE_COLORS}
+                      />
+                      <div className="trendPillRow">
+                        <span className="pill">
+                          {dominantMacro
+                            ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
+                            : "Dominante: --"}
+                        </span>
+                        <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
+                      </div>
+
+                      {emotionDominant ? (
+                        <div className="trendPillRow">
+                          <span className="pill">
+                            Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                      ) : null}
+                      {emotionCounts.labels.length ? (
+                        <ProgressDashes
+                          title="Emoción predominante (tipo)"
+                          labels={emotionCounts.labels}
+                          values={emotionCounts.values}
+                          max={100}
+                          colors={emotionColors}
+                          showScale={false}
+                        />
+                      ) : (
+                        <div className="percent-panel">
+                          <h4>Emoción predominante (tipo)</h4>
+                          <div className="percent-subtitle">Ítem mayor: --</div>
+                          <div className="emptyHint">Sin datos de emoción en el filtro.</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="card resumenDataCard">
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
 
                     <div className="kv">
@@ -5012,209 +5214,6 @@ export default function App() {
                       <button className="pillBtn danger" onClick={actionDeleteSelected}>
                         eliminar paciente
                       </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card profileCard">
-                  <div className="profileHeader">
-                    <div style={{ fontWeight: 800 }}>Resumen de tendencias Macro</div>
-                    <span className="profileBadge">
-                      {dominantMacro ? `Dominante: ${dominantMacro.label}` : "Perfil estable"}
-                    </span>
-                  </div>
-                  <div className="profileBody">
-                    <div className="panel" style={{ gridColumn: "1 / -1" }}>
-                      <div className="hd">
-                        <span className="pill" id="macroHint">
-                          {radarHint}
-                        </span>
-                      </div>
-                      <div className="bd">
-                        <div className="radar-wrap">
-                          <div className="stack">
-                            <div className="radarCanvasWrap">
-                              <RadarChart
-                                labels={profileLabels}
-                                values={radarValues}
-                                compareValues={focusRadarValues}
-                                axisSubtitles={radarAxisSubtitles}
-                                accent={selectedProfile?.accent ?? "#c7a45a"}
-                                max={scaleMax}
-                                theme={theme}
-                              />
-                            </div>
-                            <div className="miniHelp" id="treeHow">
-                              Árbol: raíz = resumen global · ramas = categorías macro · hojas = micro-evidencias
-                              (examen mental + notas) que explican la tendencia.
-                            </div>
-                            <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
-                          </div>
-
-                          <div className="controls">
-                            <div className="percent-panel">
-                              <h4>Filtros</h4>
-
-                              <div className="field">
-                                <label className="label" htmlFor="timePreset">
-                                  Rango de fechas
-                                </label>
-                                <select
-                                  id="timePreset"
-                                  value={timePreset}
-                                  onChange={(e) => setTimePreset(e.target.value)}
-                                  className="select"
-                                >
-                                  <option value="all">Histórico (todo)</option>
-                                  <option value="30d">Últimos 30 días</option>
-                                  <option value="90d">Últimos 90 días</option>
-                                  <option value="custom">Personalizado</option>
-                                </select>
-                              </div>
-
-                              <div className="row2" style={{ display: timePreset === "custom" ? "grid" : "none" }}>
-                                <div className="field">
-                                  <label className="label" htmlFor="dateFrom">
-                                    Desde
-                                  </label>
-                                  <input
-                                    id="dateFrom"
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => setDateFrom(e.target.value)}
-                                    className="input"
-                                  />
-                                </div>
-                                <div className="field">
-                                  <label className="label" htmlFor="dateTo">
-                                    Hasta
-                                  </label>
-                                  <input
-                                    id="dateTo"
-                                    type="date"
-                                    value={dateTo}
-                                    onChange={(e) => setDateTo(e.target.value)}
-                                    className="input"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="checks">
-                                <label>
-                                  <input
-                                    type="checkbox"
-                                    checked={includeExams}
-                                    onChange={(e) => setIncludeExams(e.target.checked)}
-                                  />{" "}
-                                  Exámenes
-                                </label>
-                                <label>
-                                  <input
-                                    type="checkbox"
-                                    checked={includeNotes}
-                                    onChange={(e) => setIncludeNotes(e.target.checked)}
-                                  />{" "}
-                                  Notas
-                                </label>
-                              </div>
-
-                              <div className="field">
-                                <label className="label" htmlFor="calcMode">
-                                  Cálculo del radar
-                                </label>
-                                <select
-                                  id="calcMode"
-                                  value={calcMode}
-                                  onChange={(e) => setCalcMode(e.target.value)}
-                                  className="select"
-                                >
-                                  <option value="aggregate">Agregado (promedio del filtro)</option>
-                                  <option value="avg3">Promedio últimos 3 (del filtro)</option>
-                                  <option value="latest">Último registro (del filtro)</option>
-                                </select>
-                              </div>
-
-                              <div className="field">
-                                <label className="label" htmlFor="focusRecord">
-                                  Comparar con un registro (archivo)
-                                </label>
-                                <select
-                                  id="focusRecord"
-                                  value={focusRecord}
-                                  onChange={(e) => setFocusRecord(e.target.value)}
-                                  className="select"
-                                >
-                                  <option value="">(sin comparación)</option>
-                                  {focusOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div className="field">
-                                <label className="label" htmlFor="scale">
-                                  Escala
-                                </label>
-                                <select
-                                  id="scale"
-                                  value={scale}
-                                  onChange={(e) => setScale(e.target.value)}
-                                  className="select"
-                                >
-                                  <option value="10">0 a 10</option>
-                                  <option value="5">0 a 5</option>
-                                </select>
-                              </div>
-
-                              <button className="pillBtn" onClick={resetTrendFilters} style={{ width: "100%" }}>
-                                reset filtros
-                              </button>
-                            </div>
-
-                            <ProgressDashes
-                              title="Peso relativo (macro)"
-                              labels={profileLabels}
-                              values={radarValues}
-                              max={scaleMax}
-                              colors={PROFILE_COLORS}
-                            />
-                            <div className="trendPillRow">
-                              <span className="pill">
-                                {dominantMacro
-                                  ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
-                                  : "Dominante: --"}
-                              </span>
-                              <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
-                            </div>
-
-                            {emotionDominant ? (
-                              <div className="trendPillRow">
-                                <span className="pill">
-                                  Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
-                                </span>
-                              </div>
-                            ) : null}
-                            {emotionCounts.labels.length ? (
-                              <ProgressDashes
-                                title="Emoción predominante (tipo)"
-                                labels={emotionCounts.labels}
-                                values={emotionCounts.values}
-                                max={100}
-                                colors={emotionColors}
-                                showScale={false}
-                              />
-                            ) : (
-                              <div className="percent-panel">
-                                <h4>Emoción predominante (tipo)</h4>
-                                <div className="percent-subtitle">Ítem mayor: --</div>
-                                <div className="emptyHint">Sin datos de emoción en el filtro.</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>

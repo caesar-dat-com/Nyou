@@ -1088,6 +1088,55 @@ textarea {
 }
 
 
+.resumenSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.resumenRadarCard {
+  margin-top: 0;
+}
+
+.resumenDataCard {
+  position: sticky;
+  top: 8px;
+}
+
+.radar-wrap--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.filtersDropdown {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .66);
+  overflow: hidden;
+}
+
+.filtersDropdown > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  border-bottom: 1px solid transparent;
+}
+
+.filtersDropdown[open] > summary {
+  border-bottom-color: var(--border);
+}
+
+.filtersDropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filtersDropdown .percent-panel {
+  padding: 12px;
+}
+
 /* Perfil del paciente: mantener borde solo en contenedor principal */
 .profileCard .panel,
 .profileCard .percent-panel,
@@ -1421,6 +1470,14 @@ textarea {
   .radar-wrap {
     grid-template-columns: 1fr;
   }
+
+  .resumenSplit {
+    grid-template-columns: 1fr;
+  }
+
+  .resumenDataCard {
+    position: static;
+  }
 }
 
 /* =============================
@@ -1663,6 +1720,55 @@ textarea {
   margin-top: 12px;
 }
 
+
+.resumenSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.resumenRadarCard {
+  margin-top: 0;
+}
+
+.resumenDataCard {
+  position: sticky;
+  top: 8px;
+}
+
+.radar-wrap--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.filtersDropdown {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .66);
+  overflow: hidden;
+}
+
+.filtersDropdown > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  border-bottom: 1px solid transparent;
+}
+
+.filtersDropdown[open] > summary {
+  border-bottom-color: var(--border);
+}
+
+.filtersDropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.filtersDropdown .percent-panel {
+  padding: 12px;
+}
 .profileHeader {
   display: flex;
   align-items: center;
