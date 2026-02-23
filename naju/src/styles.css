@@ -359,8 +359,8 @@ textarea {
   -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding-left: clamp(12px, 6vw, 72px);
+  justify-content: center;
+  padding-inline: 12px;
 }
 .menuGlassPanel{
   width: min(560px, calc(100vw - 24px));
