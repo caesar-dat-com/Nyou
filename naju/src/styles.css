@@ -1250,6 +1250,12 @@ textarea {
   font-size: 14px;
 }
 
+.percent-subtitle {
+  margin-top: -4px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
 .percent-row {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) auto;
@@ -2011,6 +2017,7 @@ textarea {
   cursor: pointer;
 }
 
+.consentTopOption { margin-bottom: 10px; display: flex; justify-content: flex-end; }
 .consentAccordionWrap { display: grid; gap: 12px; }
 .consentAccordion { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
 .consentAccordionHead {
