@@ -469,22 +469,22 @@ function scoreAxisValues(files: PatientFile[], mode: "aggregate" | "avg3" | "lat
   const sorted = [...files].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const targetFiles =
     mode === "latest" ? sorted.slice(0, 1) : mode === "avg3" ? sorted.slice(0, 3) : sorted;
+
   const sums = AXES.map(() => 0);
-  const counts = AXES.map(() => 0);
 
   targetFiles.forEach((file) => {
     const meta = parseMetaJson(file);
     if (!meta) return;
     AXES.forEach((axis, idx) => {
       const raw = meta[axis.key] ?? (axis.noteKey ? meta[axis.noteKey] : undefined);
-      if (!raw) return;
       const value = scoreLookup(raw, axis.map);
       sums[idx] += value;
-      counts[idx] += 1;
     });
   });
 
-  return sums.map((sum, idx) => (counts[idx] ? sum / counts[idx] : 0));
+  const totalRecords = targetFiles.length;
+  if (!totalRecords) return AXES.map(() => 0);
+  return sums.map((sum) => sum / totalRecords);
 }
 
 function buildEmotionCounts(files: PatientFile[]) {
@@ -4401,26 +4401,26 @@ export default function App() {
   const radarSum = useMemo(() => radarValues.reduce((acc, val) => acc + val, 0), [radarValues]);
   const dominantMacro = useMemo(() => {
     if (!radarValues.length) return null;
-    const maxValue = Math.max(...radarValues);
-    if (maxValue <= 0) return null;
-
-    const winners = radarValues
+    const ranked = radarValues
       .map((value, idx) => ({ value, idx }))
-      .filter((item) => Math.abs(item.value - maxValue) < 0.001);
+      .sort((a, b) => b.value - a.value);
 
-    if (winners.length !== 1) {
+    const [first, second] = ranked;
+    if (!first || first.value <= 0) return null;
+
+    // Si las dos categorías más altas están muy cerca, se considera perfil mixto.
+    if (second && Math.abs(first.value - second.value) < 0.25) {
       return {
         label: "Perfil mixto",
-        value: maxValue,
-        pct: radarSum ? (maxValue / radarSum) * 100 : 0,
+        value: first.value,
+        pct: radarSum ? (first.value / radarSum) * 100 : 0,
       };
     }
 
-    const winner = winners[0];
     return {
-      label: AXES[winner.idx].label,
-      value: winner.value,
-      pct: radarSum ? (winner.value / radarSum) * 100 : 0,
+      label: AXES[first.idx].label,
+      value: first.value,
+      pct: radarSum ? (first.value / radarSum) * 100 : 0,
     };
   }, [radarValues, radarSum]);
 
@@ -4696,11 +4696,6 @@ export default function App() {
     const evidence = buildEvidence(trendFiles, profileLabels);
     return evidence.map((bucket) => topItemSubtitleFromBucket(bucket));
   }, [trendFiles, profileLabels]);
-  const radarHint = useMemo(() => {
-    if (calcMode === "latest") return "Radar = último registro dentro del filtro";
-    if (calcMode === "avg3") return "Radar = promedio de los últimos 3 dentro del filtro";
-    return "Radar = promedio de todo lo filtrado";
-  }, [calcMode]);
   const emotionColors = useMemo(() => {
     const palette: Record<string, string> = {};
     emotionCounts.labels.forEach((label, idx) => {
@@ -4962,11 +4957,6 @@ export default function App() {
                     </div>
                     <div className="profileBody">
                       <div className="panel" style={{ gridColumn: "1 / -1" }}>
-                        <div className="hd">
-                          <span className="pill" id="macroHint">
-                            {radarHint}
-                          </span>
-                        </div>
                         <div className="bd">
                           <div className="radar-wrap radar-wrap--solo">
                             <div className="stack">
@@ -4980,10 +4970,6 @@ export default function App() {
                                   max={scaleMax}
                                   theme={theme}
                                 />
-                              </div>
-                              <div className="miniHelp" id="treeHow">
-                                Árbol: raíz = resumen global · ramas = categorías macro · hojas = micro-evidencias
-                                (examen mental + notas) que explican la tendencia.
                               </div>
                               <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
                             </div>
