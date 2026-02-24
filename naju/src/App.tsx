@@ -62,6 +62,27 @@ type Toast = { type: "ok" | "err"; msg: string } | null;
 
 
 
+type ProfessionalProfile = {
+  psicologo_nombre: string;
+  psicologo_documento: string;
+  psicologo_tp: string;
+  psicologo_correo: string;
+  psicologo_telefono: string;
+  psicologo_ciudad_direccion: string;
+  modalidad_atencion: ConsultaTipo;
+  lugar_plataforma: string;
+  canal_derechos_correo: string;
+  canal_derechos_telefono: string;
+  informe_solicitud: "verbal" | "escrita" | "ambas";
+  informe_plazo_dias: string;
+  informe_medio: "pdf" | "impreso" | "otro";
+  informe_medio_otro: string;
+  informe_costo: string;
+  firma_psicologo_data_url: string | null;
+};
+
+const PROFESSIONAL_PROFILE_STORAGE_KEY = "naju_professional_profile_v1";
+
 type PaletteTokens = {
   primary: string;
   background: string;
@@ -104,6 +125,59 @@ const APP_PALETTES: Record<string, AppPalette> = {
     dark: { primary: "#ff3270", background: "#000807", surface: "#0b1413", accent: "#00c3ff", text: "#eeffff" },
   },
 };
+
+function defaultProfessionalProfile(): ProfessionalProfile {
+  return {
+    psicologo_nombre: "",
+    psicologo_documento: "",
+    psicologo_tp: "",
+    psicologo_correo: "",
+    psicologo_telefono: "",
+    psicologo_ciudad_direccion: "",
+    modalidad_atencion: "presencial",
+    lugar_plataforma: "",
+    canal_derechos_correo: "",
+    canal_derechos_telefono: "",
+    informe_solicitud: "verbal",
+    informe_plazo_dias: "",
+    informe_medio: "pdf",
+    informe_medio_otro: "",
+    informe_costo: "",
+    firma_psicologo_data_url: null,
+  };
+}
+
+function professionalProfileFromConsent(v: ConsentData): ProfessionalProfile {
+  return {
+    psicologo_nombre: v.psicologo_nombre,
+    psicologo_documento: v.psicologo_documento,
+    psicologo_tp: v.psicologo_tp,
+    psicologo_correo: v.psicologo_correo,
+    psicologo_telefono: v.psicologo_telefono,
+    psicologo_ciudad_direccion: v.psicologo_ciudad_direccion,
+    modalidad_atencion: v.modalidad_atencion,
+    lugar_plataforma: v.lugar_plataforma,
+    canal_derechos_correo: v.canal_derechos_correo,
+    canal_derechos_telefono: v.canal_derechos_telefono,
+    informe_solicitud: v.informe_solicitud,
+    informe_plazo_dias: v.informe_plazo_dias,
+    informe_medio: v.informe_medio,
+    informe_medio_otro: v.informe_medio_otro,
+    informe_costo: v.informe_costo,
+    firma_psicologo_data_url: v.firma_psicologo_data_url,
+  };
+}
+
+function createConsentDraft(profile: ProfessionalProfile): ConsentData {
+  return {
+    created_at: new Date().toISOString(),
+    ...profile,
+    paciente_nombre: "",
+    paciente_documento: "",
+    decision: "acepto",
+    firma_paciente_data_url: null,
+  };
+}
 
 function errMsg(e: any) {
   if (!e) return "Error desconocido";
@@ -1191,12 +1265,12 @@ function TrendCanvas({
     // Objetivo: que los nodos/labels no se salgan del canvas, incluso en espacios pequeños.
     const mTop = 56 * dpr;
     const mBottom = 40 * dpr;
-    const mSide = 30 * dpr;
+    const mSide = 38 * dpr;
     const rootR = 18 * dpr;
     const root = { x: width * 0.5, y: mTop + rootR };
     const availH = Math.max(1, height - mTop - mBottom);
-    const row1 = clamp(mTop + availH * 0.46, root.y + rootR + 36 * dpr, height - mBottom - 140 * dpr);
-    const row2 = clamp(height - mBottom - 28 * dpr, row1 + 84 * dpr, height - 54 * dpr);
+    const row1 = clamp(mTop + availH * 0.42, root.y + rootR + 40 * dpr, height - mBottom - 176 * dpr);
+    const row2 = clamp(height - mBottom - 24 * dpr, row1 + 112 * dpr, height - 44 * dpr);
     const xs = labels.map((_, i) => mSide + (i * (width - mSide * 2)) / Math.max(1, labels.length - 1));
     function hexToRgb(hex: string) {
       const h = hex.replace("#", "").trim();
@@ -1410,7 +1484,6 @@ function TrendCanvas({
           ringPct: clamp(val / Math.max(1, max), 0, 1) * progress,
           centerText: `${val.toFixed(1)}`,
           label,
-          sub: `${(w * 100).toFixed(0)}% · ${val.toFixed(1)}/${max}`,
           labelMode: "below",
         });
 
@@ -1425,23 +1498,20 @@ function TrendCanvas({
           const slotLeft = idx === 0 ? mSide : (xs[idx - 1] + x) / 2;
           const slotRight = idx === labels.length - 1 ? width - mSide : (x + xs[idx + 1]) / 2;
           const slotW = Math.max(1, slotRight - slotLeft);
-          const baseOff = clamp(slotW * 0.30, 34 * dpr, 86 * dpr);
+          const baseOff = clamp(slotW * 0.38, 48 * dpr, 110 * dpr);
 
           const dir = j === 0 ? -1 : 1;
           let lx = x + dir * baseOff;
           // Mantener dentro del slot y respetar radios
           lx = clamp(lx, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           // Asegurar separación mínima con el macro
-          const minSep = macroR + leafR + 14 * dpr;
+          const minSep = macroR + leafR + 22 * dpr;
           if (Math.abs(lx - x) < minSep) {
             lx = clamp(x + dir * minSep, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           }
 
-          const ly = row2 + (j === 0 ? -18 * dpr : 18 * dpr);
-          const labelMode = j === 0 ? "above" : "below";
+          const ly = row2 + (j === 0 ? -30 * dpr : 30 * dpr);
           const rawLabel = String(value ?? "");
-          const leafLabel = rawLabel.length > 18 ? `${rawLabel.slice(0, 16)}…` : rawLabel;
-
           // Edge macro -> leaf
           drawEdge(x, row1, macroR, lx, ly, leafR, c, (1.2 + pct * 3.6) * dpr, 0.50 * progress);
 
@@ -1453,8 +1523,6 @@ function TrendCanvas({
             color: c,
             ringPct: pct * progress,
             centerText: `${Math.round(pct * 100)}%`,
-            label: leafLabel,
-            labelMode,
           });
 
           hits.push({ kind: "leaf", x: lx, y: ly, r: leafR, title: `${label} · ${rawLabel}`, sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})` });
@@ -2157,33 +2225,13 @@ function ConsentIntroModal({ onClose, onContinue }: { onClose: () => void; onCon
 function ConsentModal({
   onClose,
   onAccept,
+  professionalProfile,
 }: {
   onClose: () => void;
   onAccept: (consent: ConsentData) => void;
+  professionalProfile: ProfessionalProfile;
 }) {
-  const [v, setV] = useState<ConsentData>({
-    created_at: new Date().toISOString(),
-    psicologo_nombre: "",
-    psicologo_documento: "",
-    psicologo_tp: "",
-    psicologo_correo: "",
-    psicologo_telefono: "",
-    psicologo_ciudad_direccion: "",
-    modalidad_atencion: "presencial",
-    lugar_plataforma: "",
-    canal_derechos_correo: "",
-    canal_derechos_telefono: "",
-    informe_solicitud: "verbal",
-    informe_plazo_dias: "",
-    informe_medio: "pdf",
-    informe_medio_otro: "",
-    informe_costo: "",
-    paciente_nombre: "",
-    paciente_documento: "",
-    decision: "acepto",
-    firma_paciente_data_url: null,
-    firma_psicologo_data_url: null,
-  });
+  const [v, setV] = useState<ConsentData>(() => createConsentDraft(professionalProfile));
   const [errors, setErrors] = useState<ConsentErrors>({});
   const [openSection, setOpenSection] = useState<"pro" | "pac">("pro");
   const fieldRefs = useRef<Partial<Record<ConsentFieldKey, HTMLElement | null>>>({});
@@ -4205,6 +4253,26 @@ export default function App() {
     };
   }, [activePalette, logoColorMode]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PROFESSIONAL_PROFILE_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<ProfessionalProfile>;
+      setProfessionalProfile({ ...defaultProfessionalProfile(), ...parsed });
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  function saveProfessionalProfile(next: ProfessionalProfile) {
+    setProfessionalProfile(next);
+    try {
+      localStorage.setItem(PROFESSIONAL_PROFILE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore persistence errors
+    }
+  }
+
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
@@ -4235,6 +4303,7 @@ export default function App() {
   const [showConsentIntro, setShowConsentIntro] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
   const [pendingConsent, setPendingConsent] = useState<ConsentData | null>(null);
+  const [professionalProfile, setProfessionalProfile] = useState<ProfessionalProfile>(() => defaultProfessionalProfile());
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [showNote, setShowNote] = useState(false);
@@ -4895,6 +4964,8 @@ export default function App() {
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
                 onAddPatient={beginCreatePatient}
+                professionalProfile={professionalProfile}
+                onSaveProfessionalProfile={saveProfessionalProfile}
               />
             ) : page === "errores" ? (
               <ErrorCenter
@@ -5381,7 +5452,9 @@ export default function App() {
       {showConsent ? (
         <ConsentModal
           onClose={() => setShowConsent(false)}
+          professionalProfile={professionalProfile}
           onAccept={(consent) => {
+            saveProfessionalProfile(professionalProfileFromConsent(consent));
             setPendingConsent(consent);
             setShowConsent(false);
             setShowCreate(true);
