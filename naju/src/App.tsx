@@ -5233,7 +5233,7 @@ export default function App() {
               </div>
             ) : section === "resumen" ? (
               <>
-                <div className="resumenSplit">
+                <div className="resumenSplit resumenSplit--stacked">
                   <div className="card profileCard resumenRadarCard">
                     <div className="profileHeader">
                       <div style={{ fontWeight: 800 }}>Resumen de tendencias Macro</div>
