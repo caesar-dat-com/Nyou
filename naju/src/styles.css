@@ -2675,3 +2675,19 @@ textarea {
 .resumenDataCard {
   position: static;
 }
+
+/* Paciente (resumen): forzar apilado vertical de las dos tarjetas principales. */
+.resumenSplit.resumenSplit--stacked {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-auto-flow: row;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenRadarCard,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard {
+  position: static;
+}
