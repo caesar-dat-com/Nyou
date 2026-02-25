@@ -5244,21 +5244,8 @@ export default function App() {
                     <div className="profileBody">
                       <div className="panel" style={{ gridColumn: "1 / -1" }}>
                         <div className="bd">
-                          <div className="radar-wrap radar-wrap--solo">
-                            <div className="stack">
-                              <div className="radarCanvasWrap">
-                                <RadarChart
-                                  labels={profileLabels}
-                                  values={radarValues}
-                                  compareValues={focusRadarValues}
-                                  axisSubtitles={radarAxisSubtitles}
-                                  accent={selectedProfile?.accent ?? "#c7a45a"}
-                                  max={scaleMax}
-                                  theme={theme}
-                                />
-                              </div>
-                              <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
-                            </div>
+                          <div className="trendWrap">
+                            <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
                           </div>
                         </div>
                       </div>
@@ -5385,49 +5372,65 @@ export default function App() {
                         </div>
                       </details>
 
-                      <ProgressDashes
-                        title="Peso relativo (macro)"
-                        labels={profileLabels}
-                        values={radarValues}
-                        max={scaleMax}
-                        colors={PROFILE_COLORS}
-                      />
-                      <div className="trendPillRow">
-                        <span className="pill">
-                          {dominantMacro
-                            ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
-                            : "Dominante: --"}
-                        </span>
-                        <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
-                      </div>
-
-                      {emotionDominant ? (
-                        <div className="trendPillRow">
-                          <span className="pill">
-                            Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
-                          </span>
-                        </div>
-                      ) : null}
-                      {emotionCounts.labels.length ? (
-                        <ProgressDashes
-                          title="Emoción predominante (tipo)"
-                          labels={emotionCounts.labels}
-                          values={emotionCounts.values}
-                          max={100}
-                          colors={emotionColors}
-                          showScale={false}
-                        />
-                      ) : (
-                        <div className="percent-panel">
-                          <h4>Emoción predominante (tipo)</h4>
-                          <div className="percent-subtitle">Ítem mayor: --</div>
-                          <div className="emptyHint">Sin datos de emoción en el filtro.</div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   <div className="card resumenDataCard">
+                    <div className="resumenDataTopBanner">
+                      <div className="radarCanvasWrap resumenDataRadar">
+                        <RadarChart
+                          labels={profileLabels}
+                          values={radarValues}
+                          compareValues={focusRadarValues}
+                          axisSubtitles={radarAxisSubtitles}
+                          accent={selectedProfile?.accent ?? "#c7a45a"}
+                          max={scaleMax}
+                          theme={theme}
+                        />
+                      </div>
+                      <div className="resumenDataStats">
+                        <ProgressDashes
+                          title="Peso relativo (macro)"
+                          labels={profileLabels}
+                          values={radarValues}
+                          max={scaleMax}
+                          colors={PROFILE_COLORS}
+                        />
+                        <div className="trendPillRow">
+                          <span className="pill">
+                            {dominantMacro
+                              ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
+                              : "Dominante: --"}
+                          </span>
+                          <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
+                        </div>
+
+                        {emotionDominant ? (
+                          <div className="trendPillRow">
+                            <span className="pill">
+                              Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
+                            </span>
+                          </div>
+                        ) : null}
+                        {emotionCounts.labels.length ? (
+                          <ProgressDashes
+                            title="Emoción predominante (tipo)"
+                            labels={emotionCounts.labels}
+                            values={emotionCounts.values}
+                            max={100}
+                            colors={emotionColors}
+                            showScale={false}
+                          />
+                        ) : (
+                          <div className="percent-panel">
+                            <h4>Emoción predominante (tipo)</h4>
+                            <div className="percent-subtitle">Ítem mayor: --</div>
+                            <div className="emptyHint">Sin datos de emoción en el filtro.</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
 
                     <div className="kv">
