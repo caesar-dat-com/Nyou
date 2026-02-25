@@ -1613,25 +1613,32 @@ function Modal({
   subtitle,
   children,
   onClose,
+  fullScreen = false,
+  closeVariant = "button",
 }: {
   title?: string;
   subtitle?: string;
   children: React.ReactNode;
   onClose: () => void;
+  fullScreen?: boolean;
+  closeVariant?: "button" | "icon";
 }) {
+  const hasHeaderText = Boolean(title || subtitle);
   return (
     <div className="backdrop" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modalHeader">
-          {(title || subtitle) ? (
+      <div className={`modal ${fullScreen ? "modalFullScreen" : ""}`} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={`modalHeader ${!hasHeaderText ? "isCompact" : ""}`}>
+          {hasHeaderText ? (
             <div>
               {title ? <h3>{title}</h3> : null}
               {subtitle ? <p>{subtitle}</p> : null}
             </div>
           ) : <div />}
-          <button className="pillBtn" onClick={onClose} aria-label="Cerrar">
-            Cerrar
-          </button>
+          {closeVariant === "icon" ? (
+            <button className="modalCloseX" onClick={onClose} aria-label="Cerrar">✕</button>
+          ) : (
+            <button className="pillBtn" onClick={onClose} aria-label="Cerrar">Cerrar</button>
+          )}
         </div>
         {children}
       </div>
@@ -2716,9 +2723,9 @@ function MentalExamModal({
 
   return (
     <Modal
-      title="Nuevo examen mental"
-      subtitle="Selectores + calendario para que sea rápido y consistente."
       onClose={onClose}
+      fullScreen
+      closeVariant="icon"
     >
       <div className="modalBody">
         <div className="formGrid">
@@ -3967,7 +3974,17 @@ type CitasSectionProps = {
 function CitasSection(props: CitasSectionProps) {
   const { patient, appointments, onCreate, onDelete, onExportPatient, onExportPatientCsv } = props;
 
-  const [startLocal, setStartLocal] = useState("");
+  const [startLocal, setStartLocal] = useState(() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  });
   const [minutes, setMinutes] = useState("60");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -3980,12 +3997,21 @@ function CitasSection(props: CitasSectionProps) {
     }
   }
 
+  function parseLocalDateTime(value: string) {
+    const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    const [, y, mo, d, h, mi] = m;
+    const dt = new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), 0, 0);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt;
+  }
+
   async function submit() {
     const s = startLocal.trim();
     if (!s) return;
     const mins = Math.max(5, Number(minutes || "60") || 60);
-    const start = new Date(s);
-    if (Number.isNaN(start.getTime())) return;
+    const start = parseLocalDateTime(s);
+    if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
     await onCreate({
@@ -5328,7 +5354,6 @@ export default function App() {
                   try {
                     await createAppointment(payload);
                     await refreshAppointments();
-        await refreshErrorReports();
                     pushToast({ type: "ok", msg: "Cita creada" });
                   } catch (e: any) {
                     pushToast({ type: "err", msg: `No se pudo crear la cita: ${errMsg(e)}` });
@@ -5338,7 +5363,6 @@ export default function App() {
                   try {
                     await deleteAppointment(id);
                     await refreshAppointments();
-        await refreshErrorReports();
                     pushToast({ type: "ok", msg: "Cita eliminada" });
                   } catch (e: any) {
                     pushToast({ type: "err", msg: `No se pudo eliminar: ${errMsg(e)}` });
@@ -5512,8 +5536,7 @@ export default function App() {
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
-        await refreshAppointments();
-        await refreshErrorReports();
+            await refreshAppointments();
             pushToast({ type: "ok", msg: "Examen creado ✅" });
             startVT(() => setSection("examenes"));
           }}
@@ -5528,8 +5551,7 @@ export default function App() {
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
-        await refreshAppointments();
-        await refreshErrorReports();
+            await refreshAppointments();
             pushToast({ type: "ok", msg: "Nota creada ✅" });
             startVT(() => setSection("notas"));
           }}
