@@ -63,6 +63,8 @@ export type Appointment = {
   id: number;
   patient_id: string;
   title: string;
+  modality?: "presencial" | "virtual";
+  virtual_link?: string | null;
   start_iso: string; // ISO string in UTC (Date.toISOString())
   end_iso: string;   // ISO string in UTC (Date.toISOString())
   notes: string | null;
@@ -73,6 +75,8 @@ export type Appointment = {
 export type AppointmentInput = {
   patient_id: string;
   title: string;
+  modality?: "presencial" | "virtual";
+  virtual_link?: string | null;
   start_iso: string;
   end_iso: string;
   notes?: string | null;
@@ -470,6 +474,8 @@ export async function createAppointment(input: AppointmentInput): Promise<Appoin
     id: store.nextAppointmentId++,
     patient_id: input.patient_id,
     title: (input.title || "").trim() || "Cita",
+    modality: input.modality === "virtual" ? "virtual" : "presencial",
+    virtual_link: input.virtual_link ? String(input.virtual_link).trim() || null : null,
     start_iso: input.start_iso,
     end_iso: input.end_iso,
     notes: (input.notes ?? null) ? String(input.notes) : null,
@@ -490,6 +496,11 @@ export async function updateAppointment(appointmentId: number, patch: Partial<Ap
     ...cur,
     patient_id: patch.patient_id ?? cur.patient_id,
     title: typeof patch.title === "string" ? (patch.title.trim() || "Cita") : cur.title,
+    modality: patch.modality !== undefined ? (patch.modality === "virtual" ? "virtual" : "presencial") : (cur.modality === "virtual" ? "virtual" : "presencial"),
+    virtual_link:
+      patch.virtual_link !== undefined
+        ? (patch.virtual_link ? String(patch.virtual_link).trim() || null : null)
+        : (cur.virtual_link ?? null),
     start_iso: typeof patch.start_iso === "string" ? patch.start_iso : cur.start_iso,
     end_iso: typeof patch.end_iso === "string" ? patch.end_iso : cur.end_iso,
     notes: patch.notes !== undefined ? (patch.notes === null ? null : String(patch.notes)) : cur.notes,

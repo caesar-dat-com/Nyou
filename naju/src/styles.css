@@ -1156,7 +1156,7 @@ textarea {
 
 .resumenSplit {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1166,8 +1166,26 @@ textarea {
 }
 
 .resumenDataCard {
-  position: sticky;
-  top: 8px;
+  position: static;
+  width: 100%;
+}
+
+.resumenDataTopBanner {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(320px, .85fr);
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: start;
+}
+
+.resumenDataRadar {
+  height: clamp(260px, 38vh, 460px);
+  min-height: 240px;
+}
+
+.resumenDataStats {
+  display: grid;
+  gap: 10px;
 }
 
 .radar-wrap--solo {
@@ -1453,6 +1471,12 @@ textarea {
   box-shadow: 0 12px 26px rgba(44, 32, 18, .05);
   display: block;
   touch-action: none;
+}
+
+@media (max-width: 1100px) {
+  .resumenDataTopBanner {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1789,7 +1813,7 @@ textarea {
 
 .resumenSplit {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1799,8 +1823,26 @@ textarea {
 }
 
 .resumenDataCard {
-  position: sticky;
-  top: 8px;
+  position: static;
+  width: 100%;
+}
+
+.resumenDataTopBanner {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.15fr) minmax(320px, .85fr);
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: start;
+}
+
+.resumenDataRadar {
+  height: clamp(260px, 38vh, 460px);
+  min-height: 240px;
+}
+
+.resumenDataStats {
+  display: grid;
+  gap: 10px;
 }
 
 .radar-wrap--solo {

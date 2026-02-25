@@ -299,6 +299,47 @@ function consultaTipoLabel(value: ConsultaTipo) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
+function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
+  return value === "virtual" ? "Virtual" : "Presencial";
+}
+
+function buildVirtualSessionLink(patientName: string, startIso: string) {
+  const date = new Date(startIso);
+  const token = patientName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 24);
+  const dt = Number.isNaN(date.getTime())
+    ? Date.now().toString(36)
+    : `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
+  return `https://meet.jit.si/naju-${token || "sesion"}-${dt}`;
+}
+
+function buildVirtualLinkMessage(patientName: string, link: string) {
+  return `Hola ✨ ${patientName} ¿Cómo te encuentras?
+Este es el link para conectarte a nuestra sesión virtual: ${link}
+Te espero a la hora acordada. ¡Nos vemos! ✨`;
+}
+
+function buildPatientReminderMessage(patientName: string, startIso: string) {
+  const d = new Date(startIso);
+  const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
+  const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `Hola ✨ ${patientName} Espero se encuentre bien
+Escribo para recordarte nuestra sesión de mañana ${date} a las ${hour}. 🗓️ Te espero a la hora acordada. ¡Nos vemos! ✨`;
+}
+
+function buildPsychReminderMessage(psychName: string, patientName: string, startIso: string, modality: Appointment["modality"], calendarLink?: string | null) {
+  const d = new Date(startIso);
+  const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
+  const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const modalityLabel = modality === "virtual" ? "Virtual" : "Presencial";
+  return `Hola 👋 Soy NAJU, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
+}
+
 function fileIcon(file: PatientFile) {
   const name = file.filename.toLowerCase();
   if (file.kind === "note") return "📝";
@@ -3946,8 +3987,9 @@ function AgendaView(props: AgendaViewProps) {
                         {a.title} · {patientName[a.patient_id] || "Paciente"}
                       </div>
                       <div className="fileSub">
-                        {fmt(a.start_iso)} → {fmt(a.end_iso)}
+                        {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
                       </div>
+                      {a.notes ? <div className="fileSub">📝 {a.notes}</div> : null}
                     </div>
                     <button className="smallBtn" onClick={() => onJumpToPatient(a.patient_id)}>
                       Ir
@@ -3982,8 +4024,9 @@ function AgendaView(props: AgendaViewProps) {
                     {a.title} · {patientName[a.patient_id] || "Paciente"}
                   </div>
                   <div className="fileSub">
-                    {fmt(a.start_iso)} → {fmt(a.end_iso)}
+                    {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
                   </div>
+                  {a.notes ? <div className="fileSub">📝 {a.notes}</div> : null}
                 </div>
                 <button className="smallBtn" onClick={() => onJumpToPatient(a.patient_id)}>
                   Ir
@@ -3999,6 +4042,7 @@ function AgendaView(props: AgendaViewProps) {
 
 type CitasSectionProps = {
   patient: Patient;
+  psychologistName: string;
   appointments: Appointment[];
   onCreate: (input: AppointmentInput) => void | Promise<void>;
   onDelete: (appointmentId: number) => void | Promise<void>;
@@ -4007,7 +4051,7 @@ type CitasSectionProps = {
 };
 
 function CitasSection(props: CitasSectionProps) {
-  const { patient, appointments, onCreate, onDelete, onExportPatient, onExportPatientCsv } = props;
+  const { patient, psychologistName, appointments, onCreate, onDelete, onExportPatient, onExportPatientCsv } = props;
 
   const [startLocal, setStartLocal] = useState(() => {
     const d = new Date();
@@ -4022,6 +4066,7 @@ function CitasSection(props: CitasSectionProps) {
   });
   const [minutes, setMinutes] = useState("60");
   const [title, setTitle] = useState("");
+  const [modality, setModality] = useState<ConsultaTipo>("presencial");
   const [notes, setNotes] = useState("");
 
   function fmt(iso: string) {
@@ -4049,9 +4094,13 @@ function CitasSection(props: CitasSectionProps) {
     if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
+    const virtualLink = modality === "virtual" ? buildVirtualSessionLink(patient.name, start.toISOString()) : null;
+
     await onCreate({
       patient_id: patient.id,
       title: (title || "").trim() || `Cita - ${patient.name}`,
+      modality,
+      virtual_link: virtualLink,
       start_iso: start.toISOString(),
       end_iso: end.toISOString(),
       notes: notes.trim() ? notes.trim() : null,
@@ -4060,6 +4109,7 @@ function CitasSection(props: CitasSectionProps) {
     setStartLocal("");
     setMinutes("60");
     setTitle("");
+    setModality("presencial");
     setNotes("");
   }
 
@@ -4102,6 +4152,14 @@ function CitasSection(props: CitasSectionProps) {
           </label>
 
           <label className="field">
+            <div className="label">Modalidad</div>
+            <select className="select" value={modality} onChange={(e) => setModality(normalizeConsultaTipo(e.target.value))}>
+              <option value="presencial">Presencial</option>
+              <option value="virtual">Virtual</option>
+            </select>
+          </label>
+
+          <label className="field">
             <div className="label">Notas</div>
             <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Motivo, acuerdos, etc." />
           </label>
@@ -4126,20 +4184,44 @@ function CitasSection(props: CitasSectionProps) {
           <div style={{ color: "var(--muted)" }}>Aún no hay citas.</div>
         ) : (
           <div className="list">
-            {appointments.map((a) => (
-              <div key={a.id} className="fileRow">
+            {appointments.map((a) => {
+              const isVirtual = a.modality === "virtual";
+              const linkMsg = isVirtual ? buildVirtualLinkMessage(patient.name, a.virtual_link || "") : "";
+              const reminderPatient = buildPatientReminderMessage(patient.name, a.start_iso);
+              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, a.virtual_link);
+              return (
+              <div key={a.id} className="fileRow" style={{ alignItems: "flex-start" }}>
                 <div className="fileIcon">📅</div>
                 <div className="fileMeta">
                   <div className="fileName">{a.title}</div>
                   <div className="fileSub">
-                    {fmt(a.start_iso)} → {fmt(a.end_iso)}
+                    {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
+                  </div>
+                  {a.notes ? <div className="fileSub" style={{ marginTop: 4 }}>📝 {a.notes}</div> : null}
+                  {isVirtual && a.virtual_link ? (
+                    <div className="fileSub" style={{ marginTop: 4 }}>
+                      🔗 <a href={a.virtual_link} target="_blank" rel="noreferrer">{a.virtual_link}</a>
+                    </div>
+                  ) : null}
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                    {isVirtual && a.virtual_link ? (
+                      <button className="smallBtn" onClick={() => navigator.clipboard.writeText(linkMsg)}>
+                        Copiar mensaje link
+                      </button>
+                    ) : null}
+                    <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPatient)}>
+                      Recordatorio paciente (24h)
+                    </button>
+                    <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPsych)}>
+                      Notificación psicólogo (24h)
+                    </button>
                   </div>
                 </div>
                 <button className="smallBtn danger" onClick={() => onDelete(a.id)}>
                   Eliminar
                 </button>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -5162,21 +5244,8 @@ export default function App() {
                     <div className="profileBody">
                       <div className="panel" style={{ gridColumn: "1 / -1" }}>
                         <div className="bd">
-                          <div className="radar-wrap radar-wrap--solo">
-                            <div className="stack">
-                              <div className="radarCanvasWrap">
-                                <RadarChart
-                                  labels={profileLabels}
-                                  values={radarValues}
-                                  compareValues={focusRadarValues}
-                                  axisSubtitles={radarAxisSubtitles}
-                                  accent={selectedProfile?.accent ?? "#c7a45a"}
-                                  max={scaleMax}
-                                  theme={theme}
-                                />
-                              </div>
-                              <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
-                            </div>
+                          <div className="trendWrap">
+                            <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
                           </div>
                         </div>
                       </div>
@@ -5303,49 +5372,65 @@ export default function App() {
                         </div>
                       </details>
 
-                      <ProgressDashes
-                        title="Peso relativo (macro)"
-                        labels={profileLabels}
-                        values={radarValues}
-                        max={scaleMax}
-                        colors={PROFILE_COLORS}
-                      />
-                      <div className="trendPillRow">
-                        <span className="pill">
-                          {dominantMacro
-                            ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
-                            : "Dominante: --"}
-                        </span>
-                        <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
-                      </div>
-
-                      {emotionDominant ? (
-                        <div className="trendPillRow">
-                          <span className="pill">
-                            Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
-                          </span>
-                        </div>
-                      ) : null}
-                      {emotionCounts.labels.length ? (
-                        <ProgressDashes
-                          title="Emoción predominante (tipo)"
-                          labels={emotionCounts.labels}
-                          values={emotionCounts.values}
-                          max={100}
-                          colors={emotionColors}
-                          showScale={false}
-                        />
-                      ) : (
-                        <div className="percent-panel">
-                          <h4>Emoción predominante (tipo)</h4>
-                          <div className="percent-subtitle">Ítem mayor: --</div>
-                          <div className="emptyHint">Sin datos de emoción en el filtro.</div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   <div className="card resumenDataCard">
+                    <div className="resumenDataTopBanner">
+                      <div className="radarCanvasWrap resumenDataRadar">
+                        <RadarChart
+                          labels={profileLabels}
+                          values={radarValues}
+                          compareValues={focusRadarValues}
+                          axisSubtitles={radarAxisSubtitles}
+                          accent={selectedProfile?.accent ?? "#c7a45a"}
+                          max={scaleMax}
+                          theme={theme}
+                        />
+                      </div>
+                      <div className="resumenDataStats">
+                        <ProgressDashes
+                          title="Peso relativo (macro)"
+                          labels={profileLabels}
+                          values={radarValues}
+                          max={scaleMax}
+                          colors={PROFILE_COLORS}
+                        />
+                        <div className="trendPillRow">
+                          <span className="pill">
+                            {dominantMacro
+                              ? `Dominante: ${dominantMacro.label} (${dominantMacro.pct.toFixed(0)}%)`
+                              : "Dominante: --"}
+                          </span>
+                          <span className="pill">Suma: {radarSum.toFixed(1)} (macro)</span>
+                        </div>
+
+                        {emotionDominant ? (
+                          <div className="trendPillRow">
+                            <span className="pill">
+                              Predomina: {emotionDominant.label} ({emotionDominant.pct.toFixed(0)}%)
+                            </span>
+                          </div>
+                        ) : null}
+                        {emotionCounts.labels.length ? (
+                          <ProgressDashes
+                            title="Emoción predominante (tipo)"
+                            labels={emotionCounts.labels}
+                            values={emotionCounts.values}
+                            max={100}
+                            colors={emotionColors}
+                            showScale={false}
+                          />
+                        ) : (
+                          <div className="percent-panel">
+                            <h4>Emoción predominante (tipo)</h4>
+                            <div className="percent-subtitle">Ítem mayor: --</div>
+                            <div className="emptyHint">Sin datos de emoción en el filtro.</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
 
                     <div className="kv">
@@ -5453,6 +5538,7 @@ export default function App() {
             ) : section === "citas" ? (
               <CitasSection
                 patient={selected}
+                psychologistName={professionalProfile.psicologo_nombre}
                 appointments={appointments
                   .filter((a) => a.patient_id === selected.id)
                   .slice()

@@ -37,6 +37,33 @@ function monthLabel(d: Date) {
   }
 }
 
+
+function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
+  return value === "virtual" ? "Virtual" : "Presencial";
+}
+
+function buildVirtualLinkMessage(patientName: string, link: string) {
+  return `Hola ✨ ${patientName} ¿Cómo te encuentras?
+Este es el link para conectarte a nuestra sesión virtual: ${link}
+Te espero a la hora acordada. ¡Nos vemos! ✨`;
+}
+
+function buildPatientReminderMessage(patientName: string, startIso: string) {
+  const d = new Date(startIso);
+  const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
+  const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `Hola ✨ ${patientName} Espero se encuentre bien
+Escribo para recordarte nuestra sesión de mañana ${date} a las ${hour}. 🗓️ Te espero a la hora acordada. ¡Nos vemos! ✨`;
+}
+
+function buildPsychReminderMessage(psychName: string, patientName: string, startIso: string, modality: Appointment["modality"], calendarLink?: string | null) {
+  const d = new Date(startIso);
+  const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
+  const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const modalityLabel = modality === "virtual" ? "Virtual" : "Presencial";
+  return `Hola 👋 Soy NAJU, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
+}
+
 function buildMonthGrid(monthCursor: Date) {
   const first = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
   const start = new Date(first);
@@ -357,15 +384,42 @@ export default function HomeDashboard(props: {
                 <div style={{ color: "var(--muted)", fontSize: 13 }}>Sin citas.</div>
               ) : (
                 <div className="list">
-                  {selectedDayAppointments.map((a) => (
-                    <div key={a.id} className="fileRow">
+                  {selectedDayAppointments.map((a) => {
+                    const patientName = patientNameById.get(a.patient_id) || "Paciente";
+                    const isVirtual = a.modality === "virtual";
+                    const linkMsg = isVirtual ? buildVirtualLinkMessage(patientName, a.virtual_link || "") : "";
+                    const reminderPatient = buildPatientReminderMessage(patientName, a.start_iso);
+                    const reminderPsych = buildPsychReminderMessage(proForm.psicologo_nombre, patientName, a.start_iso, a.modality, a.virtual_link);
+                    return (
+                    <div key={a.id} className="fileRow" style={{ alignItems: "flex-start" }}>
                       <div className="fileIcon">📅</div>
                       <div className="fileMeta">
-                        <div className="fileName">{a.title} · {patientNameById.get(a.patient_id) || "Paciente"}</div>
-                        <div className="fileSub">{new Date(a.start_iso).toLocaleString()}</div>
+                        <div className="fileName">{a.title} · {patientName}</div>
+                        <div className="fileSub">
+                          {new Date(a.start_iso).toLocaleString()} · {appointmentModalityLabel(a.modality)}
+                        </div>
+                        {a.notes ? <div className="fileSub" style={{ marginTop: 4 }}>📝 {a.notes}</div> : null}
+                        {isVirtual && a.virtual_link ? (
+                          <div className="fileSub" style={{ marginTop: 4 }}>
+                            🔗 <a href={a.virtual_link} target="_blank" rel="noreferrer">{a.virtual_link}</a>
+                          </div>
+                        ) : null}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                          {isVirtual && a.virtual_link ? (
+                            <button className="smallBtn" onClick={() => navigator.clipboard.writeText(linkMsg)}>
+                              Copiar mensaje link
+                            </button>
+                          ) : null}
+                          <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPatient)}>
+                            Recordatorio paciente (24h)
+                          </button>
+                          <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPsych)}>
+                            Notificación psicólogo (24h)
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>
