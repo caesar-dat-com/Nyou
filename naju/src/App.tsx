@@ -10,6 +10,7 @@ import {
   PatientInput,
   createMentalExam,
   createPatientNote,
+  updatePatientNote,
   createPatient,
   deletePatient,
   importFiles,
@@ -62,6 +63,27 @@ type Toast = { type: "ok" | "err"; msg: string } | null;
 
 
 
+type ProfessionalProfile = {
+  psicologo_nombre: string;
+  psicologo_documento: string;
+  psicologo_tp: string;
+  psicologo_correo: string;
+  psicologo_telefono: string;
+  psicologo_ciudad_direccion: string;
+  modalidad_atencion: ConsultaTipo;
+  lugar_plataforma: string;
+  canal_derechos_correo: string;
+  canal_derechos_telefono: string;
+  informe_solicitud: "verbal" | "escrita" | "ambas";
+  informe_plazo_dias: string;
+  informe_medio: "pdf" | "impreso" | "otro";
+  informe_medio_otro: string;
+  informe_costo: string;
+  firma_psicologo_data_url: string | null;
+};
+
+const PROFESSIONAL_PROFILE_STORAGE_KEY = "naju_professional_profile_v1";
+
 type PaletteTokens = {
   primary: string;
   background: string;
@@ -104,6 +126,107 @@ const APP_PALETTES: Record<string, AppPalette> = {
     dark: { primary: "#ff3270", background: "#000807", surface: "#0b1413", accent: "#00c3ff", text: "#eeffff" },
   },
 };
+
+function defaultProfessionalProfile(): ProfessionalProfile {
+  return {
+    psicologo_nombre: "",
+    psicologo_documento: "",
+    psicologo_tp: "",
+    psicologo_correo: "",
+    psicologo_telefono: "",
+    psicologo_ciudad_direccion: "",
+    modalidad_atencion: "presencial",
+    lugar_plataforma: "",
+    canal_derechos_correo: "",
+    canal_derechos_telefono: "",
+    informe_solicitud: "verbal",
+    informe_plazo_dias: "",
+    informe_medio: "pdf",
+    informe_medio_otro: "",
+    informe_costo: "",
+    firma_psicologo_data_url: null,
+  };
+}
+
+function professionalProfileFromConsent(v: ConsentData): ProfessionalProfile {
+  return {
+    psicologo_nombre: v.psicologo_nombre,
+    psicologo_documento: v.psicologo_documento,
+    psicologo_tp: v.psicologo_tp,
+    psicologo_correo: v.psicologo_correo,
+    psicologo_telefono: v.psicologo_telefono,
+    psicologo_ciudad_direccion: v.psicologo_ciudad_direccion,
+    modalidad_atencion: v.modalidad_atencion,
+    lugar_plataforma: v.lugar_plataforma,
+    canal_derechos_correo: v.canal_derechos_correo,
+    canal_derechos_telefono: v.canal_derechos_telefono,
+    informe_solicitud: v.informe_solicitud,
+    informe_plazo_dias: v.informe_plazo_dias,
+    informe_medio: v.informe_medio,
+    informe_medio_otro: v.informe_medio_otro,
+    informe_costo: v.informe_costo,
+    firma_psicologo_data_url: v.firma_psicologo_data_url,
+  };
+}
+
+function createConsentDraft(profile: ProfessionalProfile): ConsentData {
+  return {
+    created_at: new Date().toISOString(),
+    ...profile,
+    paciente_nombre: "",
+    paciente_documento: "",
+    decision: "acepto",
+    firma_paciente_data_url: null,
+  };
+}
+
+function buildInitialAssessmentBodyTemplate() {
+  return [
+    "VALORACIÓN INICIAL. Campo de texto. Se encuentra al consultante vía Online/consultorio",
+    "",
+    "En cuanto a su esfera emocional refiere:",
+    "",
+    "Respecto al ámbito familiar expresa:",
+    "",
+    "En relación a su esfera laboral menciona:",
+    "",
+    "ANÁLISIS.",
+    "",
+    "Consultante masculino en el curso de vida de la adultez",
+    "",
+    "A la fecha, el consultante",
+    "",
+    "En cuanto a su composición familiar…",
+    "",
+    "En el ámbito ocupacional…",
+    "",
+    "Respecto al estado académico…",
+    "",
+    "Durante la sesión refiere…",
+    "",
+    "En cuanto a los factores de riesgo…",
+    "",
+    "En cuanto a los factores protectores…",
+    "",
+    "PLAN DE TRABAJO.",
+    "",
+    "Archivos adjuntos.",
+    "",
+    "- Diagnósticos: Sí / No → Subir archivo",
+    "- Fórmulas médicas / Medicación: Sí / No",
+    "- Fotos de medicamentos (pastillas/cajas): Subir archivo → Descripción breve:",
+  ].join("\n");
+}
+
+function buildInitialAssessmentNoteText(patientName: string, date: string, time: string, body: string) {
+  return [
+    patientName.toUpperCase(),
+    "",
+    `Fecha: ${date}   Hora: ${time}`,
+    "",
+    body.trim(),
+  ].join("\n");
+}
 
 function errMsg(e: any) {
   if (!e) return "Error desconocido";
@@ -469,22 +592,22 @@ function scoreAxisValues(files: PatientFile[], mode: "aggregate" | "avg3" | "lat
   const sorted = [...files].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const targetFiles =
     mode === "latest" ? sorted.slice(0, 1) : mode === "avg3" ? sorted.slice(0, 3) : sorted;
+
   const sums = AXES.map(() => 0);
-  const counts = AXES.map(() => 0);
 
   targetFiles.forEach((file) => {
     const meta = parseMetaJson(file);
     if (!meta) return;
     AXES.forEach((axis, idx) => {
       const raw = meta[axis.key] ?? (axis.noteKey ? meta[axis.noteKey] : undefined);
-      if (!raw) return;
       const value = scoreLookup(raw, axis.map);
       sums[idx] += value;
-      counts[idx] += 1;
     });
   });
 
-  return sums.map((sum, idx) => (counts[idx] ? sum / counts[idx] : 0));
+  const totalRecords = targetFiles.length;
+  if (!totalRecords) return AXES.map(() => 0);
+  return sums.map((sum) => sum / totalRecords);
 }
 
 function buildEmotionCounts(files: PatientFile[]) {
@@ -1191,12 +1314,12 @@ function TrendCanvas({
     // Objetivo: que los nodos/labels no se salgan del canvas, incluso en espacios pequeños.
     const mTop = 56 * dpr;
     const mBottom = 40 * dpr;
-    const mSide = 30 * dpr;
+    const mSide = 38 * dpr;
     const rootR = 18 * dpr;
     const root = { x: width * 0.5, y: mTop + rootR };
     const availH = Math.max(1, height - mTop - mBottom);
-    const row1 = clamp(mTop + availH * 0.46, root.y + rootR + 36 * dpr, height - mBottom - 140 * dpr);
-    const row2 = clamp(height - mBottom - 28 * dpr, row1 + 84 * dpr, height - 54 * dpr);
+    const row1 = clamp(mTop + availH * 0.42, root.y + rootR + 40 * dpr, height - mBottom - 176 * dpr);
+    const row2 = clamp(height - mBottom - 24 * dpr, row1 + 112 * dpr, height - 44 * dpr);
     const xs = labels.map((_, i) => mSide + (i * (width - mSide * 2)) / Math.max(1, labels.length - 1));
     function hexToRgb(hex: string) {
       const h = hex.replace("#", "").trim();
@@ -1410,7 +1533,6 @@ function TrendCanvas({
           ringPct: clamp(val / Math.max(1, max), 0, 1) * progress,
           centerText: `${val.toFixed(1)}`,
           label,
-          sub: `${(w * 100).toFixed(0)}% · ${val.toFixed(1)}/${max}`,
           labelMode: "below",
         });
 
@@ -1425,23 +1547,20 @@ function TrendCanvas({
           const slotLeft = idx === 0 ? mSide : (xs[idx - 1] + x) / 2;
           const slotRight = idx === labels.length - 1 ? width - mSide : (x + xs[idx + 1]) / 2;
           const slotW = Math.max(1, slotRight - slotLeft);
-          const baseOff = clamp(slotW * 0.30, 34 * dpr, 86 * dpr);
+          const baseOff = clamp(slotW * 0.38, 48 * dpr, 110 * dpr);
 
           const dir = j === 0 ? -1 : 1;
           let lx = x + dir * baseOff;
           // Mantener dentro del slot y respetar radios
           lx = clamp(lx, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           // Asegurar separación mínima con el macro
-          const minSep = macroR + leafR + 14 * dpr;
+          const minSep = macroR + leafR + 22 * dpr;
           if (Math.abs(lx - x) < minSep) {
             lx = clamp(x + dir * minSep, slotLeft + leafR + 4 * dpr, slotRight - leafR - 4 * dpr);
           }
 
-          const ly = row2 + (j === 0 ? -18 * dpr : 18 * dpr);
-          const labelMode = j === 0 ? "above" : "below";
+          const ly = row2 + (j === 0 ? -30 * dpr : 30 * dpr);
           const rawLabel = String(value ?? "");
-          const leafLabel = rawLabel.length > 18 ? `${rawLabel.slice(0, 16)}…` : rawLabel;
-
           // Edge macro -> leaf
           drawEdge(x, row1, macroR, lx, ly, leafR, c, (1.2 + pct * 3.6) * dpr, 0.50 * progress);
 
@@ -1453,8 +1572,6 @@ function TrendCanvas({
             color: c,
             ringPct: pct * progress,
             centerText: `${Math.round(pct * 100)}%`,
-            label: leafLabel,
-            labelMode,
           });
 
           hits.push({ kind: "leaf", x: lx, y: ly, r: leafR, title: `${label} · ${rawLabel}`, sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})` });
@@ -1545,25 +1662,32 @@ function Modal({
   subtitle,
   children,
   onClose,
+  fullScreen = false,
+  closeVariant = "button",
 }: {
   title?: string;
   subtitle?: string;
   children: React.ReactNode;
   onClose: () => void;
+  fullScreen?: boolean;
+  closeVariant?: "button" | "icon";
 }) {
+  const hasHeaderText = Boolean(title || subtitle);
   return (
     <div className="backdrop" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modalHeader">
-          {(title || subtitle) ? (
+      <div className={`modal ${fullScreen ? "modalFullScreen" : ""}`} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={`modalHeader ${!hasHeaderText ? "isCompact" : ""}`}>
+          {hasHeaderText ? (
             <div>
               {title ? <h3>{title}</h3> : null}
               {subtitle ? <p>{subtitle}</p> : null}
             </div>
           ) : <div />}
-          <button className="pillBtn" onClick={onClose} aria-label="Cerrar">
-            Cerrar
-          </button>
+          {closeVariant === "icon" ? (
+            <button className="modalCloseX" onClick={onClose} aria-label="Cerrar">✕</button>
+          ) : (
+            <button className="pillBtn" onClick={onClose} aria-label="Cerrar">Cerrar</button>
+          )}
         </div>
         {children}
       </div>
@@ -2157,33 +2281,13 @@ function ConsentIntroModal({ onClose, onContinue }: { onClose: () => void; onCon
 function ConsentModal({
   onClose,
   onAccept,
+  professionalProfile,
 }: {
   onClose: () => void;
   onAccept: (consent: ConsentData) => void;
+  professionalProfile: ProfessionalProfile;
 }) {
-  const [v, setV] = useState<ConsentData>({
-    created_at: new Date().toISOString(),
-    psicologo_nombre: "",
-    psicologo_documento: "",
-    psicologo_tp: "",
-    psicologo_correo: "",
-    psicologo_telefono: "",
-    psicologo_ciudad_direccion: "",
-    modalidad_atencion: "presencial",
-    lugar_plataforma: "",
-    canal_derechos_correo: "",
-    canal_derechos_telefono: "",
-    informe_solicitud: "verbal",
-    informe_plazo_dias: "",
-    informe_medio: "pdf",
-    informe_medio_otro: "",
-    informe_costo: "",
-    paciente_nombre: "",
-    paciente_documento: "",
-    decision: "acepto",
-    firma_paciente_data_url: null,
-    firma_psicologo_data_url: null,
-  });
+  const [v, setV] = useState<ConsentData>(() => createConsentDraft(professionalProfile));
   const [errors, setErrors] = useState<ConsentErrors>({});
   const [openSection, setOpenSection] = useState<"pro" | "pac">("pro");
   const fieldRefs = useRef<Partial<Record<ConsentFieldKey, HTMLElement | null>>>({});
@@ -2291,6 +2395,66 @@ function ConsentModal({
   );
 }
 
+function InitialAssessmentModal({
+  patient,
+  file,
+  onClose,
+  onSave,
+}: {
+  patient: Patient;
+  file: PatientFile | null;
+  onClose: () => void;
+  onSave: (payload: { date: string; time: string; body: string }) => Promise<void>;
+}) {
+  const parsed = file ? parseMetaJson(file) : null;
+  const now = new Date();
+  const defaultDate = now.toLocaleDateString("es-CO");
+  const defaultTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  const [date, setDate] = useState<string>(typeof parsed?.valoracion_fecha === "string" ? parsed.valoracion_fecha : defaultDate);
+  const [time, setTime] = useState<string>(typeof parsed?.valoracion_hora === "string" ? parsed.valoracion_hora : defaultTime);
+  const [body, setBody] = useState<string>(typeof parsed?.valoracion_cuerpo === "string" ? parsed.valoracion_cuerpo : buildInitialAssessmentBodyTemplate());
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await onSave({ date: date.trim() || defaultDate, time: time.trim() || defaultTime, body });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose} fullScreen closeVariant="icon">
+      <div className="modalBody" style={{ gap: 14 }}>
+        <div className="card initialAssessmentHero">
+          <div className="initialAssessmentName">{patient.name.toUpperCase()}</div>
+          <div className="initialAssessmentDateRow">
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Fecha</div>
+              <input className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Hora</div>
+              <input className="input" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+          </div>
+        </div>
+
+        <label className="field" style={{ margin: 0 }}>
+          <div className="label">Valoración inicial (editable)</div>
+          <textarea className="textarea" style={{ minHeight: "55vh", lineHeight: 1.55 }} value={body} onChange={(e) => setBody(e.target.value)} />
+        </label>
+      </div>
+      <div className="modalFooter">
+        <button className="pillBtn" onClick={onClose} disabled={busy}>Cancelar</button>
+        <button className="pillBtn primary pulseGlow" onClick={submit} disabled={busy}>{busy ? "Guardando..." : "Guardar valoración inicial"}</button>
+      </div>
+    </Modal>
+  );
+}
+
 function PatientForm({
   initial,
   onSave,
@@ -2306,45 +2470,14 @@ function PatientForm({
 }) {
   const [v, setV] = useState<PatientInput>(initial);
   const [busy, setBusy] = useState(false);
-  const [isAntecedentsEditing, setIsAntecedentsEditing] = useState(() => !(initial.personal_history ?? "").trim());
-
   const antecedentsText = v.personal_history ?? "";
-  const antecedentsWordCount = antecedentsText.trim() ? antecedentsText.trim().split(/\s+/).length : 0;
-  const antecedentsLimitReached = antecedentsWordCount > 800;
-  const antecedentsTagOptions = ["Dx previo", "Medicación", "Duelo"];
-  const antecedentsTags = Array.isArray(v.antecedents_tags) ? v.antecedents_tags : [];
-
   function set<K extends keyof PatientInput>(k: K, value: PatientInput[K]) {
     setV((p) => ({ ...p, [k]: value }));
   }
 
-  function todayIsoDate() {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function formatReviewDate(value?: string | null) {
-    if (!value) return "—";
-    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return "—";
-    return `${m[3]}/${m[2]}/${m[1]}`;
-  }
-
-  function toggleAntecedentTag(tag: string) {
-    const has = antecedentsTags.includes(tag);
-    const next = has ? antecedentsTags.filter((x) => x !== tag) : [...antecedentsTags, tag];
-    set("antecedents_tags", next);
-  }
 
   async function submit() {
-    if (!v.name?.trim() || antecedentsLimitReached) return;
-    const before = (initial.personal_history ?? "").trim();
-    const after = antecedentsText.trim();
-    const antecedentsChanged = before !== after;
-    const reviewedAt = antecedentsChanged ? todayIsoDate() : (initial.antecedents_reviewed_at ?? null);
+    if (!v.name?.trim()) return;
     setBusy(true);
     try {
       await onSave({
@@ -2359,9 +2492,9 @@ function PatientForm({
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
         notes: null,
-        personal_history: after || null,
-        antecedents_tags: antecedentsTags,
-        antecedents_reviewed_at: reviewedAt,
+        personal_history: antecedentsText.trim() || null,
+        antecedents_tags: v.antecedents_tags ?? null,
+        antecedents_reviewed_at: v.antecedents_reviewed_at ?? null,
         personal_social_situation: null,
         medical_psych_history: null,
         family_history: null,
@@ -2487,56 +2620,13 @@ function PatientForm({
           </div>
         </div>
 
-        <div className="antecedentsCard">
-          <div className="antecedentsHead">Antecedentes</div>
-          <textarea
-            className="textarea antecedentsTextarea"
-            value={antecedentsText}
-            onChange={(e) => set("personal_history", e.target.value)}
-            placeholder="Narrativa clínica libre de antecedentes..."
-            readOnly={!isAntecedentsEditing}
-          />
-          <div className="antecedentsWordCounter">
-            {antecedentsWordCount} / 800 palabras
-          </div>
-          {antecedentsLimitReached ? (
-            <div className="consentErrorText" style={{ marginTop: 6 }}>Límite máximo: 800 palabras.</div>
-          ) : null}
-
-          <div className="antecedentsTags">
-            {antecedentsTagOptions.map((tag) => {
-              const active = antecedentsTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  className={`softTag ${active ? "isActive" : ""}`}
-                  onClick={() => toggleAntecedentTag(tag)}
-                >
-                  [{tag}]
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="antecedentsFoot">
-            <div>Última revisión: {formatReviewDate(v.antecedents_reviewed_at)}</div>
-            <button
-              type="button"
-              className="pillBtn"
-              onClick={() => setIsAntecedentsEditing((x) => !x)}
-            >
-              {isAntecedentsEditing ? "Bloquear edición" : "Editar antecedentes"}
-            </button>
-          </div>
-        </div>
       </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onCancel} disabled={busy}>
           Cancelar
         </button>
         {extraRight}
-        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim() || antecedentsLimitReached}>
+        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim()}>
           {busy ? "Guardando..." : saveLabel}
         </button>
       </div>
@@ -2668,9 +2758,9 @@ function MentalExamModal({
 
   return (
     <Modal
-      title="Nuevo examen mental"
-      subtitle="Selectores + calendario para que sea rápido y consistente."
       onClose={onClose}
+      fullScreen
+      closeVariant="icon"
     >
       <div className="modalBody">
         <div className="formGrid">
@@ -3383,7 +3473,7 @@ function NoteModal({
   const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile);
 
   return (
-    <Modal title="Nueva nota" subtitle="Registro rápido del seguimiento clínico." onClose={onClose}>
+    <Modal onClose={onClose} fullScreen closeVariant="icon">
       <div className="modalBody">
         <input
           ref={audioInputRef}
@@ -3919,7 +4009,17 @@ type CitasSectionProps = {
 function CitasSection(props: CitasSectionProps) {
   const { patient, appointments, onCreate, onDelete, onExportPatient, onExportPatientCsv } = props;
 
-  const [startLocal, setStartLocal] = useState("");
+  const [startLocal, setStartLocal] = useState(() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  });
   const [minutes, setMinutes] = useState("60");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -3932,12 +4032,21 @@ function CitasSection(props: CitasSectionProps) {
     }
   }
 
+  function parseLocalDateTime(value: string) {
+    const m = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    const [, y, mo, d, h, mi] = m;
+    const dt = new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), 0, 0);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt;
+  }
+
   async function submit() {
     const s = startLocal.trim();
     if (!s) return;
     const mins = Math.max(5, Number(minutes || "60") || 60);
-    const start = new Date(s);
-    if (Number.isNaN(start.getTime())) return;
+    const start = parseLocalDateTime(s);
+    if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
     await onCreate({
@@ -4205,6 +4314,26 @@ export default function App() {
     };
   }, [activePalette, logoColorMode]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PROFESSIONAL_PROFILE_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<ProfessionalProfile>;
+      setProfessionalProfile({ ...defaultProfessionalProfile(), ...parsed });
+    } catch {
+      // ignore malformed storage
+    }
+  }, []);
+
+  function saveProfessionalProfile(next: ProfessionalProfile) {
+    setProfessionalProfile(next);
+    try {
+      localStorage.setItem(PROFESSIONAL_PROFILE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore persistence errors
+    }
+  }
+
   function toggleTheme() {
     setTheme((t) => (t === "dark" ? "light" : "dark"));
   }
@@ -4235,9 +4364,11 @@ export default function App() {
   const [showConsentIntro, setShowConsentIntro] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
   const [pendingConsent, setPendingConsent] = useState<ConsentData | null>(null);
+  const [professionalProfile, setProfessionalProfile] = useState<ProfessionalProfile>(() => defaultProfessionalProfile());
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [showNote, setShowNote] = useState(false);
+  const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
   const [consentPreview, setConsentPreview] = useState<ConsentData | null>(null);
 
@@ -4345,6 +4476,11 @@ export default function App() {
     return fileGroups.notes.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === notesFilterTipo);
   }, [fileGroups.notes, notesFilterTipo]);
 
+  const initialAssessmentFile = useMemo(() => {
+    const candidates = fileGroups.notes.filter((f) => parseMetaJson(f)?.type === "valoracion_inicial");
+    return candidates.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+  }, [fileGroups.notes]);
+
   const filteredExams = useMemo(() => {
     if (examsFilterTipo === "all") return fileGroups.exams;
     return fileGroups.exams.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === examsFilterTipo);
@@ -4401,26 +4537,26 @@ export default function App() {
   const radarSum = useMemo(() => radarValues.reduce((acc, val) => acc + val, 0), [radarValues]);
   const dominantMacro = useMemo(() => {
     if (!radarValues.length) return null;
-    const maxValue = Math.max(...radarValues);
-    if (maxValue <= 0) return null;
-
-    const winners = radarValues
+    const ranked = radarValues
       .map((value, idx) => ({ value, idx }))
-      .filter((item) => Math.abs(item.value - maxValue) < 0.001);
+      .sort((a, b) => b.value - a.value);
 
-    if (winners.length !== 1) {
+    const [first, second] = ranked;
+    if (!first || first.value <= 0) return null;
+
+    // Si las dos categorías más altas están muy cerca, se considera perfil mixto.
+    if (second && Math.abs(first.value - second.value) < 0.25) {
       return {
         label: "Perfil mixto",
-        value: maxValue,
-        pct: radarSum ? (maxValue / radarSum) * 100 : 0,
+        value: first.value,
+        pct: radarSum ? (first.value / radarSum) * 100 : 0,
       };
     }
 
-    const winner = winners[0];
     return {
-      label: AXES[winner.idx].label,
-      value: winner.value,
-      pct: radarSum ? (winner.value / radarSum) * 100 : 0,
+      label: AXES[first.idx].label,
+      value: first.value,
+      pct: radarSum ? (first.value / radarSum) * 100 : 0,
     };
   }, [radarValues, radarSum]);
 
@@ -4585,10 +4721,40 @@ export default function App() {
         consent_json: pendingConsent ? JSON.stringify(pendingConsent) : null,
       };
       const p = await createPatient(payload);
+
+      const draftDate = new Date().toLocaleDateString("es-CO");
+      const draftTime = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+      const draftBody = buildInitialAssessmentBodyTemplate();
+      const initialAssessmentPayload = {
+        type: "valoracion_inicial",
+        fecha: new Date().toISOString().slice(0, 10),
+        estado_animo: "Eutímico",
+        riesgo: "Sin riesgo aparente",
+        texto: buildInitialAssessmentNoteText(p.name, draftDate, draftTime, draftBody),
+        valoracion_fecha: draftDate,
+        valoracion_hora: draftTime,
+        valoracion_cuerpo: draftBody,
+        continuidad: null,
+        transcripcion: null,
+        audio_data_url: null,
+        consulta_tipo: "presencial" as const,
+        patient_snapshot: {
+          id: p.id,
+          name: p.name,
+          doc_type: p.doc_type,
+          doc_number: p.doc_number,
+        },
+      };
+      await createPatientNote(p.id, initialAssessmentPayload);
+
       await refreshPatients();
       await refreshAllFiles();
-      startVT(() => setSelectedId(p.id));
-      pushToast({ type: "ok", msg: "Paciente creado ✅" });
+      await refreshFiles(p.id);
+      startVT(() => {
+        setSelectedId(p.id);
+        setSection("archivos");
+      });
+      pushToast({ type: "ok", msg: "Paciente creado ✅ (con valoración inicial)" });
       setShowCreate(false);
       setPendingConsent(null);
     } catch (e: any) {
@@ -4618,6 +4784,42 @@ export default function App() {
   async function actionAttachFiles() {
     if (!selected) return;
     fileInputRef.current?.click();
+  }
+
+  function actionOpenInitialAssessment() {
+    if (!selected) return;
+    setShowInitialAssessment(true);
+  }
+
+  async function saveInitialAssessment(payload: { date: string; time: string; body: string }) {
+    if (!selected) return;
+    const notePayload = {
+      type: "valoracion_inicial",
+      fecha: new Date().toISOString().slice(0, 10),
+      estado_animo: "Eutímico",
+      riesgo: "Sin riesgo aparente",
+      texto: buildInitialAssessmentNoteText(selected.name, payload.date, payload.time, payload.body),
+      valoracion_fecha: payload.date,
+      valoracion_hora: payload.time,
+      valoracion_cuerpo: payload.body,
+      continuidad: null,
+      transcripcion: null,
+      audio_data_url: null,
+      consulta_tipo: "presencial" as const,
+      patient_snapshot: {
+        id: selected.id,
+        name: selected.name,
+        doc_type: selected.doc_type,
+        doc_number: selected.doc_number,
+      },
+    };
+
+    if (initialAssessmentFile) await updatePatientNote(initialAssessmentFile.id, notePayload);
+    else await createPatientNote(selected.id, notePayload);
+
+    await refreshFiles(selected.id);
+    await refreshAllFiles();
+    pushToast({ type: "ok", msg: initialAssessmentFile ? "Valoración inicial actualizada ✅" : "Valoración inicial creada ✅" });
   }
 
   async function actionOpenFile(file: PatientFile) {
@@ -4696,11 +4898,6 @@ export default function App() {
     const evidence = buildEvidence(trendFiles, profileLabels);
     return evidence.map((bucket) => topItemSubtitleFromBucket(bucket));
   }, [trendFiles, profileLabels]);
-  const radarHint = useMemo(() => {
-    if (calcMode === "latest") return "Radar = último registro dentro del filtro";
-    if (calcMode === "avg3") return "Radar = promedio de los últimos 3 dentro del filtro";
-    return "Radar = promedio de todo lo filtrado";
-  }, [calcMode]);
   const emotionColors = useMemo(() => {
     const palette: Record<string, string> = {};
     emotionCounts.labels.forEach((label, idx) => {
@@ -4900,6 +5097,8 @@ export default function App() {
                 appointments={appointments}
                 profileByPatientMap={profileByPatientMap}
                 onAddPatient={beginCreatePatient}
+                professionalProfile={professionalProfile}
+                onSaveProfessionalProfile={saveProfessionalProfile}
               />
             ) : page === "errores" ? (
               <ErrorCenter
@@ -4962,11 +5161,6 @@ export default function App() {
                     </div>
                     <div className="profileBody">
                       <div className="panel" style={{ gridColumn: "1 / -1" }}>
-                        <div className="hd">
-                          <span className="pill" id="macroHint">
-                            {radarHint}
-                          </span>
-                        </div>
                         <div className="bd">
                           <div className="radar-wrap radar-wrap--solo">
                             <div className="stack">
@@ -4980,10 +5174,6 @@ export default function App() {
                                   max={scaleMax}
                                   theme={theme}
                                 />
-                              </div>
-                              <div className="miniHelp" id="treeHow">
-                                Árbol: raíz = resumen global · ramas = categorías macro · hojas = micro-evidencias
-                                (examen mental + notas) que explican la tendencia.
                               </div>
                               <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
                             </div>
@@ -5271,7 +5461,6 @@ export default function App() {
                   try {
                     await createAppointment(payload);
                     await refreshAppointments();
-        await refreshErrorReports();
                     pushToast({ type: "ok", msg: "Cita creada" });
                   } catch (e: any) {
                     pushToast({ type: "err", msg: `No se pudo crear la cita: ${errMsg(e)}` });
@@ -5281,7 +5470,6 @@ export default function App() {
                   try {
                     await deleteAppointment(id);
                     await refreshAppointments();
-        await refreshErrorReports();
                     pushToast({ type: "ok", msg: "Cita eliminada" });
                   } catch (e: any) {
                     pushToast({ type: "err", msg: `No se pudo eliminar: ${errMsg(e)}` });
@@ -5351,14 +5539,30 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Archivos</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Adjuntos del paciente (PDF, imágenes, etc.).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={actionAttachFiles}>
-                    + Adjuntar
-                  </button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <button className={`pillBtn primary ${!initialAssessmentFile ? "pulseGlow" : ""}`} onClick={actionOpenInitialAssessment}>
+                      {initialAssessmentFile ? "Editar valoración inicial" : "✨ Crear valoración inicial"}
+                    </button>
+                    <button className="pillBtn primary" onClick={actionAttachFiles}>
+                      + Adjuntar
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ height: 12 }} />
 
                 <div className="list">
+                  {initialAssessmentFile ? (
+                    <div className="fileRow initialAssessmentRow pulseGlowSoft">
+                      <div className="fileIcon">🧾</div>
+                      <div className="fileMeta">
+                        <div className="fileName">Valoración inicial (editable)</div>
+                        <div className="fileSub">{isoToNice(initialAssessmentFile.created_at)} · Se mantiene fija arriba</div>
+                      </div>
+                      <button className="smallBtn" onClick={actionOpenInitialAssessment}>Editar</button>
+                    </div>
+                  ) : null}
+
                   {fileGroups.attachments.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay archivos adjuntos.</div>
                   ) : (
@@ -5395,7 +5599,9 @@ export default function App() {
       {showConsent ? (
         <ConsentModal
           onClose={() => setShowConsent(false)}
+          professionalProfile={professionalProfile}
           onAccept={(consent) => {
+            saveProfessionalProfile(professionalProfileFromConsent(consent));
             setPendingConsent(consent);
             setShowConsent(false);
             setShowCreate(true);
@@ -5453,8 +5659,7 @@ export default function App() {
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
-        await refreshAppointments();
-        await refreshErrorReports();
+            await refreshAppointments();
             pushToast({ type: "ok", msg: "Examen creado ✅" });
             startVT(() => setSection("examenes"));
           }}
@@ -5469,11 +5674,19 @@ export default function App() {
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
-        await refreshAppointments();
-        await refreshErrorReports();
+            await refreshAppointments();
             pushToast({ type: "ok", msg: "Nota creada ✅" });
             startVT(() => setSection("notas"));
           }}
+        />
+      ) : null}
+
+      {showInitialAssessment && selected ? (
+        <InitialAssessmentModal
+          patient={selected}
+          file={initialAssessmentFile}
+          onClose={() => setShowInitialAssessment(false)}
+          onSave={saveInitialAssessment}
         />
       ) : null}
 
