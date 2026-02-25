@@ -2691,3 +2691,12 @@ textarea {
 .resumenSplit.resumenSplit--stacked > .resumenDataCard {
   position: static;
 }
+
+/* En resumen apilado: radar/datos arriba y árbol de tendencias abajo. */
+.resumenSplit.resumenSplit--stacked > .resumenDataCard {
+  order: 1;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenRadarCard {
+  order: 2;
+}
