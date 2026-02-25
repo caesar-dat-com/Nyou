@@ -5431,7 +5431,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
+                    <div className="resumenDatosTitle" style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
 
                     <div className="kv">
                       <div className="k">Nombre</div>

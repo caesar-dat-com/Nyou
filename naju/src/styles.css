@@ -2700,3 +2700,42 @@ textarea {
 .resumenSplit.resumenSplit--stacked > .resumenRadarCard {
   order: 2;
 }
+
+/* En el resumen apilado, dentro del bloque de datos: izquierda = datos del paciente, derecha = radar/estadísticas. */
+.resumenSplit.resumenSplit--stacked > .resumenDataCard {
+  display: grid;
+  grid-template-columns: minmax(300px, .95fr) minmax(0, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner {
+  grid-column: 2;
+  grid-row: 1 / span 30;
+  margin-bottom: 0;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDatosTitle,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .actionRow {
+  grid-column: 1;
+}
+
+@media (max-width: 1150px) {
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard {
+    grid-template-columns: 1fr;
+  }
+
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDatosTitle,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .actionRow {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner {
+    margin-bottom: 12px;
+  }
+}
