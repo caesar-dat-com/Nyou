@@ -10,6 +10,7 @@ import {
   PatientInput,
   createMentalExam,
   createPatientNote,
+  updatePatientNote,
   createPatient,
   deletePatient,
   importFiles,
@@ -179,15 +180,8 @@ function createConsentDraft(profile: ProfessionalProfile): ConsentData {
   };
 }
 
-function buildInitialAssessmentNoteText(patientName: string) {
-  const now = new Date();
-  const date = now.toLocaleDateString("es-CO");
-  const time = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+function buildInitialAssessmentBodyTemplate() {
   return [
-    patientName.toUpperCase(),
-    "",
-    `Fecha: ${date}   Hora: ${time}`,
-    "",
     "VALORACIÓN INICIAL. Campo de texto. Se encuentra al consultante vía Online/consultorio",
     "",
     "En cuanto a su esfera emocional refiere:",
@@ -221,6 +215,16 @@ function buildInitialAssessmentNoteText(patientName: string) {
     "- Diagnósticos: Sí / No → Subir archivo",
     "- Fórmulas médicas / Medicación: Sí / No",
     "- Fotos de medicamentos (pastillas/cajas): Subir archivo → Descripción breve:",
+  ].join("\n");
+}
+
+function buildInitialAssessmentNoteText(patientName: string, date: string, time: string, body: string) {
+  return [
+    patientName.toUpperCase(),
+    "",
+    `Fecha: ${date}   Hora: ${time}`,
+    "",
+    body.trim(),
   ].join("\n");
 }
 
@@ -2391,6 +2395,66 @@ function ConsentModal({
   );
 }
 
+function InitialAssessmentModal({
+  patient,
+  file,
+  onClose,
+  onSave,
+}: {
+  patient: Patient;
+  file: PatientFile | null;
+  onClose: () => void;
+  onSave: (payload: { date: string; time: string; body: string }) => Promise<void>;
+}) {
+  const parsed = file ? parseMetaJson(file) : null;
+  const now = new Date();
+  const defaultDate = now.toLocaleDateString("es-CO");
+  const defaultTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  const [date, setDate] = useState<string>(typeof parsed?.valoracion_fecha === "string" ? parsed.valoracion_fecha : defaultDate);
+  const [time, setTime] = useState<string>(typeof parsed?.valoracion_hora === "string" ? parsed.valoracion_hora : defaultTime);
+  const [body, setBody] = useState<string>(typeof parsed?.valoracion_cuerpo === "string" ? parsed.valoracion_cuerpo : buildInitialAssessmentBodyTemplate());
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await onSave({ date: date.trim() || defaultDate, time: time.trim() || defaultTime, body });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose} fullScreen closeVariant="icon">
+      <div className="modalBody" style={{ gap: 14 }}>
+        <div className="card initialAssessmentHero">
+          <div className="initialAssessmentName">{patient.name.toUpperCase()}</div>
+          <div className="initialAssessmentDateRow">
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Fecha</div>
+              <input className="input" value={date} onChange={(e) => setDate(e.target.value)} />
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Hora</div>
+              <input className="input" value={time} onChange={(e) => setTime(e.target.value)} />
+            </label>
+          </div>
+        </div>
+
+        <label className="field" style={{ margin: 0 }}>
+          <div className="label">Valoración inicial (editable)</div>
+          <textarea className="textarea" style={{ minHeight: "55vh", lineHeight: 1.55 }} value={body} onChange={(e) => setBody(e.target.value)} />
+        </label>
+      </div>
+      <div className="modalFooter">
+        <button className="pillBtn" onClick={onClose} disabled={busy}>Cancelar</button>
+        <button className="pillBtn primary pulseGlow" onClick={submit} disabled={busy}>{busy ? "Guardando..." : "Guardar valoración inicial"}</button>
+      </div>
+    </Modal>
+  );
+}
+
 function PatientForm({
   initial,
   onSave,
@@ -4304,6 +4368,7 @@ export default function App() {
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [showNote, setShowNote] = useState(false);
+  const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
   const [consentPreview, setConsentPreview] = useState<ConsentData | null>(null);
 
@@ -4410,6 +4475,11 @@ export default function App() {
     if (notesFilterTipo === "all") return fileGroups.notes;
     return fileGroups.notes.filter((f) => normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo) === notesFilterTipo);
   }, [fileGroups.notes, notesFilterTipo]);
+
+  const initialAssessmentFile = useMemo(() => {
+    const candidates = fileGroups.notes.filter((f) => parseMetaJson(f)?.type === "valoracion_inicial");
+    return candidates.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+  }, [fileGroups.notes]);
 
   const filteredExams = useMemo(() => {
     if (examsFilterTipo === "all") return fileGroups.exams;
@@ -4652,12 +4722,18 @@ export default function App() {
       };
       const p = await createPatient(payload);
 
+      const draftDate = new Date().toLocaleDateString("es-CO");
+      const draftTime = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+      const draftBody = buildInitialAssessmentBodyTemplate();
       const initialAssessmentPayload = {
-        type: "nota",
+        type: "valoracion_inicial",
         fecha: new Date().toISOString().slice(0, 10),
         estado_animo: "Eutímico",
         riesgo: "Sin riesgo aparente",
-        texto: buildInitialAssessmentNoteText(p.name),
+        texto: buildInitialAssessmentNoteText(p.name, draftDate, draftTime, draftBody),
+        valoracion_fecha: draftDate,
+        valoracion_hora: draftTime,
+        valoracion_cuerpo: draftBody,
         continuidad: null,
         transcripcion: null,
         audio_data_url: null,
@@ -4708,6 +4784,42 @@ export default function App() {
   async function actionAttachFiles() {
     if (!selected) return;
     fileInputRef.current?.click();
+  }
+
+  function actionOpenInitialAssessment() {
+    if (!selected) return;
+    setShowInitialAssessment(true);
+  }
+
+  async function saveInitialAssessment(payload: { date: string; time: string; body: string }) {
+    if (!selected) return;
+    const notePayload = {
+      type: "valoracion_inicial",
+      fecha: new Date().toISOString().slice(0, 10),
+      estado_animo: "Eutímico",
+      riesgo: "Sin riesgo aparente",
+      texto: buildInitialAssessmentNoteText(selected.name, payload.date, payload.time, payload.body),
+      valoracion_fecha: payload.date,
+      valoracion_hora: payload.time,
+      valoracion_cuerpo: payload.body,
+      continuidad: null,
+      transcripcion: null,
+      audio_data_url: null,
+      consulta_tipo: "presencial" as const,
+      patient_snapshot: {
+        id: selected.id,
+        name: selected.name,
+        doc_type: selected.doc_type,
+        doc_number: selected.doc_number,
+      },
+    };
+
+    if (initialAssessmentFile) await updatePatientNote(initialAssessmentFile.id, notePayload);
+    else await createPatientNote(selected.id, notePayload);
+
+    await refreshFiles(selected.id);
+    await refreshAllFiles();
+    pushToast({ type: "ok", msg: initialAssessmentFile ? "Valoración inicial actualizada ✅" : "Valoración inicial creada ✅" });
   }
 
   async function actionOpenFile(file: PatientFile) {
@@ -5427,14 +5539,30 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Archivos</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Adjuntos del paciente (PDF, imágenes, etc.).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={actionAttachFiles}>
-                    + Adjuntar
-                  </button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <button className={`pillBtn primary ${!initialAssessmentFile ? "pulseGlow" : ""}`} onClick={actionOpenInitialAssessment}>
+                      {initialAssessmentFile ? "Editar valoración inicial" : "✨ Crear valoración inicial"}
+                    </button>
+                    <button className="pillBtn primary" onClick={actionAttachFiles}>
+                      + Adjuntar
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ height: 12 }} />
 
                 <div className="list">
+                  {initialAssessmentFile ? (
+                    <div className="fileRow initialAssessmentRow pulseGlowSoft">
+                      <div className="fileIcon">🧾</div>
+                      <div className="fileMeta">
+                        <div className="fileName">Valoración inicial (editable)</div>
+                        <div className="fileSub">{isoToNice(initialAssessmentFile.created_at)} · Se mantiene fija arriba</div>
+                      </div>
+                      <button className="smallBtn" onClick={actionOpenInitialAssessment}>Editar</button>
+                    </div>
+                  ) : null}
+
                   {fileGroups.attachments.length === 0 ? (
                     <div style={{ color: "var(--muted)" }}>Aún no hay archivos adjuntos.</div>
                   ) : (
@@ -5550,6 +5678,15 @@ export default function App() {
             pushToast({ type: "ok", msg: "Nota creada ✅" });
             startVT(() => setSection("notas"));
           }}
+        />
+      ) : null}
+
+      {showInitialAssessment && selected ? (
+        <InitialAssessmentModal
+          patient={selected}
+          file={initialAssessmentFile}
+          onClose={() => setShowInitialAssessment(false)}
+          onSave={saveInitialAssessment}
         />
       ) : null}
 

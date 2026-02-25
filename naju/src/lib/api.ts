@@ -389,6 +389,26 @@ export async function createPatientNote(patientId: string, payload: any): Promis
   return entry;
 }
 
+
+export async function updatePatientNote(fileId: number, payload: any): Promise<PatientFile> {
+  const store = await getStore();
+  const idx = (store.files || []).findIndex((f) => f.id === fileId);
+  if (idx === -1) throw new Error("Nota no encontrada");
+  const cur = store.files[idx];
+  if (cur.kind !== "note") throw new Error("El archivo no es una nota editable");
+
+  const json = JSON.stringify(payload, null, 2);
+  const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
+  const updated: PatientFile = {
+    ...cur,
+    path: dataUrl,
+    meta_json: json,
+  };
+  store.files[idx] = updated;
+  await persistStore(store);
+  return updated;
+}
+
 export async function setPatientDriveFolder(patientId: string, folderId: string | null): Promise<Patient> {
   const store = await getStore();
   const idx = store.patients.findIndex((p) => p.id === patientId);

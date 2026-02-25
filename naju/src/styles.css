@@ -949,6 +949,46 @@ textarea {
   color: var(--text);
 }
 
+.pulseGlow {
+  animation: pulseGlow 1.6s ease-in-out infinite;
+}
+
+.pulseGlowSoft {
+  animation: pulseGlowSoft 2s ease-in-out infinite;
+}
+
+.initialAssessmentRow {
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  background: color-mix(in srgb, var(--profile-accent), transparent 86%);
+}
+
+.initialAssessmentHero {
+  border: 1px solid color-mix(in srgb, var(--profile-accent), var(--border) 40%);
+}
+
+.initialAssessmentName {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.initialAssessmentDateRow {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 220px);
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--profile-accent), transparent 70%); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--profile-accent), transparent 88%); }
+}
+
+@keyframes pulseGlowSoft {
+  0%, 100% { box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--profile-accent), transparent 78%); }
+  50% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--profile-accent), transparent 65%); }
+}
+
 /* QR card inside NoteModal */
 .qrCard {
   border: 1px solid var(--border);
