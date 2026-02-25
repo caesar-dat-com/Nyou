@@ -359,8 +359,8 @@ textarea {
   -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding-left: clamp(12px, 6vw, 72px);
+  justify-content: center;
+  padding-inline: 12px;
 }
 .menuGlassPanel{
   width: min(560px, calc(100vw - 24px));
@@ -921,6 +921,32 @@ textarea {
   padding-top: 12px;
   display: grid;
   gap: 10px;
+}
+
+.modalHeader.isCompact {
+  padding-bottom: 2px;
+}
+
+.modalFullScreen {
+  width: min(1280px, 100%);
+  max-height: calc(100vh - 24px);
+  border-radius: 20px;
+}
+
+.modalCloseX {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.modalCloseX:hover {
+  background: rgba(255,255,255,.6);
+  color: var(--text);
 }
 
 /* QR card inside NoteModal */
