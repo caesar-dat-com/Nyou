@@ -2361,45 +2361,14 @@ function PatientForm({
 }) {
   const [v, setV] = useState<PatientInput>(initial);
   const [busy, setBusy] = useState(false);
-  const [isAntecedentsEditing, setIsAntecedentsEditing] = useState(() => !(initial.personal_history ?? "").trim());
-
   const antecedentsText = v.personal_history ?? "";
-  const antecedentsWordCount = antecedentsText.trim() ? antecedentsText.trim().split(/\s+/).length : 0;
-  const antecedentsLimitReached = antecedentsWordCount > 800;
-  const antecedentsTagOptions = ["Dx previo", "Medicación", "Duelo"];
-  const antecedentsTags = Array.isArray(v.antecedents_tags) ? v.antecedents_tags : [];
-
   function set<K extends keyof PatientInput>(k: K, value: PatientInput[K]) {
     setV((p) => ({ ...p, [k]: value }));
   }
 
-  function todayIsoDate() {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function formatReviewDate(value?: string | null) {
-    if (!value) return "—";
-    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return "—";
-    return `${m[3]}/${m[2]}/${m[1]}`;
-  }
-
-  function toggleAntecedentTag(tag: string) {
-    const has = antecedentsTags.includes(tag);
-    const next = has ? antecedentsTags.filter((x) => x !== tag) : [...antecedentsTags, tag];
-    set("antecedents_tags", next);
-  }
 
   async function submit() {
-    if (!v.name?.trim() || antecedentsLimitReached) return;
-    const before = (initial.personal_history ?? "").trim();
-    const after = antecedentsText.trim();
-    const antecedentsChanged = before !== after;
-    const reviewedAt = antecedentsChanged ? todayIsoDate() : (initial.antecedents_reviewed_at ?? null);
+    if (!v.name?.trim()) return;
     setBusy(true);
     try {
       await onSave({
@@ -2414,9 +2383,9 @@ function PatientForm({
         address: v.address ?? null,
         emergency_contact: v.emergency_contact ?? null,
         notes: null,
-        personal_history: after || null,
-        antecedents_tags: antecedentsTags,
-        antecedents_reviewed_at: reviewedAt,
+        personal_history: antecedentsText.trim() || null,
+        antecedents_tags: v.antecedents_tags ?? null,
+        antecedents_reviewed_at: v.antecedents_reviewed_at ?? null,
         personal_social_situation: null,
         medical_psych_history: null,
         family_history: null,
@@ -2542,56 +2511,13 @@ function PatientForm({
           </div>
         </div>
 
-        <div className="antecedentsCard">
-          <div className="antecedentsHead">Antecedentes</div>
-          <textarea
-            className="textarea antecedentsTextarea"
-            value={antecedentsText}
-            onChange={(e) => set("personal_history", e.target.value)}
-            placeholder="Narrativa clínica libre de antecedentes..."
-            readOnly={!isAntecedentsEditing}
-          />
-          <div className="antecedentsWordCounter">
-            {antecedentsWordCount} / 800 palabras
-          </div>
-          {antecedentsLimitReached ? (
-            <div className="consentErrorText" style={{ marginTop: 6 }}>Límite máximo: 800 palabras.</div>
-          ) : null}
-
-          <div className="antecedentsTags">
-            {antecedentsTagOptions.map((tag) => {
-              const active = antecedentsTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  className={`softTag ${active ? "isActive" : ""}`}
-                  onClick={() => toggleAntecedentTag(tag)}
-                >
-                  [{tag}]
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="antecedentsFoot">
-            <div>Última revisión: {formatReviewDate(v.antecedents_reviewed_at)}</div>
-            <button
-              type="button"
-              className="pillBtn"
-              onClick={() => setIsAntecedentsEditing((x) => !x)}
-            >
-              {isAntecedentsEditing ? "Bloquear edición" : "Editar antecedentes"}
-            </button>
-          </div>
-        </div>
       </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onCancel} disabled={busy}>
           Cancelar
         </button>
         {extraRight}
-        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim() || antecedentsLimitReached}>
+        <button className="pillBtn primary" onClick={submit} disabled={busy || !v.name?.trim()}>
           {busy ? "Guardando..." : saveLabel}
         </button>
       </div>
