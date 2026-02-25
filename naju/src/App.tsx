@@ -179,6 +179,51 @@ function createConsentDraft(profile: ProfessionalProfile): ConsentData {
   };
 }
 
+function buildInitialAssessmentNoteText(patientName: string) {
+  const now = new Date();
+  const date = now.toLocaleDateString("es-CO");
+  const time = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return [
+    patientName.toUpperCase(),
+    "",
+    `Fecha: ${date}   Hora: ${time}`,
+    "",
+    "VALORACIÓN INICIAL. Campo de texto. Se encuentra al consultante vía Online/consultorio",
+    "",
+    "En cuanto a su esfera emocional refiere:",
+    "",
+    "Respecto al ámbito familiar expresa:",
+    "",
+    "En relación a su esfera laboral menciona:",
+    "",
+    "ANÁLISIS.",
+    "",
+    "Consultante masculino en el curso de vida de la adultez",
+    "",
+    "A la fecha, el consultante",
+    "",
+    "En cuanto a su composición familiar…",
+    "",
+    "En el ámbito ocupacional…",
+    "",
+    "Respecto al estado académico…",
+    "",
+    "Durante la sesión refiere…",
+    "",
+    "En cuanto a los factores de riesgo…",
+    "",
+    "En cuanto a los factores protectores…",
+    "",
+    "PLAN DE TRABAJO.",
+    "",
+    "Archivos adjuntos.",
+    "",
+    "- Diagnósticos: Sí / No → Subir archivo",
+    "- Fórmulas médicas / Medicación: Sí / No",
+    "- Fotos de medicamentos (pastillas/cajas): Subir archivo → Descripción breve:",
+  ].join("\n");
+}
+
 function errMsg(e: any) {
   if (!e) return "Error desconocido";
   if (typeof e === "string") return e;
@@ -3364,7 +3409,7 @@ function NoteModal({
   const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile);
 
   return (
-    <Modal title="Nueva nota" subtitle="Registro rápido del seguimiento clínico." onClose={onClose}>
+    <Modal onClose={onClose} fullScreen closeVariant="icon">
       <div className="modalBody">
         <input
           ref={audioInputRef}
@@ -4606,10 +4651,34 @@ export default function App() {
         consent_json: pendingConsent ? JSON.stringify(pendingConsent) : null,
       };
       const p = await createPatient(payload);
+
+      const initialAssessmentPayload = {
+        type: "nota",
+        fecha: new Date().toISOString().slice(0, 10),
+        estado_animo: "Eutímico",
+        riesgo: "Sin riesgo aparente",
+        texto: buildInitialAssessmentNoteText(p.name),
+        continuidad: null,
+        transcripcion: null,
+        audio_data_url: null,
+        consulta_tipo: "presencial" as const,
+        patient_snapshot: {
+          id: p.id,
+          name: p.name,
+          doc_type: p.doc_type,
+          doc_number: p.doc_number,
+        },
+      };
+      await createPatientNote(p.id, initialAssessmentPayload);
+
       await refreshPatients();
       await refreshAllFiles();
-      startVT(() => setSelectedId(p.id));
-      pushToast({ type: "ok", msg: "Paciente creado ✅" });
+      await refreshFiles(p.id);
+      startVT(() => {
+        setSelectedId(p.id);
+        setSection("archivos");
+      });
+      pushToast({ type: "ok", msg: "Paciente creado ✅ (con valoración inicial)" });
       setShowCreate(false);
       setPendingConsent(null);
     } catch (e: any) {
