@@ -1,7 +1,26 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Appointment, Patient, PatientFile } from "./lib/api";
 
 type ProfileMeta = { values: number[]; accent: string; label: string | null };
+
+type ProfessionalProfile = {
+  psicologo_nombre: string;
+  psicologo_documento: string;
+  psicologo_tp: string;
+  psicologo_correo: string;
+  psicologo_telefono: string;
+  psicologo_ciudad_direccion: string;
+  modalidad_atencion: "presencial" | "virtual";
+  lugar_plataforma: string;
+  canal_derechos_correo: string;
+  canal_derechos_telefono: string;
+  informe_solicitud: "verbal" | "escrita" | "ambas";
+  informe_plazo_dias: string;
+  informe_medio: "pdf" | "impreso" | "otro";
+  informe_medio_otro: string;
+  informe_costo: string;
+  firma_psicologo_data_url: string | null;
+};
 
 function toDayKeyLocal(d: Date) {
   const y = d.getFullYear();
@@ -44,8 +63,12 @@ export default function HomeDashboard(props: {
   appointments: Appointment[];
   profileByPatientMap: Map<string, ProfileMeta>;
   onAddPatient: () => void;
+  professionalProfile: ProfessionalProfile;
+  onSaveProfessionalProfile: (profile: ProfessionalProfile) => void;
 }) {
   const { patients, allFiles, appointments, profileByPatientMap } = props;
+  const [proForm, setProForm] = useState<ProfessionalProfile>(props.professionalProfile);
+  const [proSavedAt, setProSavedAt] = useState<number | null>(null);
   const [monthCursor, setMonthCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -53,6 +76,27 @@ export default function HomeDashboard(props: {
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
   const now = Date.now();
+
+  useEffect(() => {
+    setProForm(props.professionalProfile);
+  }, [props.professionalProfile]);
+
+  function setProField<K extends keyof ProfessionalProfile>(key: K, value: ProfessionalProfile[K]) {
+    setProForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function saveProfessionalProfile() {
+    props.onSaveProfessionalProfile({
+      ...proForm,
+      psicologo_nombre: proForm.psicologo_nombre.trim(),
+      psicologo_documento: proForm.psicologo_documento.trim(),
+      psicologo_tp: proForm.psicologo_tp.trim(),
+      psicologo_correo: proForm.psicologo_correo.trim(),
+      psicologo_telefono: proForm.psicologo_telefono.trim(),
+      psicologo_ciudad_direccion: proForm.psicologo_ciudad_direccion.trim(),
+    });
+    setProSavedAt(Date.now());
+  }
 
   const normalizeConsultaTipo = (value: unknown): "presencial" | "virtual" =>
     value === "virtual" ? "virtual" : "presencial";
@@ -221,6 +265,24 @@ export default function HomeDashboard(props: {
     <div style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button className="pillBtn primary" onClick={props.onAddPatient}>+ Paciente</button>
+      </div>
+
+      <div className="card" style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <h3 style={{ margin: 0 }}>Perfil profesional</h3>
+          {proSavedAt ? <span className="hint">Guardado {new Date(proSavedAt).toLocaleTimeString()}</span> : null}
+        </div>
+        <div className="formGrid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+          <div className="field"><div className="label">Nombre psicólogo(a)</div><input className="input" value={proForm.psicologo_nombre} onChange={(e) => setProField("psicologo_nombre", e.target.value)} /></div>
+          <div className="field"><div className="label">Documento</div><input className="input" value={proForm.psicologo_documento} onChange={(e) => setProField("psicologo_documento", e.target.value)} /></div>
+          <div className="field"><div className="label">Tarjeta profesional (T.P)</div><input className="input" value={proForm.psicologo_tp} onChange={(e) => setProField("psicologo_tp", e.target.value)} /></div>
+          <div className="field"><div className="label">Correo</div><input className="input" value={proForm.psicologo_correo} onChange={(e) => setProField("psicologo_correo", e.target.value)} /></div>
+          <div className="field"><div className="label">Teléfono</div><input className="input" value={proForm.psicologo_telefono} onChange={(e) => setProField("psicologo_telefono", e.target.value)} /></div>
+          <div className="field"><div className="label">Ciudad y dirección</div><input className="input" value={proForm.psicologo_ciudad_direccion} onChange={(e) => setProField("psicologo_ciudad_direccion", e.target.value)} /></div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button className="pillBtn primary" onClick={saveProfessionalProfile}>Guardar perfil</button>
+        </div>
       </div>
 
       <div className="grid2">
