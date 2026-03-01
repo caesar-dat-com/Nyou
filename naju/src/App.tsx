@@ -10,6 +10,7 @@ import {
   PatientInput,
   createMentalExam,
   createPatientNote,
+  updateMentalExam,
   updatePatientNote,
   createPatient,
   deletePatient,
@@ -2678,17 +2679,22 @@ function PatientForm({
 function MentalExamModal({
   patient,
   consultaTipoDefault,
+  file,
   onClose,
   onCreated,
 }: {
   patient: Patient;
   consultaTipoDefault: ConsultaTipo;
+  file?: PatientFile | null;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
+  const existingMeta = useMemo(() => (file ? parseMetaJson(file) : null), [file]);
 
   const [fecha, setFecha] = useState<string>(() => {
+    const fromFile = String(existingMeta?.fecha ?? "").trim();
+    if (fromFile) return fromFile;
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -2696,43 +2702,43 @@ function MentalExamModal({
     return `${yyyy}-${mm}-${dd}`;
   });
 
-  const [motivo, setMotivo] = useState("");
-  const [lugarEntrevista, setLugarEntrevista] = useState("");
-  const [acompanante, setAcompanante] = useState("");
-  const [edadAparente, setEdadAparente] = useState("");
-  const [contextura, setContextura] = useState("");
-  const [etnia, setEtnia] = useState("");
-  const [estaturaEdad, setEstaturaEdad] = useState("");
-  const [arregloPersonal, setArregloPersonal] = useState("Adecuado");
+  const [motivo, setMotivo] = useState(() => String(existingMeta?.motivo_consulta ?? ""));
+  const [lugarEntrevista, setLugarEntrevista] = useState(() => String(existingMeta?.lugar_entrevista ?? ""));
+  const [acompanante, setAcompanante] = useState(() => String(existingMeta?.acompanante ?? ""));
+  const [edadAparente, setEdadAparente] = useState(() => String(existingMeta?.edad_aparente ?? ""));
+  const [contextura, setContextura] = useState(() => String(existingMeta?.contextura_fisica ?? ""));
+  const [etnia, setEtnia] = useState(() => String(existingMeta?.caracteristicas_etnicas ?? ""));
+  const [estaturaEdad, setEstaturaEdad] = useState(() => String(existingMeta?.estatura_para_la_edad ?? ""));
+  const [arregloPersonal, setArregloPersonal] = useState(() => String(existingMeta?.arreglo_personal ?? "Adecuado"));
 
-  const [contactoVisual, setContactoVisual] = useState("Intermitente");
-  const [contactoVerbal, setContactoVerbal] = useState("Normal");
-  const [actitud, setActitud] = useState("Colaboradora");
+  const [contactoVisual, setContactoVisual] = useState(() => String(existingMeta?.contacto_visual ?? "Intermitente"));
+  const [contactoVerbal, setContactoVerbal] = useState(() => String(existingMeta?.contacto_verbal ?? "Normal"));
+  const [actitud, setActitud] = useState(() => String(existingMeta?.actitud ?? "Colaboradora"));
 
-  const [actividadCuant, setActividadCuant] = useState("Euquinético");
-  const [tonoMuscular, setTonoMuscular] = useState("Normotónico");
-  const [posicion, setPosicion] = useState("Postura habitual");
-  const [movimientos, setMovimientos] = useState("Adaptativos");
+  const [actividadCuant, setActividadCuant] = useState(() => String(existingMeta?.actividad_motora_cuantitativa ?? "Euquinético"));
+  const [tonoMuscular, setTonoMuscular] = useState(() => String(existingMeta?.tono_muscular ?? "Normotónico"));
+  const [posicion, setPosicion] = useState(() => String(existingMeta?.posicion ?? "Postura habitual"));
+  const [movimientos, setMovimientos] = useState(() => String(existingMeta?.movimientos ?? "Adaptativos"));
 
-  const [lenguaje, setLenguaje] = useState("Normal");
-  const [animo, setAnimo] = useState("Eutímico");
-  const [afecto, setAfecto] = useState("Congruente");
-  const [cursoPens, setCursoPens] = useState("Lógico/Coherente");
-  const [nexosAsociativos, setNexosAsociativos] = useState("Coherentes");
-  const [relevanciaPens, setRelevanciaPens] = useState("Relevante");
-  const [contPens, setContPens] = useState("");
-  const [percepcion, setPercepcion] = useState("Sin alteraciones");
-  const [orientacion, setOrientacion] = useState("Orientado");
-  const [sensorio, setSensorio] = useState("Alerta");
-  const [atencion, setAtencion] = useState("Conservada");
-  const [memoria, setMemoria] = useState("Conservada");
-  const [calculo, setCalculo] = useState("Eucalculia");
-  const [abstraccion, setAbstraccion] = useState("Abstrae");
-  const [juicio, setJuicio] = useState("Conservado");
-  const [insight, setInsight] = useState("Presente");
-  const [riesgo, setRiesgo] = useState("Sin riesgo aparente");
-  const [obs, setObs] = useState("");
-  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
+  const [lenguaje, setLenguaje] = useState(() => String(existingMeta?.lenguaje ?? "Normal"));
+  const [animo, setAnimo] = useState(() => String(existingMeta?.estado_de_animo ?? "Eutímico"));
+  const [afecto, setAfecto] = useState(() => String(existingMeta?.afecto ?? "Congruente"));
+  const [cursoPens, setCursoPens] = useState(() => String(existingMeta?.pensamiento_curso ?? "Lógico/Coherente"));
+  const [nexosAsociativos, setNexosAsociativos] = useState(() => String(existingMeta?.pensamiento_nexos_asociativos ?? "Coherentes"));
+  const [relevanciaPens, setRelevanciaPens] = useState(() => String(existingMeta?.pensamiento_relevancia ?? "Relevante"));
+  const [contPens, setContPens] = useState(() => String(existingMeta?.pensamiento_contenido ?? ""));
+  const [percepcion, setPercepcion] = useState(() => String(existingMeta?.percepcion ?? "Sin alteraciones"));
+  const [orientacion, setOrientacion] = useState(() => String(existingMeta?.orientacion ?? "Orientado"));
+  const [sensorio, setSensorio] = useState(() => String(existingMeta?.sensorio ?? "Alerta"));
+  const [atencion, setAtencion] = useState(() => String(existingMeta?.atencion ?? "Conservada"));
+  const [memoria, setMemoria] = useState(() => String(existingMeta?.memoria ?? "Conservada"));
+  const [calculo, setCalculo] = useState(() => String(existingMeta?.calculo ?? "Eucalculia"));
+  const [abstraccion, setAbstraccion] = useState(() => String(existingMeta?.abstraccion ?? "Abstrae"));
+  const [juicio, setJuicio] = useState(() => String(existingMeta?.juicio ?? "Conservado"));
+  const [insight, setInsight] = useState(() => String(existingMeta?.insight ?? "Presente"));
+  const [riesgo, setRiesgo] = useState(() => String(existingMeta?.riesgo ?? "Sin riesgo aparente"));
+  const [obs, setObs] = useState(() => String(existingMeta?.observaciones ?? ""));
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(() => normalizeConsultaTipo(existingMeta?.consulta_tipo ?? consultaTipoDefault));
 
   async function create() {
     setBusy(true);
@@ -2789,7 +2795,8 @@ function MentalExamModal({
         },
       };
 
-      await createMentalExam(patient.id, payload);
+      if (file) await updateMentalExam(file.id, payload);
+      else await createMentalExam(patient.id, payload);
       await onCreated();
       onClose();
     } finally {
@@ -3176,7 +3183,7 @@ function MentalExamModal({
           Cancelar
         </button>
         <button className="pillBtn primary" onClick={create} disabled={busy}>
-          {busy ? "Guardando..." : "Crear examen"}
+          {busy ? "Guardando..." : file ? "Guardar cambios" : "Crear examen"}
         </button>
       </div>
     </Modal>
@@ -4449,6 +4456,7 @@ export default function App() {
   const [professionalProfile, setProfessionalProfile] = useState<ProfessionalProfile>(() => defaultProfessionalProfile());
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
+  const [editingExam, setEditingExam] = useState<PatientFile | null>(null);
   const [showNote, setShowNote] = useState(false);
   const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
@@ -5500,7 +5508,7 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowExam(true); }}>
+                  <button className="pillBtn primary" onClick={() => { setEditingExam(null); setConsultaTipoDefault("presencial"); setShowExam(true); }}>
                     + examen mental
                   </button>
                 </div>
@@ -5527,9 +5535,21 @@ export default function App() {
                           <div className="fileName">{f.filename}</div>
                           <div className="fileSub">{isoToNice(f.created_at)}</div>
                         </div>
-                        <button className="smallBtn" onClick={() => actionOpenFile(f)}>
-                          Abrir
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="smallBtn" onClick={() => actionOpenFile(f)}>
+                            Abrir
+                          </button>
+                          <button
+                            className="smallBtn"
+                            onClick={() => {
+                              setEditingExam(f);
+                              setConsultaTipoDefault(normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo));
+                              setShowExam(true);
+                            }}
+                          >
+                            Editar
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -5741,12 +5761,13 @@ export default function App() {
         <MentalExamModal
           patient={selected}
           consultaTipoDefault={consultaTipoDefault}
-          onClose={() => setShowExam(false)}
+          file={editingExam}
+          onClose={() => { setShowExam(false); setEditingExam(null); }}
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
             await refreshAppointments();
-            pushToast({ type: "ok", msg: "Examen creado ✅" });
+            pushToast({ type: "ok", msg: editingExam ? "Examen actualizado ✅" : "Examen creado ✅" });
             startVT(() => setSection("examenes"));
           }}
         />

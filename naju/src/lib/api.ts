@@ -373,6 +373,25 @@ export async function createMentalExam(patientId: string, payload: any): Promise
   return entry;
 }
 
+export async function updateMentalExam(fileId: number, payload: any): Promise<PatientFile> {
+  const store = await getStore();
+  const idx = (store.files || []).findIndex((f) => f.id === fileId);
+  if (idx === -1) throw new Error("Examen no encontrado");
+  const cur = store.files[idx];
+  if (cur.kind !== "exam") throw new Error("El archivo no es un examen editable");
+
+  const json = JSON.stringify(payload, null, 2);
+  const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
+  const updated: PatientFile = {
+    ...cur,
+    path: dataUrl,
+    meta_json: json,
+  };
+  store.files[idx] = updated;
+  await persistStore(store);
+  return updated;
+}
+
 export async function createPatientNote(patientId: string, payload: any): Promise<PatientFile> {
   const store = await getStore();
   const createdAt = nowIso();
