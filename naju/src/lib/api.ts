@@ -343,6 +343,15 @@ export async function importFiles(patientId: string, files: File[]): Promise<Pat
   return newFiles;
 }
 
+
+export async function deletePatientFile(fileId: number): Promise<void> {
+  const store = await getStore();
+  const before = store.files.length;
+  store.files = store.files.filter((f) => f.id !== fileId);
+  if (store.files.length === before) throw new Error("Archivo no encontrado");
+  await persistStore(store);
+}
+
 export async function listPatientFiles(patientId: string): Promise<PatientFile[]> {
   const store = await getStore();
   return store.files.filter((f) => f.patient_id === patientId);
@@ -371,6 +380,43 @@ export async function createMentalExam(patientId: string, payload: any): Promise
   store.files.unshift(entry);
   await persistStore(store);
   return entry;
+}
+
+
+export async function updatePatientFile(fileId: number, input: { filename?: string | null }): Promise<PatientFile> {
+  const store = await getStore();
+  const idx = (store.files || []).findIndex((f) => f.id === fileId);
+  if (idx === -1) throw new Error("Archivo no encontrado");
+  const cur = store.files[idx];
+
+  const nextName = String(input.filename ?? "").trim();
+  const updated: PatientFile = {
+    ...cur,
+    filename: nextName || cur.filename,
+  };
+
+  store.files[idx] = updated;
+  await persistStore(store);
+  return updated;
+}
+
+export async function updateMentalExam(fileId: number, payload: any): Promise<PatientFile> {
+  const store = await getStore();
+  const idx = (store.files || []).findIndex((f) => f.id === fileId);
+  if (idx === -1) throw new Error("Examen no encontrado");
+  const cur = store.files[idx];
+  if (cur.kind !== "exam") throw new Error("El archivo no es un examen editable");
+
+  const json = JSON.stringify(payload, null, 2);
+  const dataUrl = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
+  const updated: PatientFile = {
+    ...cur,
+    path: dataUrl,
+    meta_json: json,
+  };
+  store.files[idx] = updated;
+  await persistStore(store);
+  return updated;
 }
 
 export async function createPatientNote(patientId: string, payload: any): Promise<PatientFile> {
