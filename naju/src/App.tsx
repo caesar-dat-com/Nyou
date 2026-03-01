@@ -14,6 +14,7 @@ import {
   updatePatientNote,
   createPatient,
   deletePatient,
+  deletePatientFile,
   importFiles,
   listAllFiles,
   listPatientFiles,
@@ -4916,6 +4917,27 @@ export default function App() {
     setPreviewFile(file);
   }
 
+  async function actionDeleteFile(file: PatientFile) {
+    if (!selected) return;
+    const tipo = file.kind === "exam" ? "examen" : file.kind === "note" ? "nota" : "archivo";
+    const ok = confirm(`¿Eliminar ${tipo} "${file.filename}"? Esta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    try {
+      await deletePatientFile(file.id);
+      if (previewFile?.id === file.id) setPreviewFile(null);
+      if (editingExam?.id === file.id) {
+        setEditingExam(null);
+        setShowExam(false);
+      }
+      await refreshFiles(selected.id);
+      await refreshAllFiles();
+      pushToast({ type: "ok", msg: `${tipo[0].toUpperCase()}${tipo.slice(1)} eliminado ✅` });
+    } catch (err: any) {
+      pushToast({ type: "err", msg: `No se pudo eliminar ${tipo}: ${errMsg(err)}` });
+    }
+  }
+
   async function onPhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     if (!selected) return;
     const file = e.target.files?.[0];
@@ -5549,6 +5571,9 @@ export default function App() {
                           >
                             Editar
                           </button>
+                          <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
+                            Eliminar
+                          </button>
                         </div>
                       </div>
                     ))
@@ -5630,9 +5655,14 @@ export default function App() {
                           <div className="fileName">{f.filename}</div>
                           <div className="fileSub">{isoToNice(f.created_at)}</div>
                         </div>
-                        <button className="smallBtn" onClick={() => actionOpenFile(f)}>
-                          Abrir
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="smallBtn" onClick={() => actionOpenFile(f)}>
+                            Abrir
+                          </button>
+                          <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -5665,7 +5695,7 @@ export default function App() {
                         <div className="fileName">Valoración inicial (editable)</div>
                         <div className="fileSub">{isoToNice(initialAssessmentFile.created_at)} · Se mantiene fija arriba</div>
                       </div>
-                      <button className="smallBtn" onClick={actionOpenInitialAssessment}>Editar</button>
+                      <div style={{ display: "flex", gap: 8 }}><button className="smallBtn" onClick={actionOpenInitialAssessment}>Editar</button><button className="smallBtn" onClick={() => actionDeleteFile(initialAssessmentFile)}>Eliminar</button></div>
                     </div>
                   ) : null}
 
@@ -5679,9 +5709,14 @@ export default function App() {
                           <div className="fileName">{f.filename}</div>
                           <div className="fileSub">{isoToNice(f.created_at)}</div>
                         </div>
-                        <button className="smallBtn" onClick={() => actionOpenFile(f)}>
-                          Abrir
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button className="smallBtn" onClick={() => actionOpenFile(f)}>
+                            Abrir
+                          </button>
+                          <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}

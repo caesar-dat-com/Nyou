@@ -343,6 +343,15 @@ export async function importFiles(patientId: string, files: File[]): Promise<Pat
   return newFiles;
 }
 
+
+export async function deletePatientFile(fileId: number): Promise<void> {
+  const store = await getStore();
+  const before = store.files.length;
+  store.files = store.files.filter((f) => f.id !== fileId);
+  if (store.files.length === before) throw new Error("Archivo no encontrado");
+  await persistStore(store);
+}
+
 export async function listPatientFiles(patientId: string): Promise<PatientFile[]> {
   const store = await getStore();
   return store.files.filter((f) => f.patient_id === patientId);
