@@ -2722,6 +2722,26 @@ textarea {
   grid-column: 1;
 }
 
+/* Datos del paciente: bloques homogéneos (misma huella visual) */
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 10%);
+  border-radius: 14px;
+  background: color-mix(in oklab, white 90%, var(--surface-2));
+  align-content: center;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv .k,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv .v {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 1150px) {
   .resumenSplit.resumenSplit--stacked > .resumenDataCard {
     grid-template-columns: 1fr;
