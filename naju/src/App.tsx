@@ -182,45 +182,87 @@ function createConsentDraft(profile: ProfessionalProfile): ConsentData {
   };
 }
 
-function buildInitialAssessmentBodyTemplate() {
+type InitialAssessmentForm = {
+  introduccion: string;
+  esfera_emocional: string;
+  ambito_familiar: string;
+  esfera_laboral: string;
+  analisis_apertura: string;
+  analisis_fecha: string;
+  composicion_familiar: string;
+  ambito_ocupacional: string;
+  estado_academico: string;
+  durante_sesion: string;
+  factores_riesgo: string;
+  factores_protectores: string;
+  plan_trabajo: string;
+  diagnosticos: "Sí" | "No";
+  formulas_medicacion: "Sí" | "No";
+  fotos_medicamentos_desc: string;
+};
+
+function defaultInitialAssessmentForm(): InitialAssessmentForm {
+  return {
+    introduccion: "Campo de texto. Se encuentra al consultante vía Online/consultorio",
+    esfera_emocional: "",
+    ambito_familiar: "",
+    esfera_laboral: "",
+    analisis_apertura: "Consultante masculino en el curso de vida de la adultez",
+    analisis_fecha: "A la fecha, el consultante",
+    composicion_familiar: "",
+    ambito_ocupacional: "",
+    estado_academico: "",
+    durante_sesion: "",
+    factores_riesgo: "",
+    factores_protectores: "",
+    plan_trabajo: "",
+    diagnosticos: "No",
+    formulas_medicacion: "No",
+    fotos_medicamentos_desc: "",
+  };
+}
+
+function buildInitialAssessmentBodyFromForm(form: InitialAssessmentForm) {
   return [
-    "VALORACIÓN INICIAL. Campo de texto. Se encuentra al consultante vía Online/consultorio",
+    `VALORACIÓN INICIAL. ${form.introduccion}`,
     "",
-    "En cuanto a su esfera emocional refiere:",
+    `En cuanto a su esfera emocional refiere: ${form.esfera_emocional}`,
     "",
-    "Respecto al ámbito familiar expresa:",
+    `Respecto al ámbito familiar expresa: ${form.ambito_familiar}`,
     "",
-    "En relación a su esfera laboral menciona:",
+    `En relación a su esfera laboral menciona: ${form.esfera_laboral}`,
     "",
     "ANÁLISIS.",
     "",
-    "Consultante masculino en el curso de vida de la adultez",
+    form.analisis_apertura,
     "",
-    "A la fecha, el consultante",
+    form.analisis_fecha,
     "",
-    "En cuanto a su composición familiar…",
+    `En cuanto a su composición familiar… ${form.composicion_familiar}`,
     "",
-    "En el ámbito ocupacional…",
+    `En el ámbito ocupacional… ${form.ambito_ocupacional}`,
     "",
-    "Respecto al estado académico…",
+    `Respecto al estado académico… ${form.estado_academico}`,
     "",
-    "Durante la sesión refiere…",
+    `Durante la sesión refiere… ${form.durante_sesion}`,
     "",
-    "En cuanto a los factores de riesgo…",
+    `En cuanto a los factores de riesgo… ${form.factores_riesgo}`,
     "",
-    "En cuanto a los factores protectores…",
+    `En cuanto a los factores protectores… ${form.factores_protectores}`,
     "",
     "PLAN DE TRABAJO.",
+    form.plan_trabajo,
     "",
     "Archivos adjuntos.",
     "",
-    "- Diagnósticos: Sí / No → Subir archivo",
-    "- Fórmulas médicas / Medicación: Sí / No",
-    "- Fotos de medicamentos (pastillas/cajas): Subir archivo → Descripción breve:",
+    `- Diagnósticos: ${form.diagnosticos} → Subir archivo`,
+    `- Fórmulas médicas / Medicación: ${form.formulas_medicacion}`,
+    `- Fotos de medicamentos (pastillas/cajas): Subir archivo → Descripción breve: ${form.fotos_medicamentos_desc}`,
   ].join("\n");
 }
 
-function buildInitialAssessmentNoteText(patientName: string, date: string, time: string, body: string) {
+function buildInitialAssessmentNoteText(patientName: string, date: string, time: string, form: InitialAssessmentForm) {
+  const body = buildInitialAssessmentBodyFromForm(form);
   return [
     patientName.toUpperCase(),
     "",
@@ -2600,21 +2642,26 @@ function InitialAssessmentModal({
   patient: Patient;
   file: PatientFile | null;
   onClose: () => void;
-  onSave: (payload: { date: string; time: string; body: string }) => Promise<void>;
+  onSave: (payload: { date: string; time: string; form: InitialAssessmentForm }) => Promise<void>;
 }) {
   const parsed = file ? parseMetaJson(file) : null;
   const now = new Date();
   const defaultDate = now.toLocaleDateString("es-CO");
   const defaultTime = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  const parsedForm = parsed?.valoracion_form as Partial<InitialAssessmentForm> | undefined;
   const [date, setDate] = useState<string>(typeof parsed?.valoracion_fecha === "string" ? parsed.valoracion_fecha : defaultDate);
   const [time, setTime] = useState<string>(typeof parsed?.valoracion_hora === "string" ? parsed.valoracion_hora : defaultTime);
-  const [body, setBody] = useState<string>(typeof parsed?.valoracion_cuerpo === "string" ? parsed.valoracion_cuerpo : buildInitialAssessmentBodyTemplate());
+  const [form, setForm] = useState<InitialAssessmentForm>({ ...defaultInitialAssessmentForm(), ...(parsedForm ?? {}) });
   const [busy, setBusy] = useState(false);
+
+  function setFormField<K extends keyof InitialAssessmentForm>(key: K, value: InitialAssessmentForm[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
 
   async function submit() {
     setBusy(true);
     try {
-      await onSave({ date: date.trim() || defaultDate, time: time.trim() || defaultTime, body });
+      await onSave({ date: date.trim() || defaultDate, time: time.trim() || defaultTime, form });
       onClose();
     } finally {
       setBusy(false);
@@ -2638,10 +2685,62 @@ function InitialAssessmentModal({
           </div>
         </div>
 
-        <label className="field" style={{ margin: 0 }}>
-          <div className="label">Valoración inicial (editable)</div>
-          <textarea className="textarea" style={{ minHeight: "55vh", lineHeight: 1.55 }} value={body} onChange={(e) => setBody(e.target.value)} />
-        </label>
+        <div className="grid2" style={{ alignItems: "start" }}>
+          <div className="card" style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontWeight: 800 }}>Valoración inicial</div>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Introducción</div>
+              <textarea className="textarea" value={form.introduccion} onChange={(e) => setFormField("introduccion", e.target.value)} />
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Esfera emocional</div>
+              <textarea className="textarea" value={form.esfera_emocional} onChange={(e) => setFormField("esfera_emocional", e.target.value)} />
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Ámbito familiar</div>
+              <textarea className="textarea" value={form.ambito_familiar} onChange={(e) => setFormField("ambito_familiar", e.target.value)} />
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Esfera laboral</div>
+              <textarea className="textarea" value={form.esfera_laboral} onChange={(e) => setFormField("esfera_laboral", e.target.value)} />
+            </label>
+          </div>
+
+          <div className="card" style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontWeight: 800 }}>Análisis y plan</div>
+            <label className="field" style={{ margin: 0 }}><div className="label">Apertura análisis</div><input className="input" value={form.analisis_apertura} onChange={(e) => setFormField("analisis_apertura", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">A la fecha, el consultante</div><textarea className="textarea" value={form.analisis_fecha} onChange={(e) => setFormField("analisis_fecha", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Composición familiar</div><textarea className="textarea" value={form.composicion_familiar} onChange={(e) => setFormField("composicion_familiar", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Ámbito ocupacional</div><textarea className="textarea" value={form.ambito_ocupacional} onChange={(e) => setFormField("ambito_ocupacional", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Estado académico</div><textarea className="textarea" value={form.estado_academico} onChange={(e) => setFormField("estado_academico", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Durante la sesión</div><textarea className="textarea" value={form.durante_sesion} onChange={(e) => setFormField("durante_sesion", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Factores de riesgo</div><textarea className="textarea" value={form.factores_riesgo} onChange={(e) => setFormField("factores_riesgo", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Factores protectores</div><textarea className="textarea" value={form.factores_protectores} onChange={(e) => setFormField("factores_protectores", e.target.value)} /></label>
+            <label className="field" style={{ margin: 0 }}><div className="label">Plan de trabajo</div><textarea className="textarea" value={form.plan_trabajo} onChange={(e) => setFormField("plan_trabajo", e.target.value)} /></label>
+          </div>
+        </div>
+
+        <div className="card" style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontWeight: 800 }}>Archivos adjuntos</div>
+          <div className="grid2" style={{ gridTemplateColumns: "repeat(3,minmax(180px,1fr))" }}>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Diagnósticos</div>
+              <select className="select" value={form.diagnosticos} onChange={(e) => setFormField("diagnosticos", e.target.value as "Sí" | "No")}>
+                <option>Sí</option><option>No</option>
+              </select>
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Fórmulas médicas / Medicación</div>
+              <select className="select" value={form.formulas_medicacion} onChange={(e) => setFormField("formulas_medicacion", e.target.value as "Sí" | "No")}>
+                <option>Sí</option><option>No</option>
+              </select>
+            </label>
+            <label className="field" style={{ margin: 0 }}>
+              <div className="label">Fotos medicamentos - descripción breve</div>
+              <input className="input" value={form.fotos_medicamentos_desc} onChange={(e) => setFormField("fotos_medicamentos_desc", e.target.value)} />
+            </label>
+          </div>
+        </div>
       </div>
       <div className="modalFooter">
         <button className="pillBtn" onClick={onClose} disabled={busy}>Cancelar</button>
@@ -5004,16 +5103,17 @@ export default function App() {
 
       const draftDate = new Date().toLocaleDateString("es-CO");
       const draftTime = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
-      const draftBody = buildInitialAssessmentBodyTemplate();
+      const draftForm = defaultInitialAssessmentForm();
       const initialAssessmentPayload = {
         type: "valoracion_inicial",
         fecha: new Date().toISOString().slice(0, 10),
         estado_animo: "Eutímico",
         riesgo: "Sin riesgo aparente",
-        texto: buildInitialAssessmentNoteText(p.name, draftDate, draftTime, draftBody),
+        texto: buildInitialAssessmentNoteText(p.name, draftDate, draftTime, draftForm),
         valoracion_fecha: draftDate,
         valoracion_hora: draftTime,
-        valoracion_cuerpo: draftBody,
+        valoracion_cuerpo: buildInitialAssessmentBodyFromForm(draftForm),
+        valoracion_form: draftForm,
         continuidad: null,
         transcripcion: null,
         audio_data_url: null,
@@ -5071,17 +5171,18 @@ export default function App() {
     setShowInitialAssessment(true);
   }
 
-  async function saveInitialAssessment(payload: { date: string; time: string; body: string }) {
+  async function saveInitialAssessment(payload: { date: string; time: string; form: InitialAssessmentForm }) {
     if (!selected) return;
     const notePayload = {
       type: "valoracion_inicial",
       fecha: new Date().toISOString().slice(0, 10),
       estado_animo: "Eutímico",
       riesgo: "Sin riesgo aparente",
-      texto: buildInitialAssessmentNoteText(selected.name, payload.date, payload.time, payload.body),
+      texto: buildInitialAssessmentNoteText(selected.name, payload.date, payload.time, payload.form),
       valoracion_fecha: payload.date,
       valoracion_hora: payload.time,
-      valoracion_cuerpo: payload.body,
+      valoracion_cuerpo: buildInitialAssessmentBodyFromForm(payload.form),
+      valoracion_form: payload.form,
       continuidad: null,
       transcripcion: null,
       audio_data_url: null,
