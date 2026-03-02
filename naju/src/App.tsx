@@ -3869,9 +3869,11 @@ function NoteModal({
 function FilePreviewModal({
   file,
   onClose,
+  onDelete,
 }: {
   file: PatientFile;
   onClose: () => void;
+  onDelete: (file: PatientFile) => Promise<void> | void;
 }) {
   const meta = parseMetaJson(file);
   const isImageFile = file.kind === "attachment" && isImage(file.path);
@@ -3898,9 +3900,20 @@ function FilePreviewModal({
                 <div style={{ color: "var(--muted)" }}>Descarga para abrir este tipo de archivo.</div>
               </div>
             )}
-            <a className="pillBtn" href={file.path} download={file.filename}>
-              Descargar
-            </a>
+            <div className="actionRow" style={{ marginTop: 12, paddingTop: 0, borderTop: "none" }}>
+              <a className="pillBtn" href={file.path} download={file.filename}>
+                Descargar
+              </a>
+              <button
+                className="pillBtn danger"
+                onClick={async () => {
+                  await onDelete(file);
+                  onClose();
+                }}
+              >
+                Eliminar documento
+              </button>
+            </div>
           </div>
         ) : file.kind === "exam" ? (
           <div className="previewBody">
@@ -3941,6 +3954,17 @@ function FilePreviewModal({
               ))}
             </div>
             <div className="previewNote">{meta?.observaciones ?? "Sin observaciones adicionales."}</div>
+            <div className="actionRow" style={{ marginTop: 12, paddingTop: 0, borderTop: "none" }}>
+              <button
+                className="pillBtn danger"
+                onClick={async () => {
+                  await onDelete(file);
+                  onClose();
+                }}
+              >
+                Eliminar documento
+              </button>
+            </div>
           </div>
         ) : (
           <div className="previewBody">
@@ -3971,6 +3995,17 @@ function FilePreviewModal({
             {meta?.audio_data_url ? (
               <audio controls src={meta.audio_data_url} style={{ width: "100%" }} />
             ) : null}
+            <div className="actionRow" style={{ marginTop: 12, paddingTop: 0, borderTop: "none" }}>
+              <button
+                className="pillBtn danger"
+                onClick={async () => {
+                  await onDelete(file);
+                  onClose();
+                }}
+              >
+                Eliminar documento
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -5911,6 +5946,7 @@ export default function App() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="smallBtn" onClick={() => actionOpenFile(f)}>Abrir</button>
+                    <button className="smallBtn" onClick={() => actionDeleteFile(f)}>Eliminar</button>
                     <button className="smallBtn" onClick={() => {
                       setTrendNodeFiles(null);
                       startVT(() => setSection(f.kind === "attachment" ? "archivos" : f.kind === "note" ? "notas" : "examenes"));
@@ -6028,7 +6064,13 @@ export default function App() {
         />
       ) : null}
 
-      {previewFile ? <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
+      {previewFile ? (
+        <FilePreviewModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+          onDelete={actionDeleteFile}
+        />
+      ) : null}
 
       {consentPreview ? (
         <Modal title="Consentimiento informado" subtitle="Registro asociado al paciente" onClose={() => setConsentPreview(null)}>
