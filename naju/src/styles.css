@@ -2811,7 +2811,7 @@ textarea {
   border-bottom-color: color-mix(in srgb, var(--border), transparent 15%);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
     grid-template-columns: 1fr;
   }
