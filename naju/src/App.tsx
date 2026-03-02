@@ -5558,8 +5558,11 @@ export default function App() {
                         />
                       </div>
 
-                      <details className="filtersDropdown filtersDropdown--radar" open>
-                          <summary>Filtros del gráfico</summary>
+                      <details className="filtersDropdown filtersDropdown--radar">
+                          <summary>
+                            <span>Ajustes</span>
+                            <span className="filtersSummaryHint">Radar y tendencia</span>
+                          </summary>
                           <div className="percent-panel">
                           <div className="field">
                             <label className="label" htmlFor="timePreset">

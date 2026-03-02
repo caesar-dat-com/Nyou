@@ -2769,14 +2769,42 @@ textarea {
   gap: 10px;
 }
 
+
 .resumenDataRadarPanel .filtersDropdown--radar {
   margin-top: 2px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel), rgba(255,255,255,.72) 35%);
 }
+
+.resumenDataRadarPanel .filtersDropdown--radar > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 15%);
+  background: color-mix(in srgb, var(--panel2), transparent 25%);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar > summary .filtersSummaryHint {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar[open] > summary {
+  border-bottom-color: color-mix(in srgb, var(--border), transparent 15%);
+}
+
 
 @media (max-width: 1300px) {
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
     grid-column: 1 / -1;
