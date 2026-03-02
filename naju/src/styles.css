@@ -2815,6 +2815,7 @@ textarea {
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
     grid-template-columns: 1fr;
   }
+}
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
