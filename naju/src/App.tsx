@@ -1181,12 +1181,14 @@ function TrendCanvas({
   macroValues,
   max,
   theme,
+  onNodeFiles,
 }: {
   labels: string[];
   files: PatientFile[];
   macroValues: number[];
   max: number;
   theme?: "light" | "dark";
+  onNodeFiles?: (payload: { title: string; files: PatientFile[]; lastModified: string | null }) => void;
 }) {
   const treeRef = useRef<HTMLCanvasElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -1194,10 +1196,11 @@ function TrendCanvas({
   // Zoom/gestures (same concept as RadarChart): scale the drawing, keep the slot size.
   const zoomRef = useRef(1);
   const resetZoomRafRef = useRef<number | null>(null);
+  const panRef = useRef({ x: 0, y: 0 });
   const lastProgressRef = useRef(1);
   const drawRef = useRef<null | ((progress?: number) => void)>(null);
-  const pointersRef = useRef<{ map: Map<number, { x: number; y: number }>; baseDist: number; baseZoom: number }>(
-    { map: new Map(), baseDist: 0, baseZoom: 1 }
+  const pointersRef = useRef<{ map: Map<number, { x: number; y: number }>; baseDist: number; baseZoom: number; mode: "none" | "pan" | "pinch"; panStart: { x: number; y: number }; panBase: { x: number; y: number } }>(
+    { map: new Map(), baseDist: 0, baseZoom: 1, mode: "none", panStart: { x: 0, y: 0 }, panBase: { x: 0, y: 0 } }
   );
   const [resizeTick, setResizeTick] = useState(0);
   const [tip, setTip] = useState<null | { x: number; y: number; title: string; sub?: string }>(null);
@@ -1219,6 +1222,15 @@ function TrendCanvas({
     const MIN_Z = 0.72;
     const MAX_Z = 2.35;
     const clampZoom = (z: number) => Math.max(MIN_Z, Math.min(MAX_Z, z));
+    const clampPan = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      const z = Math.max(1, zoomRef.current);
+      const maxX = ((z - 1) * w) / (2 * z) + 0.35 * w;
+      const maxY = ((z - 1) * h) / (2 * z) + 0.35 * h;
+      panRef.current.x = Math.max(-maxX, Math.min(maxX, panRef.current.x));
+      panRef.current.y = Math.max(-maxY, Math.min(maxY, panRef.current.y));
+    };
 
     const stopReset = () => {
       if (resetZoomRafRef.current) cancelAnimationFrame(resetZoomRafRef.current);
@@ -1234,8 +1246,10 @@ function TrendCanvas({
     const animateReset = () => {
       stopReset();
       const from = zoomRef.current;
-      if (Math.abs(from - 1) < 0.001) {
+      const fromPan = { ...panRef.current };
+      if (Math.abs(from - 1) < 0.001 && Math.hypot(fromPan.x, fromPan.y) < 0.001) {
         zoomRef.current = 1;
+        panRef.current = { x: 0, y: 0 };
         return;
       }
       const t0 = performance.now();
@@ -1244,18 +1258,34 @@ function TrendCanvas({
         const t = Math.min(1, (now - t0) / dur);
         const e = 1 - Math.pow(1 - t, 3);
         zoomRef.current = from + (1 - from) * e;
+        panRef.current = { x: fromPan.x * (1 - e), y: fromPan.y * (1 - e) };
+        clampPan();
         redraw();
         if (t < 1) resetZoomRafRef.current = requestAnimationFrame(step);
       };
       resetZoomRafRef.current = requestAnimationFrame(step);
     };
+    void animateReset;
+
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       stopReset();
       setTip(null);
+      const rect = canvas.getBoundingClientRect();
+      const sx = (e.clientX - rect.left) * (canvas.width / Math.max(1, rect.width));
+      const sy = (e.clientY - rect.top) * (canvas.height / Math.max(1, rect.height));
+      const z0 = Math.max(0.001, zoomRef.current);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const wx = (sx - cx) / z0 + cx - panRef.current.x;
+      const wy = (sy - cy) / z0 + cy - panRef.current.y;
       const factor = Math.exp(-e.deltaY * 0.0016);
       zoomRef.current = clampZoom(zoomRef.current * factor);
+      const z1 = Math.max(0.001, zoomRef.current);
+      panRef.current.x = sx / z1 - cx / z1 + cx - wx;
+      panRef.current.y = sy / z1 - cy / z1 + cy - wy;
+      clampPan();
       redraw();
     };
 
@@ -1268,7 +1298,13 @@ function TrendCanvas({
         /* ignore */
       }
       st.map.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (st.map.size === 1) {
+        st.mode = "pan";
+        st.panStart = { x: e.clientX, y: e.clientY };
+        st.panBase = { ...panRef.current };
+      }
       if (st.map.size === 2) {
+        st.mode = "pinch";
         const pts = Array.from(st.map.values());
         st.baseDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
         st.baseZoom = zoomRef.current;
@@ -1278,11 +1314,18 @@ function TrendCanvas({
     const onPointerMove = (e: PointerEvent) => {
       if (!st.map.has(e.pointerId)) return;
       st.map.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (st.map.size === 1 && st.mode === "pan" && zoomRef.current > 1.001) {
+        panRef.current.x = st.panBase.x + (e.clientX - st.panStart.x);
+        panRef.current.y = st.panBase.y + (e.clientY - st.panStart.y);
+        clampPan();
+        redraw();
+      }
       if (st.map.size === 2) {
         const pts = Array.from(st.map.values());
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
         const next = st.baseZoom * (dist / (st.baseDist || 1));
         zoomRef.current = clampZoom(next);
+        clampPan();
         redraw();
       }
     };
@@ -1293,13 +1336,21 @@ function TrendCanvas({
         st.baseDist = 0;
         st.baseZoom = zoomRef.current;
       }
-      if (st.map.size === 0) animateReset();
+      if (st.map.size === 1) {
+        const rest = Array.from(st.map.values())[0];
+        st.mode = "pan";
+        st.panStart = { ...rest };
+        st.panBase = { ...panRef.current };
+      }
+      if (st.map.size === 0) {
+        st.mode = "none";
+      }
     };
 
     const onLeave = () => {
       st.map.clear();
+      st.mode = "none";
       setTip(null);
-      animateReset();
     };
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
@@ -1345,6 +1396,7 @@ function TrendCanvas({
     const panel = readVar("--panel", "rgba(255,255,255,.75)");
 
     const evidence = buildEvidence(files, labels);
+    const trendFiles = files.filter((f) => f.kind === "exam" || f.kind === "note");
     const sum = macroValues.reduce((acc, v) => acc + v, 0) || 1;
     const weights = macroValues.map((v) => v / sum);
 
@@ -1493,7 +1545,7 @@ function TrendCanvas({
       }
     }
 
-    type Hit = { kind: "root" | "macro" | "leaf"; x: number; y: number; r: number; title: string; sub?: string };
+    type Hit = { kind: "root" | "macro" | "leaf"; x: number; y: number; r: number; title: string; sub?: string; files?: PatientFile[]; lastModified?: string | null };
     const hits: Hit[] = [];
 
     function draw(progress: number) {
@@ -1524,10 +1576,11 @@ function TrendCanvas({
       const z = zoomRef.current;
       const zx = width / 2;
       const zy = height / 2;
+      const pan = panRef.current;
       ctx.save();
       ctx.translate(zx, zy);
       ctx.scale(z, z);
-      ctx.translate(-zx, -zy);
+      ctx.translate(-zx + pan.x, -zy + pan.y);
 
       // Root (global)
       const avg = macroValues.length ? macroValues.reduce((a, b) => a + b, 0) / macroValues.length : 0;
@@ -1552,7 +1605,17 @@ function TrendCanvas({
         labelMode: "above",
       });
 
-      hits.push({ kind: "root", x: root.x, y: root.y, r: rootR, title: "Perfil global", sub: `Promedio: ${avg.toFixed(1)}/${max}` });
+      const rootSorted = [...trendFiles].sort((a, b) => b.created_at.localeCompare(a.created_at));
+      hits.push({
+        kind: "root",
+        x: root.x,
+        y: root.y,
+        r: rootR,
+        title: "Perfil global",
+        sub: `Promedio: ${avg.toFixed(1)}/${max}`,
+        files: rootSorted,
+        lastModified: rootSorted[0]?.created_at ?? null,
+      });
 
       // Macro nodes + leaves
       labels.forEach((label, idx) => {
@@ -1579,7 +1642,22 @@ function TrendCanvas({
           labelMode: "below",
         });
 
-        hits.push({ kind: "macro", x, y: row1, r: macroR, title: label, sub: `Peso: ${(w * 100).toFixed(0)}% · Valor: ${val.toFixed(1)}/${max}` });
+        const axis = AXES[idx];
+        const macroFiles = trendFiles.filter((file) => {
+          const meta = parseMetaJson(file);
+          if (!meta) return false;
+          return Boolean(meta[axis.key] ?? (axis.noteKey ? meta[axis.noteKey] : undefined));
+        }).sort((a, b) => b.created_at.localeCompare(a.created_at));
+        hits.push({
+          kind: "macro",
+          x,
+          y: row1,
+          r: macroR,
+          title: label,
+          sub: `Peso: ${(w * 100).toFixed(0)}% · Valor: ${val.toFixed(1)}/${max}`,
+          files: macroFiles,
+          lastModified: macroFiles[0]?.created_at ?? null,
+        });
 
         // Leaves (micro evidence) — se ubican dentro de la "columna" del macro
         // para evitar que se salgan o se monten cuando el canvas se estrecha.
@@ -1617,7 +1695,23 @@ function TrendCanvas({
             centerText: `${Math.round(pct * 100)}%`,
           });
 
-          hits.push({ kind: "leaf", x: lx, y: ly, r: leafR, title: `${label} · ${rawLabel}`, sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})` });
+          const axis = AXES[idx];
+          const leafFiles = trendFiles.filter((file) => {
+            const meta = parseMetaJson(file);
+            if (!meta) return false;
+            const raw = meta[axis.key] ?? (axis.noteKey ? meta[axis.noteKey] : undefined);
+            return String(raw ?? "").trim().toLowerCase() === rawLabel.trim().toLowerCase();
+          }).sort((a, b) => b.created_at.localeCompare(a.created_at));
+          hits.push({
+            kind: "leaf",
+            x: lx,
+            y: ly,
+            r: leafR,
+            title: `${label} · ${rawLabel}`,
+            sub: `Evidencias: ${count} · ${(pct * 100).toFixed(0)}% del total (${total})`,
+            files: leafFiles,
+            lastModified: leafFiles[0]?.created_at ?? null,
+          });
         });
       });
 
@@ -1658,8 +1752,8 @@ function TrendCanvas({
     const z = Math.max(0.001, zoomRef.current);
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const bx = (x - cx) / z + cx;
-    const by = (y - cy) / z + cy;
+    const bx = (x - cx) / z + cx - panRef.current.x;
+    const by = (y - cy) / z + cy - panRef.current.y;
     const hits: any[] = (canvas as any).__hits ?? [];
     const hit = hits.find((h) => {
       const dx = bx - h.x;
@@ -1677,18 +1771,77 @@ function TrendCanvas({
       x: e.clientX - wrapRect.left + 14,
       y: e.clientY - wrapRect.top + 12,
       title: hit.title,
-      sub: hit.sub,
+      sub: hit.lastModified ? `${hit.sub} · Última modificación: ${isoToShortDate(hit.lastModified)}` : hit.sub,
     });
   }
 
+  function getHitFromMouse(clientX: number, clientY: number) {
+    const canvas = treeRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / Math.max(1, rect.width);
+    const x = (clientX - rect.left) * scale;
+    const y = (clientY - rect.top) * scale;
+    const z = Math.max(0.001, zoomRef.current);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const bx = (x - cx) / z + cx - panRef.current.x;
+    const by = (y - cy) / z + cy - panRef.current.y;
+    const hits: any[] = (canvas as any).__hits ?? [];
+    return hits.find((h) => {
+      const dx = bx - h.x;
+      const dy = by - h.y;
+      const tol = (8 * scale) / z;
+      return Math.hypot(dx, dy) <= h.r + tol;
+    }) ?? null;
+  }
+
+  function onClickCanvas(e: React.MouseEvent) {
+    const hit: any = getHitFromMouse(e.clientX, e.clientY);
+    if (!hit || !onNodeFiles) return;
+    onNodeFiles({ title: hit.title, files: hit.files ?? [], lastModified: hit.lastModified ?? null });
+  }
+
+  const nudgePan = (dx: number, dy: number) => {
+    panRef.current.x += dx;
+    panRef.current.y += dy;
+    const fn = drawRef.current;
+    if (fn) fn(lastProgressRef.current);
+  };
+
+  const bumpZoom = (delta: number) => {
+    const next = Math.max(0.72, Math.min(2.35, zoomRef.current + delta));
+    zoomRef.current = next;
+    const fn = drawRef.current;
+    if (fn) fn(lastProgressRef.current);
+  };
+
+  const resetView = () => {
+    zoomRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+    const fn = drawRef.current;
+    if (fn) fn(lastProgressRef.current);
+  };
+
   return (
     <div className="trendWrap" ref={wrapRef}>
+      <div className="trendControls" role="group" aria-label="Controles de árbol de tendencias">
+        <button className="smallBtn" type="button" onClick={() => bumpZoom(0.15)}>＋</button>
+        <button className="smallBtn" type="button" onClick={() => bumpZoom(-0.15)}>－</button>
+        <button className="smallBtn" type="button" onClick={resetView}>Reset</button>
+        <button className="smallBtn" type="button" onClick={() => nudgePan(0, 32)}>↑</button>
+        <button className="smallBtn" type="button" onClick={() => nudgePan(0, -32)}>↓</button>
+        <button className="smallBtn" type="button" onClick={() => nudgePan(32, 0)}>←</button>
+        <button className="smallBtn" type="button" onClick={() => nudgePan(-32, 0)}>→</button>
+      </div>
       <canvas
         ref={treeRef}
         className="trendCanvas treeCanvas"
         aria-label="Árbol de tendencias"
         onMouseMove={onMove}
         onMouseLeave={() => setTip(null)}
+        onClick={onClickCanvas}
+        style={{ cursor: "pointer" }}
       />
       {tip ? (
         <div className="chartTip" style={{ left: tip.x, top: tip.y }}>
@@ -4461,6 +4614,7 @@ export default function App() {
   const [showNote, setShowNote] = useState(false);
   const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
+  const [trendNodeFiles, setTrendNodeFiles] = useState<{ title: string; files: PatientFile[]; lastModified: string | null } | null>(null);
   const [consentPreview, setConsentPreview] = useState<ConsentData | null>(null);
 
   // --- Update (GitHub) ---
@@ -5275,7 +5429,14 @@ export default function App() {
                       <div className="panel" style={{ gridColumn: "1 / -1" }}>
                         <div className="bd">
                           <div className="trendWrap">
-                            <TrendCanvas labels={profileLabels} files={trendFiles} macroValues={radarValues} max={scaleMax} theme={theme} />
+                            <TrendCanvas
+                              labels={profileLabels}
+                              files={trendFiles}
+                              macroValues={radarValues}
+                              max={scaleMax}
+                              theme={theme}
+                              onNodeFiles={(payload) => setTrendNodeFiles(payload)}
+                            />
                           </div>
                         </div>
                       </div>
@@ -5730,6 +5891,38 @@ export default function App() {
         </main>
       </div>
 {/* Modals */}
+
+      {trendNodeFiles ? (
+        <Modal
+          title={`Archivos relacionados: ${trendNodeFiles.title}`}
+          subtitle={trendNodeFiles.lastModified ? `Última modificación: ${isoToNice(trendNodeFiles.lastModified)}` : "Sin fecha de modificación"}
+          onClose={() => setTrendNodeFiles(null)}
+        >
+          <div className="list">
+            {trendNodeFiles.files.length === 0 ? (
+              <div style={{ color: "var(--muted)" }}>No hay archivos asociados a este nodo en el filtro actual.</div>
+            ) : (
+              trendNodeFiles.files.map((f) => (
+                <div key={`trend-${f.id}`} className="fileRow">
+                  <div className="fileIcon">{fileIcon(f)}</div>
+                  <div className="fileMeta">
+                    <div className="fileName">{f.filename}</div>
+                    <div className="fileSub">{isoToNice(f.created_at)}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="smallBtn" onClick={() => actionOpenFile(f)}>Abrir</button>
+                    <button className="smallBtn" onClick={() => {
+                      setTrendNodeFiles(null);
+                      startVT(() => setSection(f.kind === "attachment" ? "archivos" : f.kind === "note" ? "notas" : "examenes"));
+                    }}>Ir a sección</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Modal>
+      ) : null}
+
       {showConsentIntro ? (
         <ConsentIntroModal
           onClose={() => setShowConsentIntro(false)}
