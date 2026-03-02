@@ -21,6 +21,7 @@ import {
   listPatients,
   setPatientPhoto,
   updatePatient,
+  updatePatientFile,
   Appointment,
   AppointmentInput,
   createAppointment,
@@ -3347,15 +3348,18 @@ function MentalExamModal({
 function NoteModal({
   patient,
   consultaTipoDefault,
+  file,
   onClose,
   onCreated,
 }: {
   patient: Patient;
   consultaTipoDefault: ConsultaTipo;
+  file?: PatientFile | null;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
+  const existingMeta = useMemo(() => (file ? parseMetaJson(file) : null), [file]);
 
   // --- QR share (LAN) ---
   const [netIps, setNetIps] = useState<string[]>([]);
@@ -3365,7 +3369,7 @@ function NoteModal({
   });
   const [netError, setNetError] = useState<string | null>(null);
   const [hostIp, setHostIp] = useState<string>("");
-  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(() => normalizeConsultaTipo(existingMeta?.consulta_tipo ?? consultaTipoDefault));
 
   useEffect(() => {
     let alive = true;
@@ -3454,7 +3458,10 @@ function NoteModal({
   }
 
   const [recording, setRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(() => {
+    const raw = existingMeta?.audio_data_url;
+    return typeof raw === "string" && raw.trim() ? raw : null;
+  });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -3465,17 +3472,19 @@ function NoteModal({
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
   const [fecha, setFecha] = useState<string>(() => {
+    const fromFile = String(existingMeta?.fecha ?? "").trim();
+    if (fromFile) return fromFile;
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   });
-  const [animo, setAnimo] = useState("Eutímico");
-  const [riesgo, setRiesgo] = useState("Sin riesgo");
-  const [texto, setTexto] = useState("");
-  const [continuidad, setContinuidad] = useState("");
-  const [transcripcion, setTranscripcion] = useState("");
+  const [animo, setAnimo] = useState(() => String(existingMeta?.estado_animo ?? "Eutímico"));
+  const [riesgo, setRiesgo] = useState(() => String(existingMeta?.riesgo ?? "Sin riesgo"));
+  const [texto, setTexto] = useState(() => String(existingMeta?.texto ?? ""));
+  const [continuidad, setContinuidad] = useState(() => String(existingMeta?.continuidad ?? ""));
+  const [transcripcion, setTranscripcion] = useState(() => String(existingMeta?.transcripcion ?? ""));
 
   useEffect(() => {
     return () => {
@@ -3664,7 +3673,8 @@ function NoteModal({
         },
       };
 
-      await createPatientNote(patient.id, payload);
+      if (file) await updatePatientNote(file.id, payload);
+      else await createPatientNote(patient.id, payload);
       await onCreated();
       onClose();
     } finally {
@@ -3672,7 +3682,7 @@ function NoteModal({
     }
   }
 
-  const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile);
+  const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile || file);
 
   return (
     <Modal onClose={onClose} fullScreen closeVariant="icon">
@@ -3859,7 +3869,7 @@ function NoteModal({
           Cancelar
         </button>
         <button className="pillBtn primary" onClick={create} disabled={busy || !canSave}>
-          {busy ? "Guardando..." : "Guardar nota"}
+          {busy ? "Guardando..." : file ? "Guardar cambios" : "Guardar nota"}
         </button>
       </div>
     </Modal>
@@ -4647,6 +4657,7 @@ export default function App() {
   const [showExam, setShowExam] = useState(false);
   const [editingExam, setEditingExam] = useState<PatientFile | null>(null);
   const [showNote, setShowNote] = useState(false);
+  const [editingNote, setEditingNote] = useState<PatientFile | null>(null);
   const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
   const [trendNodeFiles, setTrendNodeFiles] = useState<{ title: string; files: PatientFile[]; lastModified: string | null } | null>(null);
@@ -5119,11 +5130,33 @@ export default function App() {
         setEditingExam(null);
         setShowExam(false);
       }
+      if (editingNote?.id === file.id) {
+        setEditingNote(null);
+        setShowNote(false);
+      }
       await refreshFiles(selected.id);
       await refreshAllFiles();
       pushToast({ type: "ok", msg: `${tipo[0].toUpperCase()}${tipo.slice(1)} eliminado ✅` });
     } catch (err: any) {
       pushToast({ type: "err", msg: `No se pudo eliminar ${tipo}: ${errMsg(err)}` });
+    }
+  }
+
+  async function actionEditAttachmentName(file: PatientFile) {
+    if (!selected) return;
+    const current = String(file.filename || "").trim();
+    const next = prompt("Nuevo nombre del archivo:", current);
+    if (next === null) return;
+    const clean = next.trim();
+    if (!clean || clean === current) return;
+
+    try {
+      await updatePatientFile(file.id, { filename: clean });
+      await refreshFiles(selected.id);
+      await refreshAllFiles();
+      pushToast({ type: "ok", msg: "Archivo actualizado ✅" });
+    } catch (err: any) {
+      pushToast({ type: "err", msg: `No se pudo actualizar el archivo: ${errMsg(err)}` });
     }
   }
 
@@ -5834,7 +5867,7 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Notas</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Seguimiento clínico rápido con estado y riesgo.</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
+                  <button className="pillBtn primary" onClick={() => { setEditingNote(null); setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                     + Nueva nota
                   </button>
                 </div>
@@ -5864,6 +5897,9 @@ export default function App() {
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="smallBtn" onClick={() => actionOpenFile(f)}>
                             Abrir
+                          </button>
+                          <button className="smallBtn" onClick={() => { setEditingNote(f); setConsultaTipoDefault(normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo)); setShowNote(true); }}>
+                            Editar
                           </button>
                           <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
                             Eliminar
@@ -5918,6 +5954,9 @@ export default function App() {
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="smallBtn" onClick={() => actionOpenFile(f)}>
                             Abrir
+                          </button>
+                          <button className="smallBtn" onClick={() => actionEditAttachmentName(f)}>
+                            Editar
                           </button>
                           <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
                             Eliminar
@@ -6051,12 +6090,13 @@ export default function App() {
         <NoteModal
           patient={selected}
           consultaTipoDefault={consultaTipoDefault}
-          onClose={() => setShowNote(false)}
+          file={editingNote}
+          onClose={() => { setShowNote(false); setEditingNote(null); }}
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
             await refreshAppointments();
-            pushToast({ type: "ok", msg: "Nota creada ✅" });
+            pushToast({ type: "ok", msg: editingNote ? "Nota actualizada ✅" : "Nota creada ✅" });
             startVT(() => setSection("notas"));
           }}
         />

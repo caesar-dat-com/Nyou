@@ -382,6 +382,24 @@ export async function createMentalExam(patientId: string, payload: any): Promise
   return entry;
 }
 
+
+export async function updatePatientFile(fileId: number, input: { filename?: string | null }): Promise<PatientFile> {
+  const store = await getStore();
+  const idx = (store.files || []).findIndex((f) => f.id === fileId);
+  if (idx === -1) throw new Error("Archivo no encontrado");
+  const cur = store.files[idx];
+
+  const nextName = String(input.filename ?? "").trim();
+  const updated: PatientFile = {
+    ...cur,
+    filename: nextName || cur.filename,
+  };
+
+  store.files[idx] = updated;
+  await persistStore(store);
+  return updated;
+}
+
 export async function updateMentalExam(fileId: number, payload: any): Promise<PatientFile> {
   const store = await getStore();
   const idx = (store.files || []).findIndex((f) => f.id === fileId);
