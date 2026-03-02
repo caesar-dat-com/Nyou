@@ -5406,7 +5406,69 @@ export default function App() {
                   </div>
 
                   <div className="card resumenDataCard">
-                    <div className="resumenDataTopBanner">
+                    <div className="resumenDataPanels">
+                      <div className="resumenDataSheet">
+                        <div className="resumenDatosTitle" style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
+
+                        <div className="kv">
+                          <div className="k">Nombre</div>
+                          <div className="v">{selected.name}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Documento</div>
+                          <div className="v">
+                            {valOrDash(selected.doc_type)} {valOrDash(selected.doc_number)}
+                          </div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">EPS</div>
+                          <div className="v">{valOrDash(selected.insurer)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Nacimiento</div>
+                          <div className="v">{valOrDash(selected.birth_date)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Sexo</div>
+                          <div className="v">{valOrDash(selected.sex)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Teléfono</div>
+                          <div className="v">{valOrDash(selected.phone)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Email</div>
+                          <div className="v">{valOrDash(selected.email)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Dirección</div>
+                          <div className="v">{valOrDash(selected.address)}</div>
+                        </div>
+                        <div className="kv">
+                          <div className="k">Contacto de emergencia</div>
+                          <div className="v">{valOrDash(selected.emergency_contact)}</div>
+                        </div>
+
+                        <div className="actionRow resumenDataActions" style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                          <button
+                            className="pillBtn"
+                            onClick={() => {
+                              const parsed = parseConsentJson(selected.consent_json);
+                              if (!parsed) {
+                                pushToast({ type: "err", msg: "Este paciente aún no tiene consentimiento registrado." });
+                                return;
+                              }
+                              setConsentPreview(parsed);
+                            }}
+                          >
+                            Ver consentimiento
+                          </button>
+                          <button className="pillBtn danger" onClick={actionDeleteSelected}>
+                            eliminar paciente
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="radarCanvasWrap resumenDataRadar">
                         <RadarChart
                           labels={profileLabels}
@@ -5418,6 +5480,7 @@ export default function App() {
                           theme={theme}
                         />
                       </div>
+
                       <div className="resumenDataStats">
                         <ProgressDashes
                           title="Peso relativo (macro)"
@@ -5459,66 +5522,6 @@ export default function App() {
                           </div>
                         )}
                       </div>
-                    </div>
-
-                    <div className="resumenDatosTitle" style={{ fontWeight: 800, marginBottom: 6 }}>Datos</div>
-
-                    <div className="kv">
-                      <div className="k">Nombre</div>
-                      <div className="v">{selected.name}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Documento</div>
-                      <div className="v">
-                        {valOrDash(selected.doc_type)} {valOrDash(selected.doc_number)}
-                      </div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">EPS</div>
-                      <div className="v">{valOrDash(selected.insurer)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Nacimiento</div>
-                      <div className="v">{valOrDash(selected.birth_date)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Sexo</div>
-                      <div className="v">{valOrDash(selected.sex)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Teléfono</div>
-                      <div className="v">{valOrDash(selected.phone)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Email</div>
-                      <div className="v">{valOrDash(selected.email)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Dirección</div>
-                      <div className="v">{valOrDash(selected.address)}</div>
-                    </div>
-                    <div className="kv">
-                      <div className="k">Contacto de emergencia</div>
-                      <div className="v">{valOrDash(selected.emergency_contact)}</div>
-                    </div>
-
-                    <div className="actionRow" style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-                      <button
-                        className="pillBtn"
-                        onClick={() => {
-                          const parsed = parseConsentJson(selected.consent_json);
-                          if (!parsed) {
-                            pushToast({ type: "err", msg: "Este paciente aún no tiene consentimiento registrado." });
-                            return;
-                          }
-                          setConsentPreview(parsed);
-                        }}
-                      >
-                        Ver consentimiento
-                      </button>
-                      <button className="pillBtn danger" onClick={actionDeleteSelected}>
-                        eliminar paciente
-                      </button>
                     </div>
                   </div>
                 </div>
