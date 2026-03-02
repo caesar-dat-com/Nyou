@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$ROOT_DIR/naju"
+APP_DIR="$ROOT_DIR/Nyou"
 PORT="${NAJU_PORT:-1420}"
 
 HOST="127.0.0.1"
@@ -11,8 +11,8 @@ if [[ "${NAJU_LAN:-0}" == "1" ]]; then
 fi
 
 URL="http://127.0.0.1:${PORT}"
-LOG_FILE="$APP_DIR/.naju-dev.log"
-LOCK_HASH_FILE="$APP_DIR/.naju-lock.sha"
+LOG_FILE="$APP_DIR/.Nyou-dev.log"
+LOCK_HASH_FILE="$APP_DIR/.Nyou-lock.sha"
 
 cd "$ROOT_DIR"
 
@@ -23,18 +23,18 @@ cd "$ROOT_DIR"
 # =========================================================
 if [[ "${NAJU_AUTO_UPDATE:-0}" == "1" ]] && command -v git >/dev/null 2>&1; then
   if [[ -d ".git/rebase-merge" || -d ".git/rebase-apply" || -f ".git/MERGE_HEAD" ]]; then
-    echo "[NAJU] Repo con rebase/merge pendiente. Se omite auto-update."
+    echo "[Nyou] Repo con rebase/merge pendiente. Se omite auto-update."
   elif [[ -n "$(git status --porcelain)" ]]; then
-    echo "[NAJU] Cambios locales detectados. Se omite auto-update."
+    echo "[Nyou] Cambios locales detectados. Se omite auto-update."
   else
-    echo "[NAJU] Auto-update: git pull --ff-only"
-    git pull --ff-only || echo "[NAJU] Aviso: no se pudo actualizar. Continúo con versión local."
+    echo "[Nyou] Auto-update: git pull --ff-only"
+    git pull --ff-only || echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
   fi
 fi
 
 cd "$APP_DIR"
 
-echo "[NAJU] Verificando dependencias..."
+echo "[Nyou] Verificando dependencias..."
 
 if [[ -f "package-lock.json" ]]; then
   CUR_SHA="$(sha256sum package-lock.json | awk '{print $1}')"
@@ -42,25 +42,25 @@ if [[ -f "package-lock.json" ]]; then
   [[ -f "$LOCK_HASH_FILE" ]] && OLD_SHA="$(cat "$LOCK_HASH_FILE" || true)"
 
   if [[ ! -d "node_modules" || "$CUR_SHA" != "$OLD_SHA" ]]; then
-    echo "[NAJU] Instalando dependencias (npm ci)..."
+    echo "[Nyou] Instalando dependencias (npm ci)..."
     npm ci
     echo "$CUR_SHA" > "$LOCK_HASH_FILE"
   else
-    echo "[NAJU] Dependencias OK (lock sin cambios)."
+    echo "[Nyou] Dependencias OK (lock sin cambios)."
   fi
 else
   if [[ ! -d "node_modules" ]]; then
-    echo "[NAJU] Instalando dependencias (npm install)..."
+    echo "[Nyou] Instalando dependencias (npm install)..."
     npm install
   else
-    echo "[NAJU] Dependencias OK."
+    echo "[Nyou] Dependencias OK."
   fi
 fi
 
 OPEN_BROWSER=1
 
 while true; do
-  echo "[NAJU] Iniciando servidor en ${HOST}:${PORT}..."
+  echo "[Nyou] Iniciando servidor en ${HOST}:${PORT}..."
   npm run dev -- --host "$HOST" --port "$PORT" --strictPort > "$LOG_FILE" 2>&1 &
   DEV_PID=$!
 
@@ -76,7 +76,7 @@ while true; do
   done
 
   if [[ "$OPEN_BROWSER" -eq 1 ]]; then
-    echo "[NAJU] Abriendo $URL"
+    echo "[Nyou] Abriendo $URL"
     if command -v xdg-open >/dev/null 2>&1; then
       xdg-open "$URL" >/dev/null 2>&1 || true
     elif command -v gio >/dev/null 2>&1; then
@@ -86,6 +86,6 @@ while true; do
   fi
 
   wait "$DEV_PID" || true
-  echo "[NAJU] Servidor detenido. Reiniciando en 2 segundos..."
+  echo "[Nyou] Servidor detenido. Reiniciando en 2 segundos..."
   sleep 2
 done
