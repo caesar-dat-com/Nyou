@@ -2819,11 +2819,12 @@ textarea {
 }
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet {
-    grid-column: 1;
+    grid-column: 1 / -1;
+    min-height: auto;
   }
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
-    grid-column: 2;
+    grid-column: 1;
   }
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
