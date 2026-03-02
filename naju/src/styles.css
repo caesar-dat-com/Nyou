@@ -2723,7 +2723,7 @@ textarea {
 }
 
 .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadar,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
 .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
   border: 1px solid color-mix(in srgb, var(--border), transparent 6%);
   border-radius: 16px;
@@ -2753,7 +2753,7 @@ textarea {
   margin-top: auto !important;
 }
 
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadar {
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
   height: auto;
 }
 
@@ -2761,6 +2761,16 @@ textarea {
   display: grid;
   align-content: start;
   gap: 10px;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar {
+  margin-top: 2px;
 }
 
 @media (max-width: 1300px) {
@@ -2780,7 +2790,7 @@ textarea {
   }
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadar,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
     min-height: auto;
   }
