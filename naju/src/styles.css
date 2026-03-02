@@ -2811,32 +2811,11 @@ textarea {
   border-bottom-color: color-mix(in srgb, var(--border), transparent 15%);
 }
 
-
-@media (max-width: 1024px) {
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet {
-    grid-column: 1 / -1;
-    min-height: auto;
-  }
-
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
-    grid-column: 1;
-  }
-
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
-    grid-column: 2;
-    min-height: 300px;
-  }
-}
-
 @media (max-width: 900px) {
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
     grid-template-columns: 1fr;
   }
+}
 
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
   .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
