@@ -1505,6 +1505,23 @@ textarea {
   position: relative;
 }
 
+.trendControls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(100%, 260px);
+}
+
+.trendControls .smallBtn {
+  min-width: 34px;
+  padding: 6px 8px;
+}
+
+
 .chartTip {
   position: absolute;
   z-index: 3;
@@ -2690,10 +2707,6 @@ textarea {
 
 .resumenSplit.resumenSplit--stacked > .resumenDataCard {
   position: static;
-}
-
-/* En resumen apilado: radar/datos arriba y árbol de tendencias abajo. */
-.resumenSplit.resumenSplit--stacked > .resumenDataCard {
   order: 1;
 }
 
@@ -2701,41 +2714,111 @@ textarea {
   order: 2;
 }
 
-/* En el resumen apilado, dentro del bloque de datos: izquierda = datos del paciente, derecha = radar/estadísticas. */
-.resumenSplit.resumenSplit--stacked > .resumenDataCard {
+/* Tarjeta de datos integrada: hoja, radar y barras con tamaño homogéneo. */
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
   display: grid;
-  grid-template-columns: minmax(300px, .95fr) minmax(0, 1.05fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner {
-  grid-column: 2;
-  grid-row: 1 / span 30;
-  margin-bottom: 0;
-  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
+  border: 1px solid color-mix(in srgb, var(--border), transparent 6%);
+  border-radius: 16px;
+  background: color-mix(in oklab, white 85%, var(--surface-2));
+  min-height: clamp(360px, 47vh, 560px);
+  padding: 12px;
 }
 
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDatosTitle,
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv,
-.resumenSplit.resumenSplit--stacked > .resumenDataCard > .actionRow {
-  grid-column: 1;
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-@media (max-width: 1150px) {
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard {
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet .kv {
+  grid-template-columns: 130px 1fr;
+  padding: 8px 0;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet .v {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet .resumenDataActions {
+  margin-top: auto !important;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
+  height: auto;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+
+.resumenDataRadarPanel .filtersDropdown--radar {
+  margin-top: 2px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel), rgba(255,255,255,.72) 35%);
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 15%);
+  background: color-mix(in srgb, var(--panel2), transparent 25%);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar > summary .filtersSummaryHint {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.resumenDataRadarPanel .filtersDropdown--radar[open] > summary {
+  border-bottom-color: color-mix(in srgb, var(--border), transparent 15%);
+}
+
+
+@media (max-width: 1300px) {
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
+    grid-column: 1 / -1;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 900px) {
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
     grid-template-columns: 1fr;
   }
 
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDatosTitle,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .kv,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .actionRow {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataTopBanner {
-    margin-bottom: 12px;
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
+  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
+    min-height: auto;
   }
 }
