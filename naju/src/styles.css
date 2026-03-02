@@ -2810,17 +2810,3 @@ textarea {
 .resumenDataRadarPanel .filtersDropdown--radar[open] > summary {
   border-bottom-color: color-mix(in srgb, var(--border), transparent 15%);
 }
-
-@media (max-width: 700px) {
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels {
-    grid-template-columns: 1fr;
-  }
-}
-
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataSheet,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataRadarPanel,
-  .resumenSplit.resumenSplit--stacked > .resumenDataCard > .resumenDataPanels > .resumenDataStats {
-    grid-column: 1;
-    min-height: auto;
-  }
-}
