@@ -591,6 +591,26 @@ const AXES: AxisDef[] = [
   },
 ];
 
+
+
+type ExamCatalogGroup = {
+  category: string;
+  tests: string[];
+};
+
+const EXAM_CATALOG: ExamCatalogGroup[] = [
+  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VADTRS", "WURS-25"] },
+  { category: "Adicciones", tests: ["AUDIT", "DUDIT", "IRIS", "LDQ", "PGSI"] },
+  { category: "Adolescente", tests: ["A-DES", "AQ-Adolescent", "ASSQ", "BEDSY", "CAT-Q", "CES-DS", "chEAT", "chOCI-R-P", "chOCI-R-S", "DASS-Y", "EAT-26", "EDE-Q 6.0", "FFMQ-15", "FMPS", "IPIP-NEO-120", "ITQ-CA", "MAIA-Y", "MFQ-self", "MID-60 A", "MSES-R", "PSS-10"] },
+  { category: "Ansiedad", tests: ["DASS-10", "DASS-21", "DASS-42", "DASS-Y", "GAD-7", "K5", "PASS", "PDSS"] },
+  { category: "Autismo", tests: ["AQ", "AQ-Adolescente", "AQ-child", "ASSQ", "ATEC", "CAST", "CAST-Q", "CATI", "EDA-8"] },
+  { category: "Imagen corporal y alimentación", tests: ["AAI", "BES", "chEAT", "CIA", "CRQ", "EAT-26", "ED-15", "EDE-Q 6.0"] },
+  { category: "Depresión", tests: ["ATQ-B", "CES-DS", "CES-D", "CESD-R", "DASS-10", "DASS-21", "DASS-42", "DASS-Y", "MADRS-22", "MENO-D", "MFQ-parent", "PHQ-9"] },
+  { category: "Trauma", tests: ["A-DES", "ACE-Q", "BCE-s", "CDC", "DAR-5", "DES-II", "IES-R", "ITQ-CA", "LEC-5", "PCL-5"] },
+  { category: "TOC", tests: ["OCI-R"] },
+  { category: "Sueño", tests: ["ISI", "RIS"] },
+  { category: "Otras categorías", tests: ["Diagnóstico", "Discapacidad", "Formulación", "Salud", "Trastorno de acaparamiento", "Monitoreo de resultados", "Personalidad", "Proyección", "Deporte"] },
+];
 const PROFILE_COLORS: Record<string, string> = {
   "Ánimo": "#5b7bd5",
   "Afecto": "#b06fdc",
@@ -4769,6 +4789,8 @@ export default function App() {
   const [showEdit, setShowEdit] = useState(false);
   const [showExam, setShowExam] = useState(false);
   const [editingExam, setEditingExam] = useState<PatientFile | null>(null);
+  const [showExamMenu, setShowExamMenu] = useState(false);
+  const [openExamCategory, setOpenExamCategory] = useState<string | null>(null);
   const [showNote, setShowNote] = useState(false);
   const [editingNote, setEditingNote] = useState<PatientFile | null>(null);
   const [showInitialAssessment, setShowInitialAssessment] = useState(false);
@@ -4804,6 +4826,7 @@ export default function App() {
   const pendingOpenHandledRef = useRef(false);
 
   const toastTimer = useRef<number | null>(null);
+  const examMenuRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -5118,6 +5141,65 @@ export default function App() {
       setSection(sec);
     });
   }
+
+  useEffect(() => {
+    function onDocClick(ev: MouseEvent) {
+      const target = ev.target as Node | null;
+      if (!target) return;
+      if (examMenuRef.current?.contains(target)) return;
+      setShowExamMenu(false);
+      setOpenExamCategory(null);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  function isMentalExam(file: PatientFile) {
+    if (file.kind !== "exam") return false;
+    const meta = parseMetaJson(file);
+    return String(meta?.type || "") === "examen_mental";
+  }
+
+  async function createStructuredExam(category: string, test: string) {
+    if (!selected) return;
+    try {
+      const payload = {
+        type: "examen_escala",
+        categoria: category,
+        prueba: test,
+        fecha: new Date().toISOString().slice(0, 10),
+        puntaje_total: null,
+        interpretacion: null,
+        respuestas: null,
+        notas: null,
+        consulta_tipo: consultaTipoDefault,
+        patient_snapshot: {
+          id: selected.id,
+          name: selected.name,
+          doc_type: selected.doc_type,
+          doc_number: selected.doc_number,
+        },
+      };
+      await createMentalExam(selected.id, payload);
+      await refreshFiles(selected.id);
+      await refreshAllFiles();
+      setShowExamMenu(false);
+      setOpenExamCategory(null);
+      setSection("examenes");
+      pushToast({ type: "ok", msg: `Examen ${test} creado ✅` });
+    } catch (e) {
+      pushToast({ type: "err", msg: `No se pudo crear examen ${test}: ${errMsg(e)}` });
+    }
+  }
+
+  function openMentalExamModal() {
+    setShowExamMenu(false);
+    setOpenExamCategory(null);
+    setEditingExam(null);
+    setConsultaTipoDefault("presencial");
+    setShowExam(true);
+  }
+
 
   async function onCreatePatient(input: PatientInput) {
     try {
@@ -5861,9 +5943,53 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => { setEditingExam(null); setConsultaTipoDefault("presencial"); setShowExam(true); }}>
-                    + examen mental
-                  </button>
+                  <div ref={examMenuRef} style={{ position: "relative" }}>
+                    <button
+                      className="pillBtn primary"
+                      onClick={() => setShowExamMenu((prev) => !prev)}
+                      aria-expanded={showExamMenu}
+                      type="button"
+                    >
+                      + Exámenes ▾
+                    </button>
+                    {showExamMenu ? (
+                      <div className="card" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 360, zIndex: 30, padding: 10, maxHeight: 420, overflow: "auto" }}>
+                        <button className="smallBtn" style={{ width: "100%", marginBottom: 8 }} onClick={openMentalExamModal}>
+                          Examen mental formal
+                        </button>
+                        {EXAM_CATALOG.map((group) => {
+                          const open = openExamCategory === group.category;
+                          return (
+                            <div key={group.category} style={{ borderTop: "1px solid var(--line)", paddingTop: 8, marginTop: 8 }}>
+                              <button
+                                className="smallBtn"
+                                style={{ width: "100%", justifyContent: "space-between", display: "flex" }}
+                                type="button"
+                                onClick={() => setOpenExamCategory((prev) => (prev === group.category ? null : group.category))}
+                              >
+                                <span>{group.category}</span>
+                                <span>{open ? "▴" : "▾"}</span>
+                              </button>
+                              {open ? (
+                                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                                  {group.tests.map((test) => (
+                                    <button
+                                      key={`${group.category}-${test}`}
+                                      className="smallBtn"
+                                      type="button"
+                                      onClick={() => createStructuredExam(group.category, test)}
+                                    >
+                                      {test}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div style={{ height: 12 }} />
@@ -5892,16 +6018,22 @@ export default function App() {
                           <button className="smallBtn" onClick={() => actionOpenFile(f)}>
                             Abrir
                           </button>
-                          <button
-                            className="smallBtn"
-                            onClick={() => {
-                              setEditingExam(f);
-                              setConsultaTipoDefault(normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo));
-                              setShowExam(true);
-                            }}
-                          >
-                            Editar
-                          </button>
+                          {isMentalExam(f) ? (
+                            <button
+                              className="smallBtn"
+                              onClick={() => {
+                                setEditingExam(f);
+                                setConsultaTipoDefault(normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo));
+                                setShowExam(true);
+                              }}
+                            >
+                              Editar
+                            </button>
+                          ) : (
+                            <button className="smallBtn" onClick={() => actionOpenFile(f)}>
+                              Ver JSON
+                            </button>
+                          )}
                           <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
                             Eliminar
                           </button>
