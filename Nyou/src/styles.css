@@ -928,9 +928,19 @@ textarea {
 }
 
 .modalFullScreen {
-  width: min(1280px, 100%);
+  width: calc(100vw - 24px);
   max-height: calc(100vh - 24px);
   border-radius: 20px;
+}
+
+.noteModalBody {
+  min-height: calc(100vh - 180px);
+}
+
+.noteBigTextarea {
+  min-height: min(32vh, 360px);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .modalCloseX {

@@ -3628,7 +3628,14 @@ function NoteModal({
         return;
       }
 
-      setTranscripcion(String(txt).trim());
+      const cleanedText = String(txt).trim();
+      setTranscripcion(cleanedText);
+      setContinuidad((prev) => {
+        const base = prev.trim();
+        if (!base) return cleanedText;
+        if (base.includes(cleanedText)) return prev;
+        return `${prev.trimEnd()}\n\n${cleanedText}`;
+      });
     } catch (err) {
       setTranscribeError(errMsg(err));
     } finally {
@@ -3672,11 +3679,11 @@ function NoteModal({
     }
   }
 
-  const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile);
+  const canSave = Boolean(texto.trim() || continuidad.trim() || audioFile);
 
   return (
     <Modal onClose={onClose} fullScreen closeVariant="icon">
-      <div className="modalBody">
+      <div className="modalBody noteModalBody">
         <input
           ref={audioInputRef}
           type="file"
@@ -3804,7 +3811,7 @@ function NoteModal({
         <div className="field">
           <div className="label">Nota clínica</div>
           <textarea
-            className="textarea"
+            className="textarea noteBigTextarea"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Describe el seguimiento, cambios y observaciones..."
@@ -3814,20 +3821,10 @@ function NoteModal({
         <div className="field">
           <div className="label">Continuidad (plan de trabajo)</div>
           <textarea
-            className="textarea"
+            className="textarea noteBigTextarea"
             value={continuidad}
             onChange={(e) => setContinuidad(e.target.value)}
-            placeholder="Describa el plan de trabajo o continuidad clínica..."
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Transcripción (opcional)</div>
-          <textarea
-            className="textarea"
-            value={transcripcion}
-            onChange={(e) => setTranscripcion(e.target.value)}
-            placeholder="Pega aquí una transcripción o usa el botón de transcribir."
+            placeholder="Describa el plan de trabajo o continuidad clínica... (la transcripción de audio se agregará aquí automáticamente)"
           />
         </div>
 
