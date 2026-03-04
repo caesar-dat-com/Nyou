@@ -3346,16 +3346,19 @@ function MentalExamModal({
 
 function NoteModal({
   patient,
+  file,
   consultaTipoDefault,
   onClose,
   onCreated,
 }: {
   patient: Patient;
+  file?: PatientFile | null;
   consultaTipoDefault: ConsultaTipo;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
+  const meta = file ? parseMetaJson(file) : null;
 
   // --- QR share (LAN) ---
   const [netIps, setNetIps] = useState<string[]>([]);
@@ -3365,7 +3368,7 @@ function NoteModal({
   });
   const [netError, setNetError] = useState<string | null>(null);
   const [hostIp, setHostIp] = useState<string>("");
-  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(consultaTipoDefault);
+  const [consultaTipo, setConsultaTipo] = useState<ConsultaTipo>(() => normalizeConsultaTipo(meta?.consulta_tipo ?? consultaTipoDefault));
 
   useEffect(() => {
     let alive = true;
@@ -3465,17 +3468,18 @@ function NoteModal({
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
 
   const [fecha, setFecha] = useState<string>(() => {
+    if (typeof meta?.fecha === "string" && meta.fecha.trim()) return meta.fecha;
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   });
-  const [animo, setAnimo] = useState("Eutímico");
-  const [riesgo, setRiesgo] = useState("Sin riesgo");
-  const [texto, setTexto] = useState("");
-  const [continuidad, setContinuidad] = useState("");
-  const [transcripcion, setTranscripcion] = useState("");
+  const [animo, setAnimo] = useState<string>(meta?.estado_animo ?? "Eutímico");
+  const [riesgo, setRiesgo] = useState<string>(meta?.riesgo ?? "Sin riesgo");
+  const [texto, setTexto] = useState<string>(meta?.texto ?? "");
+  const [continuidad, setContinuidad] = useState<string>(meta?.continuidad ?? "");
+  const [transcripcion, setTranscripcion] = useState<string>(meta?.transcripcion ?? "");
 
   useEffect(() => {
     return () => {
@@ -3628,7 +3632,14 @@ function NoteModal({
         return;
       }
 
-      setTranscripcion(String(txt).trim());
+      const cleanedText = String(txt).trim();
+      setTranscripcion(cleanedText);
+      setContinuidad((prev) => {
+        const base = prev.trim();
+        if (!base) return cleanedText;
+        if (base.includes(cleanedText)) return prev;
+        return `${prev.trimEnd()}\n\n${cleanedText}`;
+      });
     } catch (err) {
       setTranscribeError(errMsg(err));
     } finally {
@@ -3664,7 +3675,8 @@ function NoteModal({
         },
       };
 
-      await createPatientNote(patient.id, payload);
+      if (file) await updatePatientNote(file.id, payload);
+      else await createPatientNote(patient.id, payload);
       await onCreated();
       onClose();
     } finally {
@@ -3672,11 +3684,11 @@ function NoteModal({
     }
   }
 
-  const canSave = Boolean(texto.trim() || transcripcion.trim() || audioFile);
+  const canSave = Boolean(texto.trim() || continuidad.trim() || audioFile);
 
   return (
     <Modal onClose={onClose} fullScreen closeVariant="icon">
-      <div className="modalBody">
+      <div className="modalBody noteModalBody">
         <input
           ref={audioInputRef}
           type="file"
@@ -3804,7 +3816,7 @@ function NoteModal({
         <div className="field">
           <div className="label">Nota clínica</div>
           <textarea
-            className="textarea"
+            className="textarea noteBigTextarea"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Describe el seguimiento, cambios y observaciones..."
@@ -3814,20 +3826,10 @@ function NoteModal({
         <div className="field">
           <div className="label">Continuidad (plan de trabajo)</div>
           <textarea
-            className="textarea"
+            className="textarea noteBigTextarea"
             value={continuidad}
             onChange={(e) => setContinuidad(e.target.value)}
-            placeholder="Describa el plan de trabajo o continuidad clínica..."
-          />
-        </div>
-
-        <div className="field">
-          <div className="label">Transcripción (opcional)</div>
-          <textarea
-            className="textarea"
-            value={transcripcion}
-            onChange={(e) => setTranscripcion(e.target.value)}
-            placeholder="Pega aquí una transcripción o usa el botón de transcribir."
+            placeholder="Describa el plan de trabajo o continuidad clínica... (la transcripción de audio se agregará aquí automáticamente)"
           />
         </div>
 
@@ -3859,7 +3861,7 @@ function NoteModal({
           Cancelar
         </button>
         <button className="pillBtn primary" onClick={create} disabled={busy || !canSave}>
-          {busy ? "Guardando..." : "Guardar nota"}
+          {busy ? "Guardando..." : file ? "Guardar cambios" : "Guardar nota"}
         </button>
       </div>
     </Modal>
@@ -4647,6 +4649,7 @@ export default function App() {
   const [showExam, setShowExam] = useState(false);
   const [editingExam, setEditingExam] = useState<PatientFile | null>(null);
   const [showNote, setShowNote] = useState(false);
+  const [editingNote, setEditingNote] = useState<PatientFile | null>(null);
   const [showInitialAssessment, setShowInitialAssessment] = useState(false);
   const [previewFile, setPreviewFile] = useState<PatientFile | null>(null);
   const [trendNodeFiles, setTrendNodeFiles] = useState<{ title: string; files: PatientFile[]; lastModified: string | null } | null>(null);
@@ -4970,6 +4973,7 @@ export default function App() {
       setSelectedId(p.id);
       setSection("notas");
       setConsultaTipoDefault(pendingOpen.consultaTipo);
+      setEditingNote(null);
       setShowNote(true);
     });
   }, [pendingOpen, patients]);
@@ -5834,7 +5838,7 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Notas</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Seguimiento clínico rápido con estado y riesgo.</div>
                   </div>
-                  <button className="pillBtn primary" onClick={() => { setConsultaTipoDefault("presencial"); setShowNote(true); }}>
+                  <button className="pillBtn primary" onClick={() => { setEditingNote(null); setConsultaTipoDefault("presencial"); setShowNote(true); }}>
                     + Nueva nota
                   </button>
                 </div>
@@ -5864,6 +5868,16 @@ export default function App() {
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="smallBtn" onClick={() => actionOpenFile(f)}>
                             Abrir
+                          </button>
+                          <button
+                            className="smallBtn"
+                            onClick={() => {
+                              setEditingNote(f);
+                              setConsultaTipoDefault(normalizeConsultaTipo(parseMetaJson(f)?.consulta_tipo));
+                              setShowNote(true);
+                            }}
+                          >
+                            Editar
                           </button>
                           <button className="smallBtn" onClick={() => actionDeleteFile(f)}>
                             Eliminar
@@ -6050,14 +6064,16 @@ export default function App() {
       {showNote && selected ? (
         <NoteModal
           patient={selected}
+          file={editingNote}
           consultaTipoDefault={consultaTipoDefault}
-          onClose={() => setShowNote(false)}
+          onClose={() => { setShowNote(false); setEditingNote(null); }}
           onCreated={async () => {
             await refreshFiles(selected.id);
             await refreshAllFiles();
             await refreshAppointments();
-            pushToast({ type: "ok", msg: "Nota creada ✅" });
+            pushToast({ type: "ok", msg: editingNote ? "Nota actualizada ✅" : "Nota creada ✅" });
             startVT(() => setSection("notas"));
+            setEditingNote(null);
           }}
         />
       ) : null}
