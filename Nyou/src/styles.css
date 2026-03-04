@@ -362,7 +362,7 @@ textarea {
 
 .floatingMenuBtn{
   position: fixed;
-  right: 22px;
+  left: max(22px, env(safe-area-inset-left));
   bottom: 22px;
   width: 60px;
   height: 60px;
