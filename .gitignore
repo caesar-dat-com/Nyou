@@ -1,5 +1,5 @@
 ﻿# Artefactos locales de entrega
-NAJU_ACTUALIZADO.zip
+Nyou_ACTUALIZADO.zip
 # === BIBLIOCASTIA (.gitignore) ===
 
 # Datos runtime / temporales (NO versionar)
@@ -34,10 +34,10 @@ NOOTEBOKS/keys/
 Thumbs.db
 .DS_Store
 
-# --- NAJU seguridad / limpieza ---
-naju/node_modules/
-naju/patients/store.json
-naju/patients/assets/
+# --- Nyou seguridad / limpieza ---
+nyou/node_modules/
+nyou/patients/store.json
+nyou/patients/assets/
 **/token.pickle
 *.zip
 .vscode/

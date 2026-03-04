@@ -24,13 +24,13 @@ function execCmd(cmd: string, args: string[], opts: { cwd?: string; timeoutMs?: 
   });
 }
 
-function najuStorePlugin(): Plugin {
+function nyouStorePlugin(): Plugin {
   const storeDir = path.resolve(__dirname, "patients");
   const storeFile = path.join(storeDir, "store.json");
   const assetsDir = path.join(storeDir, "assets");
   const defaultStore = { patients: [], files: [], appointments: [], nextFileId: 1, nextAppointmentId: 1 };
 
-  // Repo root is the parent of /naju (where the .git folder lives).
+  // Repo root is the parent of /nyou (where the .git folder lives).
   const repoRoot = path.resolve(__dirname, "..");
   const packageJsonPath = path.resolve(__dirname, "package.json");
 
@@ -85,10 +85,10 @@ function najuStorePlugin(): Plugin {
   }
 
   return {
-    name: "naju-store",
+    name: "nyou-store",
     configureServer(server) {
       // Expose LAN IPs so QR links can open from other devices on the same network.
-      server.middlewares.use("/__naju_netinfo", async (_req, res) => {
+      server.middlewares.use("/__nyou_netinfo", async (_req, res) => {
         try {
           const ifaces = os.networkInterfaces();
           const ipv4: string[] = [];
@@ -151,7 +151,7 @@ function najuStorePlugin(): Plugin {
         }
       }
 
-      server.middlewares.use("/__naju_update_check", async (req, res) => {
+      server.middlewares.use("/__nyou_update_check", async (req, res) => {
         // GET only
         if ((req?.method || "GET").toUpperCase() !== "GET") {
           res.statusCode = 405;
@@ -198,7 +198,7 @@ function najuStorePlugin(): Plugin {
         }
       });
 
-      server.middlewares.use("/__naju_update_apply", async (req, res) => {
+      server.middlewares.use("/__nyou_update_apply", async (req, res) => {
         // POST only
         if ((req?.method || "GET").toUpperCase() !== "POST") {
           res.statusCode = 405;
@@ -220,7 +220,7 @@ function najuStorePlugin(): Plugin {
 
           // Reinstala deps por si el update trae cambios (best-effort).
           const npm = await execCmd(process.platform === "win32" ? "npm.cmd" : "npm", ["install"], {
-            cwd: path.resolve(repoRoot, "naju"),
+            cwd: path.resolve(repoRoot, "nyou"),
             timeoutMs: 180_000,
           });
 
@@ -255,7 +255,7 @@ function najuStorePlugin(): Plugin {
       });
 
       // Persist store.json in /patients
-      server.middlewares.use("/__naju_store", async (req, res, next) => {
+      server.middlewares.use("/__nyou_store", async (req, res, next) => {
         try {
           await ensureDir();
 
@@ -319,11 +319,11 @@ function najuStorePlugin(): Plugin {
       });
 
       // Persist binary assets (audio, images, etc.) in /patients/assets/<patientId>/
-      server.middlewares.use("/__naju_asset", async (req, res, next) => {
+      server.middlewares.use("/__nyou_asset", async (req, res, next) => {
         try {
           await ensureAssetsDir();
 
-          // req.url here is the sub-path after /__naju_asset
+          // req.url here is the sub-path after /__nyou_asset
           const urlObj = new URL(req.url || "/", "http://localhost");
           const rel = safeRelPath(decodeURIComponent(urlObj.pathname || "/"));
 
@@ -404,7 +404,7 @@ function najuStorePlugin(): Plugin {
 
                 res.statusCode = 200;
                 res.setHeader("Content-Type", "application/json; charset=utf-8");
-                res.end(JSON.stringify({ ok: true, path: `/__naju_asset/${patientId}/${filename}` }));
+                res.end(JSON.stringify({ ok: true, path: `/__nyou_asset/${patientId}/${filename}` }));
               } catch {
                 res.statusCode = 400;
                 res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -428,7 +428,7 @@ function najuStorePlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), najuStorePlugin()],
+  plugins: [react(), nyouStorePlugin()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

@@ -1,12 +1,12 @@
 @echo off
 setlocal
 
-REM Crea un acceso directo (NAJU.lnk) en esta misma carpeta con icono.
+REM Crea un acceso directo (Nyou.lnk) en esta misma carpeta con icono.
 
 set "ROOT=%~dp0"
-set "TARGET=%ROOT%INICIAR_NAJU_WINDOWS.bat"
-set "ICON=%ROOT%NAJU.ico"
-set "SHORTCUT=%ROOT%NAJU.lnk"
+set "TARGET=%ROOT%INICIAR_Nyou_WINDOWS.bat"
+set "ICON=%ROOT%Nyou.ico"
+set "SHORTCUT=%ROOT%Nyou.lnk"
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$WshShell = New-Object -ComObject WScript.Shell;" ^
@@ -17,10 +17,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$Shortcut.Save();"
 
 if exist "%SHORTCUT%" (
-  echo [NAJU] Acceso directo creado: %SHORTCUT%
-  echo [NAJU] Ahora solo dale doble click a NAJU.lnk
+  echo [Nyou] Acceso directo creado: %SHORTCUT%
+  echo [Nyou] Ahora solo dale doble click a Nyou.lnk
 ) else (
-  echo [NAJU] No se pudo crear el acceso directo.
+  echo [Nyou] No se pudo crear el acceso directo.
 )
 
 pause

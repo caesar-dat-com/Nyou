@@ -37,7 +37,7 @@ export default function ErrorCenter(props: {
       exported_at: new Date().toISOString(),
       reports: props.reports,
     };
-    downloadTextFile("naju_error_reports.json", "application/json;charset=utf-8", JSON.stringify(payload, null, 2));
+    downloadTextFile("nyou_error_reports.json", "application/json;charset=utf-8", JSON.stringify(payload, null, 2));
     setToast({ type: "ok", msg: "JSON exportado ✅" });
   }
 

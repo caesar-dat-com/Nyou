@@ -44,14 +44,14 @@ export function appointmentsToIcs(appointments: Appointment[], patientNameById: 
   const lines: string[] = [];
   lines.push("BEGIN:VCALENDAR");
   lines.push("VERSION:2.0");
-  lines.push("PRODID:-//NAJU//Agenda//ES");
+  lines.push("PRODID:-//Nyou//Agenda//ES");
   lines.push("CALSCALE:GREGORIAN");
   lines.push("METHOD:PUBLISH");
 
   const dtstamp = toIcsUtc(new Date().toISOString());
 
   for (const a of appointments.slice().sort((x, y) => Date.parse(x.start_iso) - Date.parse(y.start_iso))) {
-    const uid = `naju-${a.id}@naju.local`;
+    const uid = `nyou-${a.id}@nyou.local`;
     const pname = patientNameById[a.patient_id] || "Paciente";
     const summary = escIcsText(`${a.title} · ${pname}`);
     const descParts: string[] = [];
