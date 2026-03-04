@@ -120,10 +120,10 @@ type Store = {
   nextErrorId: number;
 };
 
-const STORAGE_KEY = "naju_web_store";
+const STORAGE_KEY = "nyou_web_store";
 // Dev-only endpoint (served by Vite middleware) that persists the store inside the project folder.
 // Falls back to localStorage automatically when the endpoint is not available.
-const FILE_STORE_ENDPOINT = "/__naju_store";
+const FILE_STORE_ENDPOINT = "/__nyou_store";
 
 let cachedStore: Store | null = null;
 

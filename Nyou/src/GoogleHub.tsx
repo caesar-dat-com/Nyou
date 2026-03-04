@@ -47,9 +47,9 @@ function niceDateTime(ev: CalendarEvent) {
 
 function extractPatientId(ev: CalendarEvent): string | null {
   const ext = ev?.extendedProperties?.private;
-  if (ext?.najuPatientId) return ext.najuPatientId;
+  if (ext?.nyouPatientId) return ext.nyouPatientId;
   const desc = ev?.description || "";
-  const m = desc.match(/NAJU_PATIENT_ID=([a-zA-Z0-9_-]+)/);
+  const m = desc.match(/Nyou_PATIENT_ID=([a-zA-Z0-9_-]+)/);
   return m?.[1] || null;
 }
 
@@ -344,7 +344,7 @@ export default function GoogleHub(props: Props) {
               <div style={{ fontWeight: 800, marginBottom: 6 }}>Conecta tu cuenta</div>
               <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>
                 Para usar Drive y Calendar, el producto debe incluir su Client ID de Google.
-                Configúralo en <b>public/naju.config.json</b> (campo <b>googleClientId</b>).
+                Configúralo en <b>public/nyou.config.json</b> (campo <b>googleClientId</b>).
               </div>
               <div style={{ height: 12 }} />
               <button className="pillBtn primary" onClick={connect} disabled={busy}>
@@ -357,7 +357,7 @@ export default function GoogleHub(props: Props) {
                 <div>
                   <div style={{ fontWeight: 800 }}>Agenda (próximos 30 días)</div>
                   <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                    Citas creadas desde NAJU en tu Google Calendar.
+                    Citas creadas desde Nyou en tu Google Calendar.
                   </div>
                 </div>
                 <button className="pillBtn" onClick={refreshAgenda} disabled={busy}>
@@ -478,7 +478,7 @@ export default function GoogleHub(props: Props) {
               <div className="card">
                 <div>
                   <div style={{ fontWeight: 800 }}>Citas del paciente</div>
-                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Eventos NAJU asociados al paciente.</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>Eventos Nyou asociados al paciente.</div>
                 </div>
 
                 <div style={{ height: 12 }} />
@@ -515,7 +515,7 @@ export default function GoogleHub(props: Props) {
                     <div>
                       <div style={{ fontWeight: 800 }}>Drive</div>
                       <div style={{ color: "var(--muted)", fontSize: 13 }}>
-                        Carpeta por paciente dentro de “NAJU - Pacientes”.
+                        Carpeta por paciente dentro de “Nyou - Pacientes”.
                       </div>
                     </div>
                     <button className="pillBtn primary" onClick={triggerUpload} disabled={busy}>

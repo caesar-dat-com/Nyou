@@ -61,7 +61,7 @@ function buildPsychReminderMessage(psychName: string, patientName: string, start
   const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
   const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const modalityLabel = modality === "virtual" ? "Virtual" : "Presencial";
-  return `Hola 👋 Soy NAJU, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
+  return `Hola 👋 Soy Nyou, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
 }
 
 function buildMonthGrid(monthCursor: Date) {
@@ -335,7 +335,7 @@ export default function HomeDashboard(props: {
               <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}>
                 ◀
               </button>
-              <div className="najuMonthPill">{monthLabel(monthCursor)}</div>
+              <div className="nyouMonthPill">{monthLabel(monthCursor)}</div>
               <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}>
                 ▶
               </button>
@@ -344,15 +344,15 @@ export default function HomeDashboard(props: {
 
           <div style={{ height: 8 }} />
 
-          <div className="najuCalHead">
+          <div className="nyouCalHead">
             {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
-              <div key={d} className="najuCalDow">
+              <div key={d} className="nyouCalDow">
                 {d}
               </div>
             ))}
           </div>
 
-          <div className="najuCalGrid">
+          <div className="nyouCalGrid">
             {days.map((d) => {
               const k = toDayKeyLocal(d);
               const count = (apptByDay[k] || []).length;
@@ -361,12 +361,12 @@ export default function HomeDashboard(props: {
               return (
                 <button
                   key={k}
-                  className={"najuCalCell " + (inMonth ? "" : "isDim ") + (isSel ? "isSel" : "")}
+                  className={"nyouCalCell " + (inMonth ? "" : "isDim ") + (isSel ? "isSel" : "")}
                   onClick={() => setSelectedDayKey(isSel ? null : k)}
                   title={k}
                 >
-                  <div className="najuCalNum">{d.getDate()}</div>
-                  {count ? <div className="najuCalCount">{count}</div> : null}
+                  <div className="nyouCalNum">{d.getDate()}</div>
+                  {count ? <div className="nyouCalCount">{count}</div> : null}
                 </button>
               );
             })}
