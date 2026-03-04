@@ -3357,6 +3357,10 @@ function NoteModal({
   onClose: () => void;
   onCreated: () => Promise<void>;
 }) {
+  type SpeechRecognitionEventLike = Event & {
+    results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>;
+  };
+
   const [busy, setBusy] = useState(false);
   const meta = file ? parseMetaJson(file) : null;
 
@@ -3466,6 +3470,11 @@ function NoteModal({
 
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
+  const [transcribeInfo, setTranscribeInfo] = useState<string | null>(null);
+  const [autoProcessOnStop, setAutoProcessOnStop] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const [dictationPreview, setDictationPreview] = useState("");
+  const speechRecognitionRef = useRef<any>(null);
 
   const [fecha, setFecha] = useState<string>(() => {
     if (typeof meta?.fecha === "string" && meta.fecha.trim()) return meta.fecha;
@@ -3509,6 +3518,7 @@ function NoteModal({
   function clearAudioSelection() {
     setAudioError(null);
     setTranscribeError(null);
+    setTranscribeInfo(null);
     setAudioFile(null);
     setAudioUrl(null);
     try {
@@ -3523,6 +3533,7 @@ function NoteModal({
     if (!file) return;
     setAudioError(null);
     setTranscribeError(null);
+    setTranscribeInfo(null);
     setAudioFile(file);
     try {
       const url = URL.createObjectURL(file);
@@ -3543,6 +3554,7 @@ function NoteModal({
     try {
       setAudioError(null);
       setTranscribeError(null);
+      setTranscribeInfo(null);
 
       let stream: MediaStream | null = null;
       if (consultaTipo === "presencial") {
@@ -3592,6 +3604,10 @@ function NoteModal({
             const dataUrl = await readBlobAsDataUrl(blob);
             setAudioUrl(dataUrl);
           }
+
+          if (autoProcessOnStop) {
+            void transcribeAudioFile(file, { background: true });
+          }
         } catch (err) {
           setAudioError(err instanceof Error ? err.message : "No se pudo procesar el audio.");
         }
@@ -3604,17 +3620,30 @@ function NoteModal({
     }
   }
 
-  async function transcribeAudio() {
-    if (!audioFile) {
-      setTranscribeError("Primero selecciona o graba un audio.");
+  function notifyTranscriptionReady(message: string) {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      new Notification("Nyou · Transcripción lista", { body: message });
       return;
     }
+    if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((perm) => {
+        if (perm === "granted") {
+          new Notification("Nyou · Transcripción lista", { body: message });
+        }
+      }).catch(() => {
+        // ignore
+      });
+    }
+  }
 
+  async function transcribeAudioFile(fileToTranscribe: File, opts?: { background?: boolean }) {
     setTranscribing(true);
     setTranscribeError(null);
+    setTranscribeInfo(opts?.background ? "Procesando audio en segundo plano..." : null);
 
     try {
-      const audio = await decodeAudioToMono16k(audioFile);
+      const audio = await decodeAudioToMono16k(fileToTranscribe);
       const asr = await getAsrPipeline();
 
       const out = await asr(audio, {
@@ -3640,12 +3669,88 @@ function NoteModal({
         if (base.includes(cleanedText)) return prev;
         return `${prev.trimEnd()}\n\n${cleanedText}`;
       });
+      if (opts?.background) {
+        setTranscribeInfo("La transcripción terminó y se agregó automáticamente en Continuidad.");
+        notifyTranscriptionReady("La transcripción del audio ya está disponible en la nota actual.");
+      } else {
+        setTranscribeInfo("Transcripción completada y agregada en Continuidad.");
+      }
     } catch (err) {
       setTranscribeError(errMsg(err));
     } finally {
       setTranscribing(false);
     }
   }
+
+  async function transcribeAudio() {
+    if (!audioFile) {
+      setTranscribeError("Primero selecciona o graba un audio.");
+      return;
+    }
+    await transcribeAudioFile(audioFile);
+  }
+
+  function toggleDictation() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setTranscribeError("Dictado en vivo no disponible en este navegador.");
+      return;
+    }
+
+    if (dictating && speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
+      return;
+    }
+
+    setTranscribeError(null);
+    const recognition = new SR();
+    recognition.lang = "es-ES";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setDictating(true);
+      setDictationPreview("");
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      let finalChunk = "";
+      let interimChunk = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result?.[0]?.transcript ?? "";
+        if ((result as any).isFinal) finalChunk += transcript;
+        else interimChunk += transcript;
+      }
+      if (finalChunk.trim()) {
+        setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+      }
+      setDictationPreview(interimChunk.trim());
+    };
+
+    recognition.onerror = () => {
+      setTranscribeError("Se interrumpió el dictado. Verifica permisos del micrófono e intenta de nuevo.");
+    };
+
+    recognition.onend = () => {
+      setDictating(false);
+      setDictationPreview("");
+      speechRecognitionRef.current = null;
+    };
+
+    speechRecognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  useEffect(() => {
+    return () => {
+      try {
+        speechRecognitionRef.current?.stop();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
 
   async function create() {
     setBusy(true);
@@ -3831,6 +3936,12 @@ function NoteModal({
             onChange={(e) => setContinuidad(e.target.value)}
             placeholder="Describa el plan de trabajo o continuidad clínica... (la transcripción de audio se agregará aquí automáticamente)"
           />
+          <div className="audioRow" style={{ marginTop: 10 }}>
+            <button className={`pillBtn ${dictating ? "danger" : ""}`} onClick={toggleDictation} type="button" disabled={busy || transcribing || recording}>
+              {dictating ? "Detener dictado en vivo" : "Dictado en vivo"}
+            </button>
+            {dictationPreview ? <span className="audioStatus">🗣️ {dictationPreview}</span> : null}
+          </div>
         </div>
 
         <div className="audioRow">
@@ -3843,9 +3954,19 @@ function NoteModal({
           <button className="pillBtn primary" onClick={transcribeAudio} type="button" disabled={!audioFile || busy || transcribing}>
             {transcribing ? "Transcribiendo..." : "Transcribir audio"}
           </button>
+          <label className="audioStatus" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={autoProcessOnStop}
+              onChange={(e) => setAutoProcessOnStop(e.target.checked)}
+              disabled={busy || transcribing}
+            />
+            Procesar automáticamente al detener grabación
+          </label>
           {audioFile ? <span className="audioStatus">Audio seleccionado: {audioFile.name}</span> : null}
           {audioError ? <span className="audioError">{audioError}</span> : null}
           {transcribeError ? <span className="audioError">{transcribeError}</span> : null}
+          {transcribeInfo ? <span className="audioStatus">{transcribeInfo}</span> : null}
           {audioFile ? (
             <button className="pillBtn" type="button" onClick={clearAudioSelection} disabled={busy || transcribing || recording}>
               Quitar audio
