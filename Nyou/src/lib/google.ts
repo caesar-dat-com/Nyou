@@ -29,17 +29,17 @@ declare global {
   }
 }
 
-const TOKEN_KEY = "naju_google_access_token_v1";
-const EXP_KEY = "naju_google_access_token_exp_v1";
-const SCOPE_KEY = "naju_google_scopes_v1";
-const DRIVE_ROOT_KEY = "naju_drive_root_folder_id_v1";
+const TOKEN_KEY = "nyou_google_access_token_v1";
+const EXP_KEY = "nyou_google_access_token_exp_v1";
+const SCOPE_KEY = "nyou_google_scopes_v1";
+const DRIVE_ROOT_KEY = "nyou_drive_root_folder_id_v1";
 
 export const DEFAULT_SCOPES = [
   "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/calendar.events",
 ];
 
-type NajuPublicConfig = {
+type NyouPublicConfig = {
   googleClientId?: string;
 };
 
@@ -49,9 +49,9 @@ async function publicConfigClientId(): Promise<string | null> {
   if (_publicClientIdPromise) return _publicClientIdPromise;
   _publicClientIdPromise = (async () => {
     try {
-      const res = await fetch("/naju.config.json", { cache: "no-store" });
+      const res = await fetch("/nyou.config.json", { cache: "no-store" });
       if (!res.ok) return null;
-      const data = (await res.json()) as NajuPublicConfig;
+      const data = (await res.json()) as NyouPublicConfig;
       const id = (data as any)?.googleClientId;
       if (typeof id === "string" && id.trim()) return id.trim();
       return null;
@@ -70,7 +70,7 @@ async function resolveClientId(): Promise<string> {
   if (typeof fromEnv === "string" && fromEnv.trim()) return fromEnv.trim();
 
   throw new Error(
-    "Falta googleClientId en public/naju.config.json (recomendado para distribución) o VITE_GOOGLE_CLIENT_ID en .env."
+    "Falta googleClientId en public/nyou.config.json (recomendado para distribución) o VITE_GOOGLE_CLIENT_ID en .env."
   );
 }
 
@@ -211,7 +211,7 @@ async function driveCreateFolder(name: string, parentId: string | null) {
 export async function ensureRootDriveFolder(): Promise<string> {
   const cached = localStorage.getItem(DRIVE_ROOT_KEY);
   if (cached) return cached;
-  const name = "NAJU - Pacientes";
+  const name = "Nyou - Pacientes";
   let id = await driveFindFolderByName(name, null);
   if (!id) id = await driveCreateFolder(name, null);
   localStorage.setItem(DRIVE_ROOT_KEY, id);
@@ -242,7 +242,7 @@ export async function driveListFolderFiles(folderId: string): Promise<DriveFile[
 }
 
 export async function driveUploadMultipart(folderId: string, file: File): Promise<DriveFile> {
-  const boundary = "-------naju_drive_boundary_" + Math.random().toString(16).slice(2);
+  const boundary = "-------nyou_drive_boundary_" + Math.random().toString(16).slice(2);
   const metadata: any = { name: file.name, parents: [folderId] };
   const fileB64 = base64FromArrayBuffer(await file.arrayBuffer());
   const contentType = file.type || "application/octet-stream";
@@ -276,16 +276,16 @@ export async function driveUploadMultipart(folderId: string, file: File): Promis
 
 function eventHasPatient(event: CalendarEvent, patientId: string) {
   const ext = event?.extendedProperties?.private;
-  if (ext?.najuPatientId && ext.najuPatientId === patientId) return true;
+  if (ext?.nyouPatientId && ext.nyouPatientId === patientId) return true;
   const desc = event?.description || "";
-  return desc.includes(`NAJU_PATIENT_ID=${patientId}`);
+  return desc.includes(`Nyou_PATIENT_ID=${patientId}`);
 }
 
-function eventIsNaju(event: CalendarEvent) {
+function eventIsNyou(event: CalendarEvent) {
   const ext = event?.extendedProperties?.private;
-  if (ext?.najuPatientId) return true;
+  if (ext?.nyouPatientId) return true;
   const desc = event?.description || "";
-  return desc.includes("NAJU_PATIENT_ID=");
+  return desc.includes("Nyou_PATIENT_ID=");
 }
 
 export async function calendarCreatePatientEvent(args: {
@@ -298,7 +298,7 @@ export async function calendarCreatePatientEvent(args: {
 }): Promise<CalendarEvent> {
   const { patientId, patientName, startISO, endISO, title, notes } = args;
   const summary = title && title.trim() ? title.trim() : `Cita - ${patientName}`;
-  const desc = [notes?.trim() ? notes.trim() : "", `NAJU_PATIENT_ID=${patientId}`]
+  const desc = [notes?.trim() ? notes.trim() : "", `Nyou_PATIENT_ID=${patientId}`]
     .filter(Boolean)
     .join("\n\n");
 
@@ -307,7 +307,7 @@ export async function calendarCreatePatientEvent(args: {
     description: desc,
     start: { dateTime: startISO },
     end: { dateTime: endISO },
-    extendedProperties: { private: { najuPatientId: patientId } },
+    extendedProperties: { private: { nyouPatientId: patientId } },
   };
 
   const url =
@@ -357,5 +357,5 @@ export async function calendarListUpcoming(args: {
   if (!res.ok) throw new Error("No se pudieron listar las citas.");
   const data = await res.json();
   const items: CalendarEvent[] = Array.isArray(data?.items) ? data.items : [];
-  return items.filter((ev) => eventIsNaju(ev));
+  return items.filter((ev) => eventIsNyou(ev));
 }

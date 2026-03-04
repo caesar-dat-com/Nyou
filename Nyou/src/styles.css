@@ -1,4 +1,4 @@
-/* NAJU — Apothecary / Tierra / Beige / Verde / Dorado */
+/* Nyou — Apothecary / Tierra / Beige / Verde / Dorado */
 
 :root {
   --bg: #fbf7ef;
@@ -1997,7 +1997,7 @@ textarea {
 
 
 /* Agenda (Plan B: export ICS/CSV) */
-.najuMonthPill{
+.nyouMonthPill{
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2007,27 +2007,27 @@ textarea {
   text-transform: capitalize;
 }
 
-.najuCalHead{
+.nyouCalHead{
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 8px;
   margin-bottom: 8px;
 }
 
-.najuCalDow{
+.nyouCalDow{
   font-size: 12px;
   color: var(--muted);
   font-weight: 800;
   text-align: center;
 }
 
-.najuCalGrid{
+.nyouCalGrid{
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 
-.najuCalCell{
+.nyouCalCell{
   min-height: 62px;
   padding: 10px;
   border-radius: 16px;
@@ -2041,26 +2041,26 @@ textarea {
   transition: transform .08s ease, border-color .08s ease;
 }
 
-.najuCalCell:hover{
+.nyouCalCell:hover{
   transform: translateY(-1px);
   border-color: rgba(255,255,255,.22);
 }
 
-.najuCalCell.isDim{
+.nyouCalCell.isDim{
   opacity: .45;
 }
 
-.najuCalCell.isSel{
+.nyouCalCell.isSel{
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
-.najuCalNum{
+.nyouCalNum{
   font-weight: 900;
   font-size: 13px;
 }
 
-.najuCalCount{
+.nyouCalCount{
   align-self: flex-start;
   padding: 3px 8px;
   border-radius: 999px;

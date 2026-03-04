@@ -84,7 +84,7 @@ type ProfessionalProfile = {
   firma_psicologo_data_url: string | null;
 };
 
-const PROFESSIONAL_PROFILE_STORAGE_KEY = "naju_professional_profile_v1";
+const PROFESSIONAL_PROFILE_STORAGE_KEY = "nyou_professional_profile_v1";
 
 type PaletteTokens = {
   primary: string;
@@ -317,7 +317,7 @@ function buildVirtualSessionLink(patientName: string, startIso: string) {
   const dt = Number.isNaN(date.getTime())
     ? Date.now().toString(36)
     : `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
-  return `https://meet.jit.si/naju-${token || "sesion"}-${dt}`;
+  return `https://meet.jit.si/nyou-${token || "sesion"}-${dt}`;
 }
 
 function buildVirtualLinkMessage(patientName: string, link: string) {
@@ -339,7 +339,7 @@ function buildPsychReminderMessage(psychName: string, patientName: string, start
   const date = Number.isNaN(d.getTime()) ? "fecha" : d.toLocaleDateString();
   const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const modalityLabel = modality === "virtual" ? "Virtual" : "Presencial";
-  return `Hola 👋 Soy NAJU, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
+  return `Hola 👋 Soy Nyou, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
 }
 
 function fileIcon(file: PatientFile) {
@@ -496,7 +496,7 @@ async function trySaveAudioAsset(patientId: string, file: File): Promise<string 
     const ext = guessExt(file);
     const filename = safeFilename(file.name, ext);
     const b64 = arrayBufferToBase64(await file.arrayBuffer());
-    const res = await fetch("/__naju_asset", {
+    const res = await fetch("/__nyou_asset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -2168,7 +2168,7 @@ async function generateConsentPdf(value: ConsentData) {
   drawSignature("Firma del paciente", value.firma_paciente_data_url);
   drawSignature("Firma del psicólogo(a)", value.firma_psicologo_data_url);
 
-  addBlock("NAJU · Documento de apoyo para la atención psicológica · Custodia profesional", 9, false, 0);
+  addBlock("Nyou · Documento de apoyo para la atención psicológica · Custodia profesional", 9, false, 0);
 
   const safeName = field(value.paciente_nombre).replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "paciente";
   doc.save(`consentimiento_${safeName}_${formatConsentDate(value.created_at).replace(/\//g, "-")}.pdf`);
@@ -2453,7 +2453,7 @@ function ConsentDocument({
       <h3 className="consentH">10. Voluntariedad</h3>
       <div className="consentP">Usted puede aceptar el uso de la aplicación y el audio, o rechazarlo y continuar con metodología alternativa informándolo verbalmente al terapeuta.</div>
 
-      <div className="consentFoot">NAJU · Documento de apoyo para la atención psicológica · Custodia profesional</div>
+      <div className="consentFoot">Nyou · Documento de apoyo para la atención psicológica · Custodia profesional</div>
     </div>
   );
 }
@@ -2463,7 +2463,7 @@ function ConsentIntroModal({ onClose, onContinue }: { onClose: () => void; onCon
     <Modal title="Antes de crear el paciente" onClose={onClose}>
       <div className="modalBody">
         <div className="consentIntroBox">
-          Para registrar un paciente en NAJU, es obligatorio aceptar el consentimiento informado. Este consentimiento aplica al uso del aplicativo durante las citas.
+          Para registrar un paciente en Nyou, es obligatorio aceptar el consentimiento informado. Este consentimiento aplica al uso del aplicativo durante las citas.
         </div>
         <div className="consentIntroActions">
           <button className="pillBtn primary" onClick={onContinue}>Continuar</button>
@@ -3375,7 +3375,7 @@ function NoteModal({
     (async () => {
       try {
         setNetError(null);
-        const r = await fetch("/__naju_netinfo", { cache: "no-store" as any });
+        const r = await fetch("/__nyou_netinfo", { cache: "no-store" as any });
         const j = await r.json();
         const ips = Array.isArray(j?.ips) ? j.ips.map((x: any) => String(x)).filter(Boolean) : [];
         const port = String(j?.port ?? "").trim();
@@ -3703,7 +3703,7 @@ function NoteModal({
             <div>
               <div className="qrTitle">Captura rápida (otro dispositivo)</div>
               <div className="qrSub">
-                Escanea el QR desde otro celular/tablet en la misma red Wi‑Fi para abrir NAJU directamente en este formulario.
+                Escanea el QR desde otro celular/tablet en la misma red Wi‑Fi para abrir Nyou directamente en este formulario.
               </div>
             </div>
 </div>
@@ -3711,7 +3711,7 @@ function NoteModal({
           <div className="qrGrid">
             <div className="qrBox">
               {qrDataUrl ? (
-                <img className="qrImg" src={qrDataUrl} alt="QR para abrir NAJU" />
+                <img className="qrImg" src={qrDataUrl} alt="QR para abrir Nyou" />
               ) : (
                 <div className="qrFallback">
                   <div style={{ fontWeight: 800 }}>QR no disponible</div>
@@ -4121,7 +4121,7 @@ function AgendaView(props: AgendaViewProps) {
             <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}>
               ◀
             </button>
-            <div className="najuMonthPill">{monthLabel(monthCursor)}</div>
+            <div className="nyouMonthPill">{monthLabel(monthCursor)}</div>
             <button className="pillBtn" onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}>
               ▶
             </button>
@@ -4136,15 +4136,15 @@ function AgendaView(props: AgendaViewProps) {
 
         <div style={{ height: 12 }} />
 
-        <div className="najuCalHead">
+        <div className="nyouCalHead">
           {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
-            <div key={d} className="najuCalDow">
+            <div key={d} className="nyouCalDow">
               {d}
             </div>
           ))}
         </div>
 
-        <div className="najuCalGrid">
+        <div className="nyouCalGrid">
           {days.map((d) => {
             const k = toDayKeyLocal(d);
             const count = (apptByDay[k] || []).length;
@@ -4153,12 +4153,12 @@ function AgendaView(props: AgendaViewProps) {
             return (
               <button
                 key={k}
-                className={"najuCalCell " + (inMonth ? "" : "isDim ") + (isSel ? "isSel" : "")}
+                className={"nyouCalCell " + (inMonth ? "" : "isDim ") + (isSel ? "isSel" : "")}
                 onClick={() => setDayKey(isSel ? null : k)}
                 title={k}
               >
-                <div className="najuCalNum">{d.getDate()}</div>
-                {count ? <div className="najuCalCount">{count}</div> : null}
+                <div className="nyouCalNum">{d.getDate()}</div>
+                {count ? <div className="nyouCalCount">{count}</div> : null}
               </button>
             );
           })}
@@ -4317,7 +4317,7 @@ function CitasSection(props: CitasSectionProps) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <div>
             <div style={{ fontWeight: 900 }}>Nueva cita</div>
-            <div style={{ color: "var(--muted)", fontSize: 13 }}>Se guarda en NAJU y luego puedes exportarla.</div>
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>Se guarda en Nyou y luego puedes exportarla.</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button className="pillBtn primary" onClick={onExportPatient}>
@@ -4478,7 +4478,7 @@ async function tintPng(baseUrl: string, size: number, primary: string, accent: s
 export default function App() {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
-      const saved = localStorage.getItem("naju_theme");
+      const saved = localStorage.getItem("nyou_theme");
       if (saved === "light" || saved === "dark") return saved;
     } catch {
       // ignore
@@ -4488,7 +4488,7 @@ export default function App() {
   });
   const [colorTheme, setColorTheme] = useState<keyof typeof APP_PALETTES>(() => {
     try {
-      const saved = localStorage.getItem("naju_color_theme") as keyof typeof APP_PALETTES | null;
+      const saved = localStorage.getItem("nyou_color_theme") as keyof typeof APP_PALETTES | null;
       if (saved && APP_PALETTES[saved]) return saved;
     } catch {
       // ignore
@@ -4497,13 +4497,13 @@ export default function App() {
   });
   const [logoColorMode, setLogoColorMode] = useState<"theme" | "original">(() => {
     try {
-      const saved = localStorage.getItem("naju_logo_color_mode");
+      const saved = localStorage.getItem("nyou_logo_color_mode");
       return saved === "original" ? "original" : "theme";
     } catch {
       return "theme";
     }
   });
-  const [logoSrc, setLogoSrc] = useState("/naju-icon-512.png");
+  const [logoSrc, setLogoSrc] = useState("/nyou-icon-512.png");
 
   const activePalette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
 
@@ -4529,8 +4529,8 @@ export default function App() {
     root.setProperty("--profile-accent", palette.accent);
 
     try {
-      localStorage.setItem("naju_theme", theme);
-      localStorage.setItem("naju_color_theme", colorTheme);
+      localStorage.setItem("nyou_theme", theme);
+      localStorage.setItem("nyou_color_theme", colorTheme);
     } catch {
       // ignore
     }
@@ -4545,11 +4545,11 @@ export default function App() {
       const primary = useOriginal ? "#1a5158" : activePalette.primary;
       const accent = useOriginal ? "#59e2e4" : activePalette.accent;
       const icon512 = useOriginal
-        ? "/naju-icon-512.png"
-        : await tintPng("/naju-icon-512.png", 512, primary, accent);
+        ? "/nyou-icon-512.png"
+        : await tintPng("/nyou-icon-512.png", 512, primary, accent);
       const icon192 = useOriginal
-        ? "/naju-icon-192.png"
-        : await tintPng("/naju-icon-512.png", 192, primary, accent);
+        ? "/nyou-icon-192.png"
+        : await tintPng("/nyou-icon-512.png", 192, primary, accent);
 
       if (cancelled) return;
       setLogoSrc(icon512);
@@ -4560,9 +4560,9 @@ export default function App() {
       const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
       if (manifest) {
         const dynamicManifest = {
-          name: "NAJU",
-          short_name: "NAJU",
-          description: "NAJU — apoyo clínico para psicólogos y pacientes.",
+          name: "Nyou",
+          short_name: "Nyou",
+          description: "Nyou — apoyo clínico para psicólogos y pacientes.",
           start_url: "/",
           display: "standalone",
           background_color: activePalette.background,
@@ -4580,7 +4580,7 @@ export default function App() {
       if (themeMeta) themeMeta.content = activePalette.primary;
 
       try {
-        localStorage.setItem("naju_logo_color_mode", logoColorMode);
+        localStorage.setItem("nyou_logo_color_mode", logoColorMode);
       } catch {
         // ignore
       }
@@ -4693,7 +4693,7 @@ export default function App() {
   }
 
   async function checkForUpdates(silent = true) {
-    const res = await fetch("/__naju_update_check", { cache: "no-store" });
+    const res = await fetch("/__nyou_update_check", { cache: "no-store" });
     const info = await res.json();
     if (!info?.ok) throw new Error(info?.error || "No se pudo verificar");
 
@@ -4721,7 +4721,7 @@ export default function App() {
   }
 
   async function applyUpdate() {
-    const res = await fetch("/__naju_update_apply", { method: "POST" });
+    const res = await fetch("/__nyou_update_apply", { method: "POST" });
     const out = await res.json();
     if (!out?.ok) throw new Error(out?.error || out?.detail || "No se pudo actualizar");
 
@@ -5256,11 +5256,11 @@ export default function App() {
                   title={logoColorMode === "original" ? "Usar color del tema" : "Volver al color original"}
                   onClick={() => setLogoColorMode((m) => (m === "original" ? "theme" : "original"))}
                 >
-                  <img src={logoSrc} alt="Logo NAJU" className="brandLogo" />
+                  <img src={logoSrc} alt="Logo Nyou" className="brandLogo" />
                 </button>
                 <div>
                   <div className="title">
-                    <span>NAJU</span>
+                    <span>Nyou</span>
                     <span style={{ fontSize: 11, color: "var(--muted)" }}>Gestor web</span>
                   </div>
                   <div className="subtitle">Pacientes · Exámenes · Archivos (Web)</div>
@@ -5328,7 +5328,7 @@ export default function App() {
             ) : page === "agenda" ? (
               <div className="mainTitle">
                 <h2>Agenda</h2>
-                <p className="hint">Citas locales de NAJU (exportables a Google Calendar).</p>
+                <p className="hint">Citas locales de Nyou (exportables a Google Calendar).</p>
               </div>
             ) : !selected ? (
               <div className="mainTitle">
@@ -5435,19 +5435,19 @@ export default function App() {
                   const map: Record<string, string> = {};
                   patients.forEach((p) => (map[p.id] = p.name));
                   const ics = appointmentsToIcs(appointments, map);
-                  downloadTextFile("naju_citas.ics", "text/calendar;charset=utf-8", ics);
+                  downloadTextFile("nyou_citas.ics", "text/calendar;charset=utf-8", ics);
                 }}
                 onExportAllCsv={() => {
                   const map: Record<string, string> = {};
                   patients.forEach((p) => (map[p.id] = p.name));
                   const csv = appointmentsToCsv(appointments, map);
-                  downloadTextFile("naju_citas.csv", "text/csv;charset=utf-8", csv);
+                  downloadTextFile("nyou_citas.csv", "text/csv;charset=utf-8", csv);
                 }}
               />
             ) : !selected ? (
               <div className="emptyState">
                 <div className="hero">
-                  <h1>NAJU</h1>
+                  <h1>Nyou</h1>
                   <p>
                     Selecciona un paciente del panel izquierdo o crea uno nuevo.
                     El detalle siempre se muestra aquí (sin sub-pestañas).
@@ -6168,7 +6168,7 @@ export default function App() {
             <header className="menuGlassHead">
               <div>
                 <h3>Menú</h3>
-                <p>Acciones principales de NAJU</p>
+                <p>Acciones principales de Nyou</p>
               </div>
               <button className="menuGlassClose" type="button" onClick={() => setShowMenu(false)} aria-label="Cerrar menú">✕</button>
             </header>

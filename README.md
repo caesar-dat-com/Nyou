@@ -1,6 +1,6 @@
-# NAJU - Sistema de Gestión de Pacientes (Tauri + React)
+# Nyou - Sistema de Gestión de Pacientes (Tauri + React)
 
-**NAJU** es una aplicación de escritorio moderna diseñada para la gestión local de pacientes, historias clínicas y exámenes mentales. Combina la potencia y seguridad de **Rust** en el backend con la flexibilidad y estética de **React** en el frontend.
+**Nyou** es una aplicación de escritorio moderna diseñada para la gestión local de pacientes, historias clínicas y exámenes mentales. Combina la potencia y seguridad de **Rust** en el backend con la flexibilidad y estética de **React** en el frontend.
 
 ## 🚀 Tecnologías
 
@@ -41,8 +41,8 @@ La interfaz de usuario que ve el profesional.
 
 ### 3. Datos (`App Data`)
 La aplicación **NO** guarda datos en la carpeta del ejecutable. Lo hace en la ruta estándar del sistema operativo para datos de aplicación:
-*   **Windows**: `C:\Users\Usuario\AppData\Roaming\NAJU` (o `Local` según config).
-    *   Aquí encontrarás el archivo `naju.sqlite` y la carpeta `patients/` con las fotos y adjuntos.
+*   **Windows**: `C:\Users\Usuario\AppData\Roaming\Nyou` (o `Local` según config).
+    *   Aquí encontrarás el archivo `nyou.sqlite` y la carpeta `patients/` con las fotos y adjuntos.
 
 ---
 
@@ -52,7 +52,7 @@ Requisitos: [Node.js](https://nodejs.org/) y [Rust](https://rustup.rs/) instalad
 
 1.  **Instalar dependencias**:
     ```bash
-    cd naju
+    cd nyou
     npm install
     ```
 
@@ -76,7 +76,7 @@ Requisitos: [Node.js](https://nodejs.org/) y [Rust](https://rustup.rs/) instalad
 
 Este error sucede cuando existen **dos declaraciones** de `profileByPatient` en el mismo scope dentro de `src/App.tsx`. Para resolverlo:
 
-1. Abre `naju/src/App.tsx` y busca todas las apariciones de `profileByPatient`.
+1. Abre `nyou/src/App.tsx` y busca todas las apariciones de `profileByPatient`.
 2. Asegúrate de que **solo exista una** (o renombra una de ellas).
 3. Guarda y vuelve a ejecutar `npm run dev`.
 
@@ -97,9 +97,9 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
    ```bash
    ./INSTALAR_ACCESO_DIRECTO_LINUX.sh
    ```
-2. Esto crea `~/.local/share/applications/NAJU.desktop` y una copia en `~/Desktop/NAJU.desktop`.
+2. Esto crea `~/.local/share/applications/Nyou.desktop` y una copia en `~/Desktop/Nyou.desktop`.
 3. Al hacer doble clic en el acceso directo:
-   - levanta NAJU en modo desarrollo (`INICIAR_NAJU_LINUX.sh`),
+   - levanta Nyou en modo desarrollo (`INICIAR_Nyou_LINUX.sh`),
    - espera a que responda,
    - y abre el navegador automáticamente.
 
@@ -110,15 +110,15 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
 
 - **Actualizar (manual):**
   - `git pull --ff-only`
-  - `./INICIAR_NAJU_LINUX.sh`
+  - `./INICIAR_Nyou_LINUX.sh`
 
 - **Opcional (script de actualización segura):**
-  - `./ACTUALIZAR_NAJU_LINUX.sh`
+  - `./ACTUALIZAR_Nyou_LINUX.sh`
 
 - **Si el repo quedó “raro” (divergencia / force-push):**
-  - `./RESET_NAJU_LINUX.sh`
+  - `./RESET_Nyou_LINUX.sh`
 
 - Para habilitar LAN/QR:
-  - `NAJU_LAN=1 ./INICIAR_NAJU_LINUX.sh`
+  - `Nyou_LAN=1 ./INICIAR_Nyou_LINUX.sh`
 
 > El inicio **ya no hace `git pull --rebase`** automáticamente (eso era lo que rompía el repo en Linux).
