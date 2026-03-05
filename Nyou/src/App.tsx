@@ -599,7 +599,7 @@ type ExamCatalogGroup = {
 };
 
 const EXAM_CATALOG: ExamCatalogGroup[] = [
-  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VADTRS", "WURS-25"] },
+  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VDTRS", "WURS-25"] },
   { category: "Adicciones", tests: ["AUDIT", "DUDIT", "IRIS", "LDQ", "PGSI"] },
   { category: "Adolescente", tests: ["A-DES", "AQ-Adolescent", "ASSQ", "BEDSY", "CAT-Q", "CES-DS", "chEAT", "chOCI-R-P", "chOCI-R-S", "DASS-Y", "EAT-26", "EDE-Q 6.0", "FFMQ-15", "FMPS", "IPIP-NEO-120", "ITQ-CA", "MAIA-Y", "MFQ-self", "MID-60 A", "MSES-R", "PSS-10"] },
   { category: "Ansiedad", tests: ["DASS-10", "DASS-21", "DASS-42", "DASS-Y", "GAD-7", "K5", "PASS", "PDSS"] },
@@ -608,7 +608,7 @@ const EXAM_CATALOG: ExamCatalogGroup[] = [
   { category: "Depresión", tests: ["ATQ-B", "CES-DS", "CES-D", "CESD-R", "DASS-10", "DASS-21", "DASS-42", "DASS-Y", "MADRS-22", "MENO-D", "MFQ-parent", "PHQ-9"] },
   { category: "Trauma", tests: ["A-DES", "ACE-Q", "BCE-s", "CDC", "DAR-5", "DES-II", "IES-R", "ITQ-CA", "LEC-5", "PCL-5"] },
   { category: "TOC", tests: ["OCI-R"] },
-  { category: "Sueño", tests: ["ISI", "RIS"] },
+  { category: "Duereme", tests: ["ISI", "RIS"] },
   { category: "Otras categorías", tests: ["Diagnóstico", "Discapacidad", "Formulación", "Salud", "Trastorno de acaparamiento", "Monitoreo de resultados", "Personalidad", "Proyección", "Deporte"] },
 ];
 const PROFILE_COLORS: Record<string, string> = {
