@@ -360,24 +360,11 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
-function buildVirtualSessionLink(patientName: string, startIso: string) {
-  const date = new Date(startIso);
-  const token = patientName
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .slice(0, 24);
-  const dt = Number.isNaN(date.getTime())
-    ? Date.now().toString(36)
-    : `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}${String(date.getHours()).padStart(2, "0")}${String(date.getMinutes()).padStart(2, "0")}`;
-  return `https://meet.jit.si/nyou-${token || "sesion"}-${dt}`;
-}
+const createGoogleMeetLink = () => "https://meet.google.com/new";
 
 function buildVirtualLinkMessage(patientName: string, link: string) {
   return `Hola ✨ ${patientName} ¿Cómo te encuentras?
-Este es el link para conectarte a nuestra sesión virtual: ${link}
+Este es el link para conectarte a nuestra sesión virtual (Google Meet): ${link}
 Te espero a la hora acordada. ¡Nos vemos! ✨`;
 }
 
@@ -395,6 +382,25 @@ function buildPsychReminderMessage(psychName: string, patientName: string, start
   const hour = Number.isNaN(d.getTime()) ? "hora" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const modalityLabel = modality === "virtual" ? "Virtual" : "Presencial";
   return `Hola 👋 Soy Nyou, ${psychName || "Psicólogo(a)"}. Tienes una sesión programada para mañana ${date} a las ${hour} con ${patientName}. 🗓️ Modalidad: ${modalityLabel}. Ver en calendario: ${calendarLink || "(sin link)"}`;
+}
+
+
+function toWhatsappPhone(raw: string | null | undefined) {
+  const digits = String(raw || "").replace(/\D+/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("00")) return digits.slice(2);
+  if (digits.startsWith("0")) return digits.slice(1);
+  return digits;
+}
+
+function openWhatsappMessage(phoneRaw: string | null | undefined, message: string) {
+  const phone = toWhatsappPhone(phoneRaw);
+  if (!phone) {
+    alert("El paciente no tiene teléfono registrado para WhatsApp.");
+    return;
+  }
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 function fileIcon(file: PatientFile) {
@@ -4522,13 +4528,14 @@ function CitasSection(props: CitasSectionProps) {
     if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
-    const virtualLink = modality === "virtual" ? buildVirtualSessionLink(patient.name, start.toISOString()) : null;
+    const virtualLink = modality === "virtual" ? createGoogleMeetLink() : null;
 
     await onCreate({
       patient_id: patient.id,
       title: (title || "").trim() || `Cita - ${patient.name}`,
       modality,
       virtual_link: virtualLink,
+      virtual_link_meet: virtualLink,
       start_iso: start.toISOString(),
       end_iso: end.toISOString(),
       notes: notes.trim() ? notes.trim() : null,
@@ -4614,9 +4621,10 @@ function CitasSection(props: CitasSectionProps) {
           <div className="list">
             {appointments.map((a) => {
               const isVirtual = a.modality === "virtual";
-              const linkMsg = isVirtual ? buildVirtualLinkMessage(patient.name, a.virtual_link || "") : "";
+              const meetLink = a.virtual_link_meet || a.virtual_link || "";
+              const meetMsg = isVirtual && meetLink ? buildVirtualLinkMessage(patient.name, meetLink) : "";
               const reminderPatient = buildPatientReminderMessage(patient.name, a.start_iso);
-              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, a.virtual_link);
+              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, meetLink || a.virtual_link);
               return (
               <div key={a.id} className="fileRow" style={{ alignItems: "flex-start" }}>
                 <div className="fileIcon">📅</div>
@@ -4626,19 +4634,24 @@ function CitasSection(props: CitasSectionProps) {
                     {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
                   </div>
                   {a.notes ? <div className="fileSub" style={{ marginTop: 4 }}>📝 {a.notes}</div> : null}
-                  {isVirtual && a.virtual_link ? (
+                  {isVirtual && meetLink ? (
                     <div className="fileSub" style={{ marginTop: 4 }}>
-                      🔗 <a href={a.virtual_link} target="_blank" rel="noreferrer">{a.virtual_link}</a>
+                      🔗 Meet: <a href={meetLink} target="_blank" rel="noreferrer">{meetLink}</a>
                     </div>
                   ) : null}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                    {isVirtual && a.virtual_link ? (
-                      <button className="smallBtn" onClick={() => navigator.clipboard.writeText(linkMsg)}>
-                        Copiar mensaje link
-                      </button>
+                    {isVirtual && meetLink ? (
+                      <>
+                        <button className="smallBtn" onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}>
+                          Iniciar Meet
+                        </button>
+                        <button className="smallBtn" onClick={() => openWhatsappMessage(patient.phone, meetMsg)}>
+                          Enviar link por WhatsApp
+                        </button>
+                      </>
                     ) : null}
-                    <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPatient)}>
-                      Recordatorio paciente (24h)
+                    <button className="smallBtn" onClick={() => openWhatsappMessage(patient.phone, reminderPatient)}>
+                      Recordatorio paciente (WhatsApp)
                     </button>
                     <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPsych)}>
                       Notificación psicólogo (24h)
