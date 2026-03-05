@@ -362,7 +362,11 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
 
 const createGoogleMeetLink = () => "https://meet.google.com/new";
 
-function buildVirtualLinkMessage(patientName: string, link: string) {
+function buildVirtualSessionLinkMeet() {
+  return "https://meet.google.com/new";
+}
+
+function buildVirtualLinkMessage(patientName: string, link: string, platformLabel = "sala virtual") {
   return `Hola ✨ ${patientName} ¿Cómo te encuentras?
 Este es el link para conectarte a nuestra sesión virtual (Google Meet): ${link}
 Te espero a la hora acordada. ¡Nos vemos! ✨`;

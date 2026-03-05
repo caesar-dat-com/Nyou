@@ -42,7 +42,7 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
-function buildVirtualLinkMessage(patientName: string, link: string) {
+function buildVirtualLinkMessage(patientName: string, link: string, platformLabel = "sala virtual") {
   return `Hola ✨ ${patientName} ¿Cómo te encuentras?
 Este es el link para conectarte a nuestra sesión virtual (Google Meet): ${link}
 Te espero a la hora acordada. ¡Nos vemos! ✨`;

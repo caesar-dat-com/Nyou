@@ -31,11 +31,21 @@ if "%DO_UPDATE%"=="1" (
     if defined DIRTY (
       echo [Nyou] Repo tiene cambios locales. Se omite auto-update.
     ) else (
+      for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "PRE_HEAD=%%H"
       for /f "delims=" %%B in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "CURRENT_BRANCH=%%B"
       if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
       echo [Nyou] Auto-update: git pull --ff-only origin !CURRENT_BRANCH!
       git pull --ff-only origin !CURRENT_BRANCH!
-      if errorlevel 1 echo [Nyou] Aviso: no se pudo actualizar. Continuo con version local.
+      if errorlevel 1 (
+        echo [Nyou] Aviso: no se pudo actualizar. Continuo con version local.
+      ) else (
+        for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "POST_HEAD=%%H"
+        if defined PRE_HEAD if defined POST_HEAD if /i not "!PRE_HEAD!"=="!POST_HEAD!" (
+          echo [Nyou] Se detectaron actualizaciones. Reiniciando launcher...
+          start "" "%~f0"
+          exit /b 0
+        )
+      )
     )
   )
 )

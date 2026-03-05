@@ -33,9 +33,18 @@ if [[ "${Nyou_AUTO_UPDATE:-1}" == "1" ]] && command -v git >/dev/null 2>&1; then
   elif [[ -n "$(git status --porcelain)" ]]; then
     echo "[Nyou] Cambios locales detectados. Se omite auto-update."
   else
+    PRE_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
     CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
     echo "[Nyou] Auto-update: git pull --ff-only origin ${CURRENT_BRANCH}"
-    git pull --ff-only origin "$CURRENT_BRANCH" || echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
+    if git pull --ff-only origin "$CURRENT_BRANCH"; then
+      POST_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
+      if [[ -n "$PRE_HEAD" && -n "$POST_HEAD" && "$PRE_HEAD" != "$POST_HEAD" ]]; then
+        echo "[Nyou] Se detectaron actualizaciones. Reiniciando launcher..."
+        exec "$ROOT_DIR/INICIAR_Nyou_LINUX.sh"
+      fi
+    else
+      echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
+    fi
   fi
 fi
 
