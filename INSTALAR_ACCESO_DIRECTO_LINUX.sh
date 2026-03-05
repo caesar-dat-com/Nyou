@@ -17,7 +17,8 @@ Version=1.0
 Type=Application
 Name=Nyou
 Comment=Iniciar Nyou Web App
-Exec=bash "$LAUNCHER"
+TryExec=/usr/bin/env
+Exec=/usr/bin/env bash -lc '"$LAUNCHER"'
 Icon=$ICON
 Terminal=false
 Categories=Office;MedicalSoftware;
@@ -29,6 +30,7 @@ cp "$DESKTOP_FILE" "$DESKTOP_FILE_ON_DESKTOP"
 chmod +x "$DESKTOP_FILE" "$DESKTOP_FILE_ON_DESKTOP" "$LAUNCHER"
 
 if command -v gio >/dev/null 2>&1; then
+  gio set "$DESKTOP_FILE" metadata::trusted true >/dev/null 2>&1 || true
   gio set "$DESKTOP_FILE_ON_DESKTOP" metadata::trusted true >/dev/null 2>&1 || true
 fi
 
