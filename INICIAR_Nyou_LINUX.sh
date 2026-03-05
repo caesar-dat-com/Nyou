@@ -24,18 +24,27 @@ LOCK_HASH_FILE="$APP_DIR/.nyou-lock.sha"
 cd "$ROOT_DIR"
 
 # =========================================================
-# AUTO-UPDATE (DESACTIVADO POR DEFECTO)
-# Para activarlo (bajo tu riesgo): Nyou_AUTO_UPDATE=1
-# Recomendado: hacer "git pull" manual y luego ejecutar este script.
+# AUTO-UPDATE (ACTIVADO POR DEFECTO)
+# Para desactivarlo: Nyou_AUTO_UPDATE=0
 # =========================================================
-if [[ "${Nyou_AUTO_UPDATE:-0}" == "1" ]] && command -v git >/dev/null 2>&1; then
+if [[ "${Nyou_AUTO_UPDATE:-1}" == "1" ]] && command -v git >/dev/null 2>&1; then
   if [[ -d ".git/rebase-merge" || -d ".git/rebase-apply" || -f ".git/MERGE_HEAD" ]]; then
     echo "[Nyou] Repo con rebase/merge pendiente. Se omite auto-update."
   elif [[ -n "$(git status --porcelain)" ]]; then
     echo "[Nyou] Cambios locales detectados. Se omite auto-update."
   else
-    echo "[Nyou] Auto-update: git pull --ff-only"
-    git pull --ff-only || echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
+    PRE_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
+    CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+    echo "[Nyou] Auto-update: git pull --ff-only origin ${CURRENT_BRANCH}"
+    if git pull --ff-only origin "$CURRENT_BRANCH"; then
+      POST_HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
+      if [[ -n "$PRE_HEAD" && -n "$POST_HEAD" && "$PRE_HEAD" != "$POST_HEAD" ]]; then
+        echo "[Nyou] Se detectaron actualizaciones. Reiniciando launcher..."
+        exec "$ROOT_DIR/INICIAR_Nyou_LINUX.sh"
+      fi
+    else
+      echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
+    fi
   fi
 fi
 
@@ -43,12 +52,20 @@ cd "$APP_DIR"
 
 echo "[Nyou] Verificando dependencias..."
 
+NEEDS_INSTALL=0
+if [[ ! -d "node_modules" ]]; then
+  NEEDS_INSTALL=1
+elif [[ ! -f "node_modules/vite/bin/vite.js" ]]; then
+  # node_modules puede existir pero incompleto/corrupto
+  NEEDS_INSTALL=1
+fi
+
 if [[ -f "package-lock.json" ]]; then
   CUR_SHA="$(sha256sum package-lock.json | awk '{print $1}')"
   OLD_SHA=""
   [[ -f "$LOCK_HASH_FILE" ]] && OLD_SHA="$(cat "$LOCK_HASH_FILE" || true)"
 
-  if [[ ! -d "node_modules" || "$CUR_SHA" != "$OLD_SHA" ]]; then
+  if [[ "$NEEDS_INSTALL" -eq 1 || "$CUR_SHA" != "$OLD_SHA" ]]; then
     echo "[Nyou] Instalando dependencias (npm ci)..."
     npm ci
     echo "$CUR_SHA" > "$LOCK_HASH_FILE"
@@ -56,7 +73,7 @@ if [[ -f "package-lock.json" ]]; then
     echo "[Nyou] Dependencias OK (lock sin cambios)."
   fi
 else
-  if [[ ! -d "node_modules" ]]; then
+  if [[ "$NEEDS_INSTALL" -eq 1 ]]; then
     echo "[Nyou] Instalando dependencias (npm install)..."
     npm install
   else
