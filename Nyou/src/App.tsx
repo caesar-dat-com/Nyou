@@ -13,6 +13,8 @@ import {
   updateMentalExam,
   updatePatientNote,
   createPatient,
+  importPatientsBulk,
+  ImportedPatientInput,
   deletePatient,
   deletePatientFile,
   importFiles,
@@ -63,6 +65,59 @@ type ConsentData = {
 
 type Toast = { type: "ok" | "err"; msg: string } | null;
 
+type RawImportedPatients = { patients?: unknown; pacientes?: unknown };
+
+function normImportText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim();
+  return cleaned.length ? cleaned : null;
+}
+
+function importedPatientsFromJson(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+  const input = raw as RawImportedPatients;
+  if (Array.isArray(input.patients)) return input.patients;
+  if (Array.isArray(input.pacientes)) return input.pacientes;
+  return [];
+}
+
+function normalizeImportedPatient(raw: unknown): ImportedPatientInput | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  const name = normImportText(item.name) ?? normImportText(item.nombre) ?? null;
+  if (!name) return null;
+
+  return {
+    name,
+    doc_type: normImportText(item.doc_type) ?? normImportText(item.tipo_documento),
+    doc_number: normImportText(item.doc_number) ?? normImportText(item.numero_documento),
+    insurer: normImportText(item.insurer) ?? normImportText(item.eps) ?? normImportText(item.aseguradora),
+    birth_date: normImportText(item.birth_date) ?? normImportText(item.fecha_nacimiento),
+    sex: normImportText(item.sex) ?? normImportText(item.sexo),
+    phone: normImportText(item.phone) ?? normImportText(item.telefono),
+    email: normImportText(item.email),
+    address: normImportText(item.address) ?? normImportText(item.direccion),
+    emergency_contact: normImportText(item.emergency_contact) ?? normImportText(item.contacto_emergencia),
+    notes: normImportText(item.notes) ?? normImportText(item.notas),
+    personal_history: normImportText(item.personal_history),
+    antecedents_tags: Array.isArray(item.antecedents_tags)
+      ? item.antecedents_tags.map((v) => String(v).trim()).filter(Boolean)
+      : null,
+    antecedents_reviewed_at: normImportText(item.antecedents_reviewed_at),
+    personal_social_situation: normImportText(item.personal_social_situation),
+    medical_psych_history: normImportText(item.medical_psych_history),
+    family_history: normImportText(item.family_history),
+    work_academic_situation: normImportText(item.work_academic_situation),
+    judicial_situation: normImportText(item.judicial_situation),
+    consent_json: normImportText(item.consent_json),
+    id: normImportText(item.id),
+    photo_path: normImportText(item.photo_path),
+    drive_folder_id: normImportText(item.drive_folder_id),
+    created_at: normImportText(item.created_at),
+    updated_at: normImportText(item.updated_at),
+  };
+}
 
 
 type ProfessionalProfile = {
@@ -4863,6 +4918,7 @@ export default function App() {
   const examMenuRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const patientsJsonInputRef = useRef<HTMLInputElement | null>(null);
 
   function pushToast(t: Toast) {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -5307,6 +5363,55 @@ export default function App() {
     fileInputRef.current?.click();
   }
 
+  function actionImportPatientsJson() {
+    patientsJsonInputRef.current?.click();
+  }
+
+  async function onPatientsJsonSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const rows = importedPatientsFromJson(parsed);
+      if (!rows.length) throw new Error("El JSON no contiene un arreglo de pacientes.");
+
+      const toImport: ImportedPatientInput[] = [];
+      let skippedInvalid = 0;
+
+      rows.forEach((row) => {
+        const normalized = normalizeImportedPatient(row);
+        if (!normalized) {
+          skippedInvalid++;
+          return;
+        }
+        toImport.push(normalized);
+      });
+
+      if (!toImport.length) {
+        pushToast({ type: "err", msg: `No hay pacientes válidos para importar. Inválidos: ${skippedInvalid}.` });
+        return;
+      }
+
+      const result = await importPatientsBulk(toImport);
+
+      await refreshPatients();
+      await refreshAllFiles();
+
+      setPage("pacientes");
+
+      pushToast({
+        type: "ok",
+        msg: `Importación lista ✅ Nuevos: ${result.created}. Actualizados por ID: ${result.updated}. Inválidos: ${result.skippedInvalid + skippedInvalid}.`,
+      });
+    } catch (err: any) {
+      pushToast({ type: "err", msg: `No se pudo importar JSON: ${errMsg(err)}` });
+    } finally {
+      e.target.value = "";
+    }
+  }
+
   function actionOpenInitialAssessment() {
     if (!selected) return;
     setShowInitialAssessment(true);
@@ -5506,6 +5611,18 @@ export default function App() {
 
               <div className="pillRow" />
             </div>
+          </div>
+
+          <div className="sidebarPatientActions">
+            <button className="iconBtn" onClick={beginCreatePatient}>➕ Nuevo paciente</button>
+            <button className="iconBtn" onClick={actionImportPatientsJson}>📥 Importar JSON</button>
+            <input
+              ref={patientsJsonInputRef}
+              type="file"
+              accept="application/json,.json"
+              style={{ display: "none" }}
+              onChange={onPatientsJsonSelected}
+            />
           </div>
 
           <div className="patientList">

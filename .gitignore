@@ -41,3 +41,8 @@ nyou/patients/assets/
 **/token.pickle
 *.zip
 .vscode/
+# Importaciones locales de pacientes
+pacientes/
+pacientes/*.json
+**/pacientes/*.json
+
