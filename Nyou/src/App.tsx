@@ -13,6 +13,8 @@ import {
   updateMentalExam,
   updatePatientNote,
   createPatient,
+  importPatientsBulk,
+  ImportedPatientInput,
   deletePatient,
   deletePatientFile,
   importFiles,
@@ -80,7 +82,7 @@ function importedPatientsFromJson(raw: unknown): unknown[] {
   return [];
 }
 
-function normalizeImportedPatient(raw: unknown): PatientInput | null {
+function normalizeImportedPatient(raw: unknown): ImportedPatientInput | null {
   if (!raw || typeof raw !== "object") return null;
   const item = raw as Record<string, unknown>;
   const name = normImportText(item.name) ?? normImportText(item.nombre) ?? null;
@@ -109,6 +111,11 @@ function normalizeImportedPatient(raw: unknown): PatientInput | null {
     work_academic_situation: normImportText(item.work_academic_situation),
     judicial_situation: normImportText(item.judicial_situation),
     consent_json: normImportText(item.consent_json),
+    id: normImportText(item.id),
+    photo_path: normImportText(item.photo_path),
+    drive_folder_id: normImportText(item.drive_folder_id),
+    created_at: normImportText(item.created_at),
+    updated_at: normImportText(item.updated_at),
   };
 }
 
@@ -353,7 +360,7 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
-function buildVirtualSessionLink(patientName: string, startIso: string) {
+function buildVirtualSessionLinkJitsi(patientName: string, startIso: string) {
   const date = new Date(startIso);
   const token = patientName
     .toLowerCase()
@@ -368,9 +375,13 @@ function buildVirtualSessionLink(patientName: string, startIso: string) {
   return `https://meet.jit.si/nyou-${token || "sesion"}-${dt}`;
 }
 
-function buildVirtualLinkMessage(patientName: string, link: string) {
+function buildVirtualSessionLinkMeet() {
+  return "https://meet.google.com/new";
+}
+
+function buildVirtualLinkMessage(patientName: string, link: string, platformLabel = "sala virtual") {
   return `Hola ✨ ${patientName} ¿Cómo te encuentras?
-Este es el link para conectarte a nuestra sesión virtual: ${link}
+Este es el link para conectarte a nuestra sesión virtual (${platformLabel}): ${link}
 Te espero a la hora acordada. ¡Nos vemos! ✨`;
 }
 
@@ -4515,13 +4526,20 @@ function CitasSection(props: CitasSectionProps) {
     if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
-    const virtualLink = modality === "virtual" ? buildVirtualSessionLink(patient.name, start.toISOString()) : null;
+    const virtualLinks = modality === "virtual"
+      ? {
+          jitsi: buildVirtualSessionLinkJitsi(patient.name, start.toISOString()),
+          meet: buildVirtualSessionLinkMeet(),
+        }
+      : null;
 
     await onCreate({
       patient_id: patient.id,
       title: (title || "").trim() || `Cita - ${patient.name}`,
       modality,
-      virtual_link: virtualLink,
+      virtual_link: virtualLinks?.jitsi || null,
+      virtual_link_jitsi: virtualLinks?.jitsi || null,
+      virtual_link_meet: virtualLinks?.meet || null,
       start_iso: start.toISOString(),
       end_iso: end.toISOString(),
       notes: notes.trim() ? notes.trim() : null,
@@ -4607,9 +4625,12 @@ function CitasSection(props: CitasSectionProps) {
           <div className="list">
             {appointments.map((a) => {
               const isVirtual = a.modality === "virtual";
-              const linkMsg = isVirtual ? buildVirtualLinkMessage(patient.name, a.virtual_link || "") : "";
+              const jitsiLink = a.virtual_link_jitsi || a.virtual_link || "";
+              const meetLink = a.virtual_link_meet || "";
+              const jitsiMsg = isVirtual && jitsiLink ? buildVirtualLinkMessage(patient.name, jitsiLink, "Jitsi") : "";
+              const meetMsg = isVirtual && meetLink ? buildVirtualLinkMessage(patient.name, meetLink, "Google Meet") : "";
               const reminderPatient = buildPatientReminderMessage(patient.name, a.start_iso);
-              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, a.virtual_link);
+              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, jitsiLink || meetLink || a.virtual_link);
               return (
               <div key={a.id} className="fileRow" style={{ alignItems: "flex-start" }}>
                 <div className="fileIcon">📅</div>
@@ -4619,16 +4640,36 @@ function CitasSection(props: CitasSectionProps) {
                     {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
                   </div>
                   {a.notes ? <div className="fileSub" style={{ marginTop: 4 }}>📝 {a.notes}</div> : null}
-                  {isVirtual && a.virtual_link ? (
+                  {isVirtual && jitsiLink ? (
                     <div className="fileSub" style={{ marginTop: 4 }}>
-                      🔗 <a href={a.virtual_link} target="_blank" rel="noreferrer">{a.virtual_link}</a>
+                      🔗 Jitsi: <a href={jitsiLink} target="_blank" rel="noreferrer">{jitsiLink}</a>
+                    </div>
+                  ) : null}
+                  {isVirtual && meetLink ? (
+                    <div className="fileSub" style={{ marginTop: 4 }}>
+                      🔗 Meet: <a href={meetLink} target="_blank" rel="noreferrer">{meetLink}</a>
                     </div>
                   ) : null}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                    {isVirtual && a.virtual_link ? (
-                      <button className="smallBtn" onClick={() => navigator.clipboard.writeText(linkMsg)}>
-                        Copiar mensaje link
-                      </button>
+                    {isVirtual && jitsiLink ? (
+                      <>
+                        <button className="smallBtn" onClick={() => window.open(jitsiLink, "_blank", "noopener,noreferrer")}>
+                          Iniciar Jitsi
+                        </button>
+                        <button className="smallBtn" onClick={() => navigator.clipboard.writeText(jitsiMsg)}>
+                          Copiar mensaje Jitsi
+                        </button>
+                      </>
+                    ) : null}
+                    {isVirtual && meetLink ? (
+                      <>
+                        <button className="smallBtn" onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}>
+                          Iniciar Meet
+                        </button>
+                        <button className="smallBtn" onClick={() => navigator.clipboard.writeText(meetMsg)}>
+                          Copiar mensaje Meet
+                        </button>
+                      </>
                     ) : null}
                     <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPatient)}>
                       Recordatorio paciente (24h)
@@ -5370,15 +5411,8 @@ export default function App() {
       const rows = importedPatientsFromJson(parsed);
       if (!rows.length) throw new Error("El JSON no contiene un arreglo de pacientes.");
 
-      const existingKeys = new Set(
-        patients
-          .map((p) => `${(p.doc_type || "").trim().toLowerCase()}::${(p.doc_number || "").trim().toLowerCase()}`)
-          .filter((key) => key !== "::")
-      );
-
-      const toCreate: PatientInput[] = [];
+      const toImport: ImportedPatientInput[] = [];
       let skippedInvalid = 0;
-      let skippedDuplicated = 0;
 
       rows.forEach((row) => {
         const normalized = normalizeImportedPatient(row);
@@ -5386,41 +5420,24 @@ export default function App() {
           skippedInvalid++;
           return;
         }
-        const docType = (normalized.doc_type || "").trim().toLowerCase();
-        const docNumber = (normalized.doc_number || "").trim().toLowerCase();
-        const key = `${docType}::${docNumber}`;
-        if (key !== "::") {
-          if (existingKeys.has(key)) {
-            skippedDuplicated++;
-            return;
-          }
-          existingKeys.add(key);
-        }
-        toCreate.push(normalized);
+        toImport.push(normalized);
       });
 
-      if (!toCreate.length) {
-        pushToast({ type: "err", msg: `No hay pacientes nuevos para importar. Inválidos: ${skippedInvalid}. Duplicados: ${skippedDuplicated}.` });
+      if (!toImport.length) {
+        pushToast({ type: "err", msg: `No hay pacientes válidos para importar. Inválidos: ${skippedInvalid}.` });
         return;
       }
 
-      let firstCreatedId: string | null = null;
-      for (const payload of toCreate) {
-        const created = await createPatient(payload);
-        if (!firstCreatedId) firstCreatedId = created.id;
-      }
+      const result = await importPatientsBulk(toImport);
 
       await refreshPatients();
       await refreshAllFiles();
 
-      if (firstCreatedId) {
-        setPage("pacientes");
-        setSelectedId(firstCreatedId);
-      }
+      setPage("pacientes");
 
       pushToast({
         type: "ok",
-        msg: `Importación lista ✅ Nuevos: ${toCreate.length}. Inválidos: ${skippedInvalid}. Duplicados: ${skippedDuplicated}.`,
+        msg: `Importación lista ✅ Nuevos: ${result.created}. Actualizados por ID: ${result.updated}. Inválidos: ${result.skippedInvalid + skippedInvalid}.`,
       });
     } catch (err: any) {
       pushToast({ type: "err", msg: `No se pudo importar JSON: ${errMsg(err)}` });

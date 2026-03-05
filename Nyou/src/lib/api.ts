@@ -49,6 +49,20 @@ export type PatientInput = {
   consent_json?: string | null;
 };
 
+export type ImportedPatientInput = PatientInput & {
+  id?: string | null;
+  photo_path?: string | null;
+  drive_folder_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type ImportPatientsResult = {
+  created: number;
+  updated: number;
+  skippedInvalid: number;
+};
+
 export type PatientFile = {
   id: number;
   patient_id: string;
@@ -65,6 +79,8 @@ export type Appointment = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
+  virtual_link_jitsi?: string | null;
+  virtual_link_meet?: string | null;
   start_iso: string; // ISO string in UTC (Date.toISOString())
   end_iso: string;   // ISO string in UTC (Date.toISOString())
   notes: string | null;
@@ -77,6 +93,8 @@ export type AppointmentInput = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
+  virtual_link_jitsi?: string | null;
+  virtual_link_meet?: string | null;
   start_iso: string;
   end_iso: string;
   notes?: string | null;
@@ -131,7 +149,15 @@ function normalizeStore(input: any): Store {
   return {
     patients: Array.isArray(input?.patients) ? (input.patients as Patient[]) : [],
     files: Array.isArray(input?.files) ? (input.files as PatientFile[]) : [],
-    appointments: Array.isArray(input?.appointments) ? (input.appointments as Appointment[]) : [],
+    appointments: Array.isArray(input?.appointments)
+      ? (input.appointments as Appointment[]).map((a) => ({
+          ...a,
+          modality: a?.modality === "virtual" ? "virtual" : "presencial",
+          virtual_link: a?.virtual_link ?? null,
+          virtual_link_jitsi: a?.virtual_link_jitsi ?? a?.virtual_link ?? null,
+          virtual_link_meet: a?.virtual_link_meet ?? null,
+        }))
+      : [],
     errorReports: Array.isArray(input?.errorReports) ? (input.errorReports as ErrorReport[]) : [],
     nextFileId: typeof input?.nextFileId === "number" ? input.nextFileId : 1,
     nextAppointmentId: typeof input?.nextAppointmentId === "number" ? input.nextAppointmentId : 1,
@@ -227,6 +253,72 @@ export async function listPatients(query?: string): Promise<Patient[]> {
       })
     : store.patients;
   return [...patients].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+}
+
+function isValidIso(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return !Number.isNaN(new Date(value).getTime());
+}
+
+function normalizeImportedPatientInput(input: ImportedPatientInput): Patient | null {
+  const name = (input.name || "").trim();
+  if (!name) return null;
+  const fallbackNow = nowIso();
+  const created = isValidIso(input.created_at) ? input.created_at : fallbackNow;
+  const updated = isValidIso(input.updated_at) ? input.updated_at : created;
+  return {
+    id: (input.id || "").trim() || newId(),
+    name,
+    doc_type: input.doc_type ?? null,
+    doc_number: input.doc_number ?? null,
+    insurer: input.insurer ?? null,
+    birth_date: input.birth_date ?? null,
+    sex: input.sex ?? null,
+    phone: input.phone ?? null,
+    email: input.email ?? null,
+    address: input.address ?? null,
+    emergency_contact: input.emergency_contact ?? null,
+    notes: input.notes ?? null,
+    personal_history: input.personal_history ?? null,
+    antecedents_tags: Array.isArray(input.antecedents_tags) ? input.antecedents_tags : null,
+    antecedents_reviewed_at: input.antecedents_reviewed_at ?? null,
+    personal_social_situation: input.personal_social_situation ?? null,
+    medical_psych_history: input.medical_psych_history ?? null,
+    family_history: input.family_history ?? null,
+    work_academic_situation: input.work_academic_situation ?? null,
+    judicial_situation: input.judicial_situation ?? null,
+    consent_json: input.consent_json ?? null,
+    photo_path: input.photo_path ?? null,
+    drive_folder_id: input.drive_folder_id ?? null,
+    created_at: created,
+    updated_at: updated,
+  };
+}
+
+export async function importPatientsBulk(rows: ImportedPatientInput[]): Promise<ImportPatientsResult> {
+  const store = await getStore();
+  let created = 0;
+  let updated = 0;
+  let skippedInvalid = 0;
+
+  rows.forEach((raw) => {
+    const patient = normalizeImportedPatientInput(raw);
+    if (!patient) {
+      skippedInvalid++;
+      return;
+    }
+    const idx = store.patients.findIndex((p) => p.id === patient.id);
+    if (idx >= 0) {
+      store.patients[idx] = patient;
+      updated++;
+    } else {
+      store.patients.unshift(patient);
+      created++;
+    }
+  });
+
+  if (created || updated) await persistStore(store);
+  return { created, updated, skippedInvalid };
 }
 
 export async function createPatient(input: PatientInput): Promise<Patient> {
@@ -504,6 +596,11 @@ export async function createAppointment(input: AppointmentInput): Promise<Appoin
     title: (input.title || "").trim() || "Cita",
     modality: input.modality === "virtual" ? "virtual" : "presencial",
     virtual_link: input.virtual_link ? String(input.virtual_link).trim() || null : null,
+    virtual_link_jitsi:
+      input.virtual_link_jitsi !== undefined
+        ? (input.virtual_link_jitsi ? String(input.virtual_link_jitsi).trim() || null : null)
+        : (input.virtual_link ? String(input.virtual_link).trim() || null : null),
+    virtual_link_meet: input.virtual_link_meet ? String(input.virtual_link_meet).trim() || null : null,
     start_iso: input.start_iso,
     end_iso: input.end_iso,
     notes: (input.notes ?? null) ? String(input.notes) : null,
@@ -529,6 +626,14 @@ export async function updateAppointment(appointmentId: number, patch: Partial<Ap
       patch.virtual_link !== undefined
         ? (patch.virtual_link ? String(patch.virtual_link).trim() || null : null)
         : (cur.virtual_link ?? null),
+    virtual_link_jitsi:
+      patch.virtual_link_jitsi !== undefined
+        ? (patch.virtual_link_jitsi ? String(patch.virtual_link_jitsi).trim() || null : null)
+        : (cur.virtual_link_jitsi ?? cur.virtual_link ?? null),
+    virtual_link_meet:
+      patch.virtual_link_meet !== undefined
+        ? (patch.virtual_link_meet ? String(patch.virtual_link_meet).trim() || null : null)
+        : (cur.virtual_link_meet ?? null),
     start_iso: typeof patch.start_iso === "string" ? patch.start_iso : cur.start_iso,
     end_iso: typeof patch.end_iso === "string" ? patch.end_iso : cur.end_iso,
     notes: patch.notes !== undefined ? (patch.notes === null ? null : String(patch.notes)) : cur.notes,

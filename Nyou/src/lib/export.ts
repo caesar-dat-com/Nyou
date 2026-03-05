@@ -58,6 +58,9 @@ export function appointmentsToIcs(appointments: Appointment[], patientNameById: 
     descParts.push(`Paciente: ${pname}`);
     descParts.push(`PatientId: ${a.patient_id}`);
     if (a.notes) descParts.push(`Notas: ${a.notes}`);
+    if (a.modality) descParts.push(`Modalidad: ${a.modality}`);
+    if (a.virtual_link_jitsi || a.virtual_link) descParts.push(`Link Jitsi: ${a.virtual_link_jitsi || a.virtual_link}`);
+    if (a.virtual_link_meet) descParts.push(`Link Meet: ${a.virtual_link_meet}`);
     const description = escIcsText(descParts.join("\n"));
 
     lines.push("BEGIN:VEVENT");
@@ -84,7 +87,7 @@ function csvEscape(val: string) {
 }
 
 export function appointmentsToCsv(appointments: Appointment[], patientNameById: Record<string, string>) {
-  const header = ["patient_id", "patient_name", "title", "start_iso", "end_iso", "notes"].join(",");
+  const header = ["patient_id", "patient_name", "title", "modality", "virtual_link_jitsi", "virtual_link_meet", "start_iso", "end_iso", "notes"].join(",");
   const rows = appointments
     .slice()
     .sort((x, y) => Date.parse(x.start_iso) - Date.parse(y.start_iso))
@@ -93,6 +96,9 @@ export function appointmentsToCsv(appointments: Appointment[], patientNameById: 
         csvEscape(a.patient_id),
         csvEscape(patientNameById[a.patient_id] || ""),
         csvEscape(a.title || ""),
+        csvEscape(a.modality || ""),
+        csvEscape(a.virtual_link_jitsi || a.virtual_link || ""),
+        csvEscape(a.virtual_link_meet || ""),
         csvEscape(a.start_iso || ""),
         csvEscape(a.end_iso || ""),
         csvEscape(a.notes || ""),
