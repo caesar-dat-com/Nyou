@@ -237,6 +237,52 @@ function errMsg(e: any) {
   try { return JSON.stringify(e); } catch { return String(e); }
 }
 
+function toOptionalText(value: unknown): string | null {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+}
+
+function parsePatientsImportJson(input: unknown): PatientInput[] {
+  const rows: unknown[] = Array.isArray(input)
+    ? input
+    : Array.isArray((input as any)?.patients)
+    ? (input as any).patients
+    : [];
+
+  return rows
+    .map((row: unknown): PatientInput | null => {
+      if (!row || typeof row !== "object") return null;
+      const name = toOptionalText((row as any).name);
+      if (!name) return null;
+      return {
+        name,
+        doc_type: toOptionalText((row as any).doc_type),
+        doc_number: toOptionalText((row as any).doc_number),
+        insurer: toOptionalText((row as any).insurer),
+        birth_date: toOptionalText((row as any).birth_date),
+        sex: toOptionalText((row as any).sex),
+        phone: toOptionalText((row as any).phone),
+        email: toOptionalText((row as any).email),
+        address: toOptionalText((row as any).address),
+        emergency_contact: toOptionalText((row as any).emergency_contact),
+        notes: toOptionalText((row as any).notes),
+        personal_history: toOptionalText((row as any).personal_history),
+        antecedents_tags: Array.isArray((row as any).antecedents_tags)
+          ? (row as any).antecedents_tags.map((tag: unknown) => String(tag).trim()).filter(Boolean)
+          : null,
+        antecedents_reviewed_at: toOptionalText((row as any).antecedents_reviewed_at),
+        personal_social_situation: toOptionalText((row as any).personal_social_situation),
+        medical_psych_history: toOptionalText((row as any).medical_psych_history),
+        family_history: toOptionalText((row as any).family_history),
+        work_academic_situation: toOptionalText((row as any).work_academic_situation),
+        judicial_situation: toOptionalText((row as any).judicial_situation),
+        consent_json: toOptionalText((row as any).consent_json),
+      };
+    })
+    .filter((p: PatientInput | null): p is PatientInput => Boolean(p));
+}
+
 function startVT(fn: () => void) {
   const d: any = document;
   if (d.startViewTransition) d.startViewTransition(fn);
@@ -4863,6 +4909,7 @@ export default function App() {
   const examMenuRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importPatientsInputRef = useRef<HTMLInputElement | null>(null);
 
   function pushToast(t: Toast) {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
@@ -5235,6 +5282,55 @@ export default function App() {
   }
 
 
+  async function onImportPatientsFile(ev: React.ChangeEvent<HTMLInputElement>) {
+    const file = ev.target.files?.[0];
+    ev.target.value = "";
+    if (!file) return;
+
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const toImport = parsePatientsImportJson(parsed);
+      if (!toImport.length) {
+        throw new Error("El JSON no contiene pacientes válidos. Usa un arreglo o { patients: [...] } con campo name.");
+      }
+
+      const existing = await listPatients("");
+      const existingDocKeys = new Set(
+        existing
+          .map((p) => `${(p.doc_type ?? "").trim().toLowerCase()}::${(p.doc_number ?? "").trim().toLowerCase()}`)
+          .filter((key) => key !== "::")
+      );
+
+      let created = 0;
+      let skipped = 0;
+
+      for (const candidate of toImport) {
+        const docKey = `${(candidate.doc_type ?? "").trim().toLowerCase()}::${(candidate.doc_number ?? "").trim().toLowerCase()}`;
+        if (docKey !== "::" && existingDocKeys.has(docKey)) {
+          skipped += 1;
+          continue;
+        }
+
+        const createdPatient = await createPatient(candidate);
+        created += 1;
+
+        const nextDocKey = `${(createdPatient.doc_type ?? "").trim().toLowerCase()}::${(createdPatient.doc_number ?? "").trim().toLowerCase()}`;
+        if (nextDocKey !== "::") existingDocKeys.add(nextDocKey);
+      }
+
+      await refreshPatients();
+      if (created > 0) {
+        setPage("pacientes");
+        pushToast({ type: "ok", msg: `Importación lista: ${created} pacientes agregados${skipped ? `, ${skipped} omitidos por documento repetido` : ""}.` });
+      } else {
+        pushToast({ type: "err", msg: `No se agregaron pacientes. ${skipped} omitidos por documento repetido.` });
+      }
+    } catch (e: any) {
+      pushToast({ type: "err", msg: `No se pudo importar JSON: ${errMsg(e)}` });
+    }
+  }
+
   async function onCreatePatient(input: PatientInput) {
     try {
       const payload: PatientInput = {
@@ -5504,7 +5600,17 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="pillRow" />
+              <div className="pillRow">
+                <button className="pillBtn primary" type="button" onClick={beginCreatePatient}>+ Paciente</button>
+                <button className="pillBtn" type="button" onClick={() => importPatientsInputRef.current?.click()}>Importar JSON</button>
+                <input
+                  ref={importPatientsInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  style={{ display: "none" }}
+                  onChange={onImportPatientsFile}
+                />
+              </div>
             </div>
           </div>
 
@@ -6464,6 +6570,10 @@ export default function App() {
               <button className="menuQuickBtn" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>
                 <span className="menuIcon" aria-hidden="true">👤＋</span>
                 <span>Nuevo paciente</span>
+              </button>
+              <button className="menuQuickBtn" onClick={() => { importPatientsInputRef.current?.click(); setShowMenu(false); }}>
+                <span className="menuIcon" aria-hidden="true">📥</span>
+                <span>Importar pacientes JSON</span>
               </button>
             </div>
 

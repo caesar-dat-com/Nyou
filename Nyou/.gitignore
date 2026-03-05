@@ -25,6 +25,7 @@ dist-ssr
 *.sw?
 
 # Nyou local "database" (dev file-store)
+# Importante: mantener pacientes fuera de git para evitar conflictos al hacer pull.
 patients/store.json
 patients/assets/
 patients/*.json
