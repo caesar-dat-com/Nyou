@@ -79,7 +79,6 @@ export type Appointment = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
-  virtual_link_jitsi?: string | null;
   virtual_link_meet?: string | null;
   start_iso: string; // ISO string in UTC (Date.toISOString())
   end_iso: string;   // ISO string in UTC (Date.toISOString())
@@ -93,7 +92,6 @@ export type AppointmentInput = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
-  virtual_link_jitsi?: string | null;
   virtual_link_meet?: string | null;
   start_iso: string;
   end_iso: string;
@@ -154,8 +152,7 @@ function normalizeStore(input: any): Store {
           ...a,
           modality: a?.modality === "virtual" ? "virtual" : "presencial",
           virtual_link: a?.virtual_link ?? null,
-          virtual_link_jitsi: a?.virtual_link_jitsi ?? a?.virtual_link ?? null,
-          virtual_link_meet: a?.virtual_link_meet ?? null,
+          virtual_link_meet: a?.virtual_link_meet ?? a?.virtual_link ?? null,
         }))
       : [],
     errorReports: Array.isArray(input?.errorReports) ? (input.errorReports as ErrorReport[]) : [],
@@ -596,10 +593,6 @@ export async function createAppointment(input: AppointmentInput): Promise<Appoin
     title: (input.title || "").trim() || "Cita",
     modality: input.modality === "virtual" ? "virtual" : "presencial",
     virtual_link: input.virtual_link ? String(input.virtual_link).trim() || null : null,
-    virtual_link_jitsi:
-      input.virtual_link_jitsi !== undefined
-        ? (input.virtual_link_jitsi ? String(input.virtual_link_jitsi).trim() || null : null)
-        : (input.virtual_link ? String(input.virtual_link).trim() || null : null),
     virtual_link_meet: input.virtual_link_meet ? String(input.virtual_link_meet).trim() || null : null,
     start_iso: input.start_iso,
     end_iso: input.end_iso,
@@ -626,10 +619,6 @@ export async function updateAppointment(appointmentId: number, patch: Partial<Ap
       patch.virtual_link !== undefined
         ? (patch.virtual_link ? String(patch.virtual_link).trim() || null : null)
         : (cur.virtual_link ?? null),
-    virtual_link_jitsi:
-      patch.virtual_link_jitsi !== undefined
-        ? (patch.virtual_link_jitsi ? String(patch.virtual_link_jitsi).trim() || null : null)
-        : (cur.virtual_link_jitsi ?? cur.virtual_link ?? null),
     virtual_link_meet:
       patch.virtual_link_meet !== undefined
         ? (patch.virtual_link_meet ? String(patch.virtual_link_meet).trim() || null : null)
