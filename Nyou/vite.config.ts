@@ -426,9 +426,48 @@ function nyouStorePlugin(): Plugin {
   };
 }
 
+
+
+function externalLogoPlugin(): Plugin {
+  const logoRelativePath = "../Nyou.png";
+  let rootDir = "";
+  let outDir = "";
+
+  return {
+    name: "nyou-external-logo",
+    configResolved(config) {
+      rootDir = config.root;
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use("/Nyou.png", async (_req, res, next) => {
+        try {
+          const abs = path.resolve(rootDir || __dirname, logoRelativePath);
+          const data = await fs.readFile(abs);
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "image/png");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(data);
+        } catch {
+          next();
+        }
+      });
+    },
+    async writeBundle() {
+      const src = path.resolve(rootDir || __dirname, logoRelativePath);
+      const dest = path.join(outDir || path.resolve(__dirname, "dist"), "Nyou.png");
+      try {
+        await fs.copyFile(src, dest);
+      } catch {
+        // ignore when source logo is unavailable
+      }
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), nyouStorePlugin()],
+  plugins: [react(), nyouStorePlugin(), externalLogoPlugin()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
