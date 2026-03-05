@@ -79,6 +79,8 @@ export type Appointment = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
+  virtual_link_jitsi?: string | null;
+  virtual_link_meet?: string | null;
   start_iso: string; // ISO string in UTC (Date.toISOString())
   end_iso: string;   // ISO string in UTC (Date.toISOString())
   notes: string | null;
@@ -91,6 +93,8 @@ export type AppointmentInput = {
   title: string;
   modality?: "presencial" | "virtual";
   virtual_link?: string | null;
+  virtual_link_jitsi?: string | null;
+  virtual_link_meet?: string | null;
   start_iso: string;
   end_iso: string;
   notes?: string | null;
@@ -145,7 +149,15 @@ function normalizeStore(input: any): Store {
   return {
     patients: Array.isArray(input?.patients) ? (input.patients as Patient[]) : [],
     files: Array.isArray(input?.files) ? (input.files as PatientFile[]) : [],
-    appointments: Array.isArray(input?.appointments) ? (input.appointments as Appointment[]) : [],
+    appointments: Array.isArray(input?.appointments)
+      ? (input.appointments as Appointment[]).map((a) => ({
+          ...a,
+          modality: a?.modality === "virtual" ? "virtual" : "presencial",
+          virtual_link: a?.virtual_link ?? null,
+          virtual_link_jitsi: a?.virtual_link_jitsi ?? a?.virtual_link ?? null,
+          virtual_link_meet: a?.virtual_link_meet ?? null,
+        }))
+      : [],
     errorReports: Array.isArray(input?.errorReports) ? (input.errorReports as ErrorReport[]) : [],
     nextFileId: typeof input?.nextFileId === "number" ? input.nextFileId : 1,
     nextAppointmentId: typeof input?.nextAppointmentId === "number" ? input.nextAppointmentId : 1,
@@ -584,6 +596,11 @@ export async function createAppointment(input: AppointmentInput): Promise<Appoin
     title: (input.title || "").trim() || "Cita",
     modality: input.modality === "virtual" ? "virtual" : "presencial",
     virtual_link: input.virtual_link ? String(input.virtual_link).trim() || null : null,
+    virtual_link_jitsi:
+      input.virtual_link_jitsi !== undefined
+        ? (input.virtual_link_jitsi ? String(input.virtual_link_jitsi).trim() || null : null)
+        : (input.virtual_link ? String(input.virtual_link).trim() || null : null),
+    virtual_link_meet: input.virtual_link_meet ? String(input.virtual_link_meet).trim() || null : null,
     start_iso: input.start_iso,
     end_iso: input.end_iso,
     notes: (input.notes ?? null) ? String(input.notes) : null,
@@ -609,6 +626,14 @@ export async function updateAppointment(appointmentId: number, patch: Partial<Ap
       patch.virtual_link !== undefined
         ? (patch.virtual_link ? String(patch.virtual_link).trim() || null : null)
         : (cur.virtual_link ?? null),
+    virtual_link_jitsi:
+      patch.virtual_link_jitsi !== undefined
+        ? (patch.virtual_link_jitsi ? String(patch.virtual_link_jitsi).trim() || null : null)
+        : (cur.virtual_link_jitsi ?? cur.virtual_link ?? null),
+    virtual_link_meet:
+      patch.virtual_link_meet !== undefined
+        ? (patch.virtual_link_meet ? String(patch.virtual_link_meet).trim() || null : null)
+        : (cur.virtual_link_meet ?? null),
     start_iso: typeof patch.start_iso === "string" ? patch.start_iso : cur.start_iso,
     end_iso: typeof patch.end_iso === "string" ? patch.end_iso : cur.end_iso,
     notes: patch.notes !== undefined ? (patch.notes === null ? null : String(patch.notes)) : cur.notes,
