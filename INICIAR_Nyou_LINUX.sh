@@ -43,12 +43,20 @@ cd "$APP_DIR"
 
 echo "[Nyou] Verificando dependencias..."
 
+NEEDS_INSTALL=0
+if [[ ! -d "node_modules" ]]; then
+  NEEDS_INSTALL=1
+elif [[ ! -f "node_modules/vite/bin/vite.js" ]]; then
+  # node_modules puede existir pero incompleto/corrupto
+  NEEDS_INSTALL=1
+fi
+
 if [[ -f "package-lock.json" ]]; then
   CUR_SHA="$(sha256sum package-lock.json | awk '{print $1}')"
   OLD_SHA=""
   [[ -f "$LOCK_HASH_FILE" ]] && OLD_SHA="$(cat "$LOCK_HASH_FILE" || true)"
 
-  if [[ ! -d "node_modules" || "$CUR_SHA" != "$OLD_SHA" ]]; then
+  if [[ "$NEEDS_INSTALL" -eq 1 || "$CUR_SHA" != "$OLD_SHA" ]]; then
     echo "[Nyou] Instalando dependencias (npm ci)..."
     npm ci
     echo "$CUR_SHA" > "$LOCK_HASH_FILE"
@@ -56,7 +64,7 @@ if [[ -f "package-lock.json" ]]; then
     echo "[Nyou] Dependencias OK (lock sin cambios)."
   fi
 else
-  if [[ ! -d "node_modules" ]]; then
+  if [[ "$NEEDS_INSTALL" -eq 1 ]]; then
     echo "[Nyou] Instalando dependencias (npm install)..."
     npm install
   else

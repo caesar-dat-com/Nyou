@@ -43,7 +43,7 @@ if "%DO_UPDATE%"=="1" (
 cd /d "%APP_DIR%"
 
 echo [Nyou] Verificando dependencias...
-if not exist "node_modules\vite\package.json" (
+if not exist "node_modules\vite\bin\vite.js" (
   echo [Nyou] Instalando dependencias...
   if exist "package-lock.json" (
     call npm ci
