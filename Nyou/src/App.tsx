@@ -360,9 +360,7 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
-function buildVirtualSessionLinkMeet() {
-  return "https://meet.google.com/new";
-}
+const createGoogleMeetLink = () => "https://meet.google.com/new";
 
 function buildVirtualSessionLinkMeet() {
   return "https://meet.google.com/new";
@@ -4534,7 +4532,7 @@ function CitasSection(props: CitasSectionProps) {
     if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
-    const virtualLink = modality === "virtual" ? buildVirtualSessionLinkMeet() : null;
+    const virtualLink = modality === "virtual" ? createGoogleMeetLink() : null;
 
     await onCreate({
       patient_id: patient.id,
