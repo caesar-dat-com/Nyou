@@ -1002,9 +1002,9 @@ textarea {
 }
 
 .noteBigTextarea {
-  min-height: min(32vh, 360px);
+  min-height: min(46vh, 520px);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .modalCloseX {

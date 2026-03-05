@@ -3492,8 +3492,8 @@ function NoteModal({
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const [transcribeInfo, setTranscribeInfo] = useState<string | null>(null);
   const [autoProcessOnStop, setAutoProcessOnStop] = useState(false);
-  const [dictating, setDictating] = useState(false);
-  const [dictationPreview, setDictationPreview] = useState("");
+  const [dictatingField, setDictatingField] = useState<"texto" | "continuidad" | null>(null);
+  const [dictationPreviewByField, setDictationPreviewByField] = useState<{ texto: string; continuidad: string }>({ texto: "", continuidad: "" });
   const speechRecognitionRef = useRef<any>(null);
 
   const [fecha, setFecha] = useState<string>(() => {
@@ -3666,14 +3666,20 @@ function NoteModal({
       const audio = await decodeAudioToMono16k(fileToTranscribe);
       const asr = await getAsrPipeline();
 
-      const out = await asr(audio, {
+      const firstAttemptOpts = {
         // Nota: chunking ayuda con audios medianos/largos
         chunk_length_s: 30,
         stride_length_s: 5,
-        // Whisper suele inferir idioma; pero intentamos guiarlo
-        language: "spanish",
+        language: "es",
         task: "transcribe",
-      });
+      };
+      let out: any;
+      try {
+        out = await asr(audio, firstAttemptOpts);
+      } catch {
+        // fallback para navegadores/modelos que no soportan algunos parámetros
+        out = await asr(audio);
+      }
 
       const txt = typeof out === "string" ? out : out?.text;
       if (!txt || !String(txt).trim()) {
@@ -3710,16 +3716,19 @@ function NoteModal({
     await transcribeAudioFile(audioFile);
   }
 
-  function toggleDictation() {
+  function toggleDictation(targetField: "texto" | "continuidad") {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       setTranscribeError("Dictado en vivo no disponible en este navegador.");
       return;
     }
 
-    if (dictating && speechRecognitionRef.current) {
+    if (dictatingField && speechRecognitionRef.current) {
+      if (dictatingField === targetField) {
+        speechRecognitionRef.current.stop();
+        return;
+      }
       speechRecognitionRef.current.stop();
-      return;
     }
 
     setTranscribeError(null);
@@ -3729,8 +3738,8 @@ function NoteModal({
     recognition.interimResults = true;
 
     recognition.onstart = () => {
-      setDictating(true);
-      setDictationPreview("");
+      setDictatingField(targetField);
+      setDictationPreviewByField({ texto: "", continuidad: "" });
     };
 
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
@@ -3743,9 +3752,13 @@ function NoteModal({
         else interimChunk += transcript;
       }
       if (finalChunk.trim()) {
-        setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        if (targetField === "texto") {
+          setTexto((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        } else {
+          setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        }
       }
-      setDictationPreview(interimChunk.trim());
+      setDictationPreviewByField((prev) => ({ ...prev, [targetField]: interimChunk.trim() }));
     };
 
     recognition.onerror = () => {
@@ -3753,8 +3766,8 @@ function NoteModal({
     };
 
     recognition.onend = () => {
-      setDictating(false);
-      setDictationPreview("");
+      setDictatingField(null);
+      setDictationPreviewByField({ texto: "", continuidad: "" });
       speechRecognitionRef.current = null;
     };
 
@@ -3946,6 +3959,17 @@ function NoteModal({
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Describe el seguimiento, cambios y observaciones..."
           />
+          <div className="audioRow" style={{ marginTop: 10 }}>
+            <button
+              className={`pillBtn ${dictatingField === "texto" ? "danger" : ""}`}
+              onClick={() => toggleDictation("texto")}
+              type="button"
+              disabled={busy || transcribing || recording || (dictatingField === "continuidad")}
+            >
+              {dictatingField === "texto" ? "Detener dictado en vivo" : "Dictado en vivo (Nota clínica)"}
+            </button>
+            {dictationPreviewByField.texto ? <span className="audioStatus">🗣️ {dictationPreviewByField.texto}</span> : null}
+          </div>
         </div>
 
         <div className="field">
@@ -3957,10 +3981,15 @@ function NoteModal({
             placeholder="Describa el plan de trabajo o continuidad clínica... (la transcripción de audio se agregará aquí automáticamente)"
           />
           <div className="audioRow" style={{ marginTop: 10 }}>
-            <button className={`pillBtn ${dictating ? "danger" : ""}`} onClick={toggleDictation} type="button" disabled={busy || transcribing || recording}>
-              {dictating ? "Detener dictado en vivo" : "Dictado en vivo"}
+            <button
+              className={`pillBtn ${dictatingField === "continuidad" ? "danger" : ""}`}
+              onClick={() => toggleDictation("continuidad")}
+              type="button"
+              disabled={busy || transcribing || recording || (dictatingField === "texto")}
+            >
+              {dictatingField === "continuidad" ? "Detener dictado en vivo" : "Dictado en vivo (Continuidad)"}
             </button>
-            {dictationPreview ? <span className="audioStatus">🗣️ {dictationPreview}</span> : null}
+            {dictationPreviewByField.continuidad ? <span className="audioStatus">🗣️ {dictationPreviewByField.continuidad}</span> : null}
           </div>
         </div>
 
