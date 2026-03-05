@@ -4678,7 +4678,7 @@ export default function App() {
       return "theme";
     }
   });
-  const [logoSrc, setLogoSrc] = useState("/Nyou-icon-512.png");
+  const [logoSrc, setLogoSrc] = useState("/Nyou.png");
 
   const activePalette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
 
@@ -4727,7 +4727,7 @@ export default function App() {
         : await tintPng("/Nyou-icon-512.png", 192, primary, accent);
 
       if (cancelled) return;
-      setLogoSrc(icon512);
+      setLogoSrc("/Nyou.png");
 
       const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (favicon) favicon.href = icon192;
