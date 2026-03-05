@@ -91,6 +91,16 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
 *   **Examen Mental Formal**: Formulario completo que se guarda como documento inmutable (JSON) con fecha y hora.
 *   **Adjuntos**: Capacidad de arrastrar o seleccionar archivos (PDFs, imágenes) que se organizan automáticamente en la carpeta del paciente.
 
+
+## Windows: acceso directo con icono
+
+1. Ejecuta una sola vez:
+   ```bat
+   CREAR_ACCESO_DIRECTO_WINDOWS.bat
+   ```
+2. El script crea `Nyou.lnk` en tu Escritorio (y deja una copia en la carpeta del proyecto).
+3. Abre Nyou con doble clic desde el Escritorio.
+
 ## Linux: acceso directo de escritorio
 
 1. Ejecuta una sola vez:

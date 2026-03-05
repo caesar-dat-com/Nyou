@@ -2,7 +2,13 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 set "ROOT_DIR=%~dp0"
-set "APP_DIR=%ROOT_DIR%nyou"
+set "APP_DIR=%ROOT_DIR%Nyou"
+if not exist "%APP_DIR%\package.json" set "APP_DIR=%ROOT_DIR%nyou"
+if not exist "%APP_DIR%\package.json" (
+  echo [Nyou] Error: no se encontro la carpeta de la app ^(Nyou\ o nyou\^).
+  pause
+  exit /b 1
+)
 set "PORT=1420"
 set "HOST=127.0.0.1"
 if /i "%Nyou_LAN%"=="1" set "HOST=0.0.0.0"
