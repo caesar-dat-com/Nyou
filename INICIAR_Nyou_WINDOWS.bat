@@ -17,11 +17,13 @@ set "URL=http://localhost:%PORT%"
 cd /d "%ROOT_DIR%"
 
 REM =========================================================
-REM AUTO-UPDATE (DESACTIVADO POR DEFECTO)
-REM Para activarlo: set Nyou_AUTO_UPDATE=1
-REM Recomendado: usar ACTUALIZAR_Nyou_WINDOWS.bat manualmente
+REM AUTO-UPDATE (ACTIVADO POR DEFECTO)
+REM Para desactivarlo: set Nyou_AUTO_UPDATE=0
 REM =========================================================
-if /i "%Nyou_AUTO_UPDATE%"=="1" (
+set "DO_UPDATE=1"
+if /i "%Nyou_AUTO_UPDATE%"=="0" set "DO_UPDATE=0"
+
+if "%DO_UPDATE%"=="1" (
   where git >nul 2>&1
   if !errorlevel!==0 (
     set "DIRTY="
@@ -29,8 +31,10 @@ if /i "%Nyou_AUTO_UPDATE%"=="1" (
     if defined DIRTY (
       echo [Nyou] Repo tiene cambios locales. Se omite auto-update.
     ) else (
-      echo [Nyou] Actualizando (git pull --ff-only)...
-      git pull --ff-only
+      for /f "delims=" %%B in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "CURRENT_BRANCH=%%B"
+      if not defined CURRENT_BRANCH set "CURRENT_BRANCH=main"
+      echo [Nyou] Auto-update: git pull --ff-only origin !CURRENT_BRANCH!
+      git pull --ff-only origin !CURRENT_BRANCH!
       if errorlevel 1 echo [Nyou] Aviso: no se pudo actualizar. Continuo con version local.
     )
   )
@@ -39,7 +43,7 @@ if /i "%Nyou_AUTO_UPDATE%"=="1" (
 cd /d "%APP_DIR%"
 
 echo [Nyou] Verificando dependencias...
-if not exist "node_modules\vite\package.json" (
+if not exist "node_modules\vite\bin\vite.js" (
   echo [Nyou] Instalando dependencias...
   if exist "package-lock.json" (
     call npm ci

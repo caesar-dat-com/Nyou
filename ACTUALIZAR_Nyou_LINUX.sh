@@ -2,7 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$ROOT_DIR/nyou"
+if [[ -d "$ROOT_DIR/Nyou" ]]; then
+  APP_DIR="$ROOT_DIR/Nyou"
+elif [[ -d "$ROOT_DIR/nyou" ]]; then
+  APP_DIR="$ROOT_DIR/nyou"
+else
+  echo "[Nyou] Error: no se encontro la carpeta de la app (Nyou/ o nyou/)."
+  exit 1
+fi
 
 cd "$ROOT_DIR"
 
@@ -21,11 +28,13 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+
 echo "[Nyou] Fetch..."
 git fetch origin
 
-echo "[Nyou] Pull (ff-only)..."
-if ! git pull --ff-only; then
+echo "[Nyou] Pull (ff-only) en ${CURRENT_BRANCH}..."
+if ! git pull --ff-only origin "$CURRENT_BRANCH"; then
   echo "[Nyou] No se pudo actualizar con ff-only."
   echo "[Nyou] Si el remoto fue reescrito o hay divergencia, ejecuta: ./RESET_Nyou_LINUX.sh"
   exit 1
