@@ -24,18 +24,18 @@ LOCK_HASH_FILE="$APP_DIR/.nyou-lock.sha"
 cd "$ROOT_DIR"
 
 # =========================================================
-# AUTO-UPDATE (DESACTIVADO POR DEFECTO)
-# Para activarlo (bajo tu riesgo): Nyou_AUTO_UPDATE=1
-# Recomendado: hacer "git pull" manual y luego ejecutar este script.
+# AUTO-UPDATE (ACTIVADO POR DEFECTO)
+# Para desactivarlo: Nyou_AUTO_UPDATE=0
 # =========================================================
-if [[ "${Nyou_AUTO_UPDATE:-0}" == "1" ]] && command -v git >/dev/null 2>&1; then
+if [[ "${Nyou_AUTO_UPDATE:-1}" == "1" ]] && command -v git >/dev/null 2>&1; then
   if [[ -d ".git/rebase-merge" || -d ".git/rebase-apply" || -f ".git/MERGE_HEAD" ]]; then
     echo "[Nyou] Repo con rebase/merge pendiente. Se omite auto-update."
   elif [[ -n "$(git status --porcelain)" ]]; then
     echo "[Nyou] Cambios locales detectados. Se omite auto-update."
   else
-    echo "[Nyou] Auto-update: git pull --ff-only"
-    git pull --ff-only || echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
+    CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+    echo "[Nyou] Auto-update: git pull --ff-only origin ${CURRENT_BRANCH}"
+    git pull --ff-only origin "$CURRENT_BRANCH" || echo "[Nyou] Aviso: no se pudo actualizar. Continúo con versión local."
   fi
 fi
 
