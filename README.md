@@ -84,6 +84,13 @@ Si tu copia está actualizada, el bloque válido se llama `profileByPatientMap`.
 
 ---
 
+
+### Nota (flujo con Codex)
+
+Mensaje corregido:
+
+> **Codex currently does not support updating PRs that were modified outside of Codex. For now, please create a new PR.**
+
 ## ✨ Características Clave
 
 *   **Privacidad Local**: Todos los datos viven en tu máquina, nada en la nube.
