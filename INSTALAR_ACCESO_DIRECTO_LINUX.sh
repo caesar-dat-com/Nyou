@@ -6,10 +6,35 @@ LAUNCHER="$ROOT_DIR/INICIAR_Nyou_LINUX.sh"
 ICON="$ROOT_DIR/Nyou.png"
 DESKTOP_NAME="Nyou.desktop"
 DESKTOP_FILE="$HOME/.local/share/applications/$DESKTOP_NAME"
-DESKTOP_FILE_ON_DESKTOP="$HOME/Desktop/$DESKTOP_NAME"
+
+if command -v xdg-user-dir >/dev/null 2>&1; then
+  DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+fi
+
+if [[ -z "${DESKTOP_DIR:-}" || ! -d "$DESKTOP_DIR" ]]; then
+  if [[ -d "$HOME/Desktop" ]]; then
+    DESKTOP_DIR="$HOME/Desktop"
+  elif [[ -d "$HOME/Escritorio" ]]; then
+    DESKTOP_DIR="$HOME/Escritorio"
+  else
+    DESKTOP_DIR="$HOME/Desktop"
+    mkdir -p "$DESKTOP_DIR"
+  fi
+fi
+
+DESKTOP_FILE_ON_DESKTOP="$DESKTOP_DIR/$DESKTOP_NAME"
 
 mkdir -p "$HOME/.local/share/applications"
-mkdir -p "$HOME/Desktop"
+mkdir -p "$DESKTOP_DIR"
+
+if [[ ! -x "$LAUNCHER" ]]; then
+  chmod +x "$LAUNCHER"
+fi
+
+if [[ ! -f "$LAUNCHER" ]]; then
+  echo "[Nyou] Error: no se encontro el launcher Linux: $LAUNCHER"
+  exit 1
+fi
 
 cat > "$DESKTOP_FILE" <<DESKTOP
 [Desktop Entry]
@@ -17,7 +42,7 @@ Version=1.0
 Type=Application
 Name=Nyou
 Comment=Iniciar Nyou Web App
-TryExec=/usr/bin/env
+TryExec=$LAUNCHER
 Exec=/usr/bin/env bash -lc '"$LAUNCHER"'
 Icon=$ICON
 Terminal=false

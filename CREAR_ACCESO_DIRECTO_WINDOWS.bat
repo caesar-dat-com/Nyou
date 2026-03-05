@@ -7,7 +7,11 @@ set "ROOT=%~dp0"
 set "TARGET=%ROOT%INICIAR_Nyou_WINDOWS.bat"
 set "ICON=%ROOT%Nyou.ico"
 set "SHORTCUT_LOCAL=%ROOT%Nyou.lnk"
-set "SHORTCUT_DESKTOP=%USERPROFILE%\Desktop\Nyou.lnk"
+set "SHORTCUT_DESKTOP="
+
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('Desktop')"`) do set "DESKTOP_DIR=%%D"
+if not defined DESKTOP_DIR set "DESKTOP_DIR=%USERPROFILE%\Desktop"
+set "SHORTCUT_DESKTOP=%DESKTOP_DIR%\Nyou.lnk"
 
 if not exist "%TARGET%" (
   echo [Nyou] Error: no se encontro %TARGET%
@@ -25,7 +29,8 @@ if errorlevel 1 (
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$WshShell = New-Object -ComObject WScript.Shell;" ^
   "$Shortcut = $WshShell.CreateShortcut('%SHORTCUT_DESKTOP%');" ^
-  "$Shortcut.TargetPath = '%TARGET%';" ^
+  "$Shortcut.TargetPath = '%ComSpec%';" ^
+  "$Shortcut.Arguments = '/c ""%TARGET%""';" ^
   "$Shortcut.WorkingDirectory = '%ROOT%';" ^
   "$Shortcut.IconLocation = '%ICON%,0';" ^
   "$Shortcut.Save();"
