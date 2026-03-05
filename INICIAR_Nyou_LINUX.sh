@@ -2,7 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$ROOT_DIR/nyou"
+if [[ -d "$ROOT_DIR/Nyou" ]]; then
+  APP_DIR="$ROOT_DIR/Nyou"
+elif [[ -d "$ROOT_DIR/nyou" ]]; then
+  APP_DIR="$ROOT_DIR/nyou"
+else
+  echo "[Nyou] Error: no se encontro la carpeta de la app (Nyou/ o nyou/)."
+  exit 1
+fi
 PORT="${Nyou_PORT:-1420}"
 
 HOST="127.0.0.1"
