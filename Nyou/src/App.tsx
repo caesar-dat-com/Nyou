@@ -3379,6 +3379,7 @@ function NoteModal({
 }) {
   type SpeechRecognitionEventLike = Event & {
     results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>;
+    resultIndex?: number;
   };
 
   const [busy, setBusy] = useState(false);
@@ -3745,12 +3746,15 @@ function NoteModal({
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let finalChunk = "";
       let interimChunk = "";
-      for (let i = 0; i < event.results.length; i++) {
+      const startIdx = typeof event.resultIndex === "number" ? event.resultIndex : 0;
+
+      for (let i = startIdx; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result?.[0]?.transcript ?? "";
         if ((result as any).isFinal) finalChunk += transcript;
         else interimChunk += transcript;
       }
+
       if (finalChunk.trim()) {
         if (targetField === "texto") {
           setTexto((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
@@ -3758,6 +3762,7 @@ function NoteModal({
           setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
         }
       }
+
       setDictationPreviewByField((prev) => ({ ...prev, [targetField]: interimChunk.trim() }));
     };
 
