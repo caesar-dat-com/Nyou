@@ -28,3 +28,8 @@ dist-ssr
 patients/store.json
 patients/assets/
 patients/*.json
+# Importaciones locales de pacientes
+pacientes/
+pacientes/*.json
+**/pacientes/*.json
+
