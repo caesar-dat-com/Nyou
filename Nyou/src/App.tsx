@@ -599,7 +599,7 @@ type ExamCatalogGroup = {
 };
 
 const EXAM_CATALOG: ExamCatalogGroup[] = [
-  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VADTRS", "WURS-25"] },
+  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VDTRS", "WURS-25"] },
   { category: "Adicciones", tests: ["AUDIT", "DUDIT", "IRIS", "LDQ", "PGSI"] },
   { category: "Adolescente", tests: ["A-DES", "AQ-Adolescent", "ASSQ", "BEDSY", "CAT-Q", "CES-DS", "chEAT", "chOCI-R-P", "chOCI-R-S", "DASS-Y", "EAT-26", "EDE-Q 6.0", "FFMQ-15", "FMPS", "IPIP-NEO-120", "ITQ-CA", "MAIA-Y", "MFQ-self", "MID-60 A", "MSES-R", "PSS-10"] },
   { category: "Ansiedad", tests: ["DASS-10", "DASS-21", "DASS-42", "DASS-Y", "GAD-7", "K5", "PASS", "PDSS"] },
@@ -608,7 +608,7 @@ const EXAM_CATALOG: ExamCatalogGroup[] = [
   { category: "Depresión", tests: ["ATQ-B", "CES-DS", "CES-D", "CESD-R", "DASS-10", "DASS-21", "DASS-42", "DASS-Y", "MADRS-22", "MENO-D", "MFQ-parent", "PHQ-9"] },
   { category: "Trauma", tests: ["A-DES", "ACE-Q", "BCE-s", "CDC", "DAR-5", "DES-II", "IES-R", "ITQ-CA", "LEC-5", "PCL-5"] },
   { category: "TOC", tests: ["OCI-R"] },
-  { category: "Sueño", tests: ["ISI", "RIS"] },
+  { category: "Duereme", tests: ["ISI", "RIS"] },
   { category: "Otras categorías", tests: ["Diagnóstico", "Discapacidad", "Formulación", "Salud", "Trastorno de acaparamiento", "Monitoreo de resultados", "Personalidad", "Proyección", "Deporte"] },
 ];
 const PROFILE_COLORS: Record<string, string> = {
@@ -3379,6 +3379,7 @@ function NoteModal({
 }) {
   type SpeechRecognitionEventLike = Event & {
     results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }>;
+    resultIndex?: number;
   };
 
   const [busy, setBusy] = useState(false);
@@ -3492,8 +3493,8 @@ function NoteModal({
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const [transcribeInfo, setTranscribeInfo] = useState<string | null>(null);
   const [autoProcessOnStop, setAutoProcessOnStop] = useState(false);
-  const [dictating, setDictating] = useState(false);
-  const [dictationPreview, setDictationPreview] = useState("");
+  const [dictatingField, setDictatingField] = useState<"texto" | "continuidad" | null>(null);
+  const [dictationPreviewByField, setDictationPreviewByField] = useState<{ texto: string; continuidad: string }>({ texto: "", continuidad: "" });
   const speechRecognitionRef = useRef<any>(null);
 
   const [fecha, setFecha] = useState<string>(() => {
@@ -3666,14 +3667,20 @@ function NoteModal({
       const audio = await decodeAudioToMono16k(fileToTranscribe);
       const asr = await getAsrPipeline();
 
-      const out = await asr(audio, {
+      const firstAttemptOpts = {
         // Nota: chunking ayuda con audios medianos/largos
         chunk_length_s: 30,
         stride_length_s: 5,
-        // Whisper suele inferir idioma; pero intentamos guiarlo
-        language: "spanish",
+        language: "es",
         task: "transcribe",
-      });
+      };
+      let out: any;
+      try {
+        out = await asr(audio, firstAttemptOpts);
+      } catch {
+        // fallback para navegadores/modelos que no soportan algunos parámetros
+        out = await asr(audio);
+      }
 
       const txt = typeof out === "string" ? out : out?.text;
       if (!txt || !String(txt).trim()) {
@@ -3710,16 +3717,19 @@ function NoteModal({
     await transcribeAudioFile(audioFile);
   }
 
-  function toggleDictation() {
+  function toggleDictation(targetField: "texto" | "continuidad") {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       setTranscribeError("Dictado en vivo no disponible en este navegador.");
       return;
     }
 
-    if (dictating && speechRecognitionRef.current) {
+    if (dictatingField && speechRecognitionRef.current) {
+      if (dictatingField === targetField) {
+        speechRecognitionRef.current.stop();
+        return;
+      }
       speechRecognitionRef.current.stop();
-      return;
     }
 
     setTranscribeError(null);
@@ -3729,23 +3739,31 @@ function NoteModal({
     recognition.interimResults = true;
 
     recognition.onstart = () => {
-      setDictating(true);
-      setDictationPreview("");
+      setDictatingField(targetField);
+      setDictationPreviewByField({ texto: "", continuidad: "" });
     };
 
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let finalChunk = "";
       let interimChunk = "";
-      for (let i = 0; i < event.results.length; i++) {
+      const startIdx = typeof event.resultIndex === "number" ? event.resultIndex : 0;
+
+      for (let i = startIdx; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result?.[0]?.transcript ?? "";
         if ((result as any).isFinal) finalChunk += transcript;
         else interimChunk += transcript;
       }
+
       if (finalChunk.trim()) {
-        setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        if (targetField === "texto") {
+          setTexto((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        } else {
+          setContinuidad((prev) => `${prev}${prev.trim() ? " " : ""}${finalChunk.trim()}`);
+        }
       }
-      setDictationPreview(interimChunk.trim());
+
+      setDictationPreviewByField((prev) => ({ ...prev, [targetField]: interimChunk.trim() }));
     };
 
     recognition.onerror = () => {
@@ -3753,8 +3771,8 @@ function NoteModal({
     };
 
     recognition.onend = () => {
-      setDictating(false);
-      setDictationPreview("");
+      setDictatingField(null);
+      setDictationPreviewByField({ texto: "", continuidad: "" });
       speechRecognitionRef.current = null;
     };
 
@@ -3946,6 +3964,17 @@ function NoteModal({
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Describe el seguimiento, cambios y observaciones..."
           />
+          <div className="audioRow" style={{ marginTop: 10 }}>
+            <button
+              className={`pillBtn ${dictatingField === "texto" ? "danger" : ""}`}
+              onClick={() => toggleDictation("texto")}
+              type="button"
+              disabled={busy || transcribing || recording || (dictatingField === "continuidad")}
+            >
+              {dictatingField === "texto" ? "Detener dictado en vivo" : "Dictado en vivo (Nota clínica)"}
+            </button>
+            {dictationPreviewByField.texto ? <span className="audioStatus">🗣️ {dictationPreviewByField.texto}</span> : null}
+          </div>
         </div>
 
         <div className="field">
@@ -3957,10 +3986,15 @@ function NoteModal({
             placeholder="Describa el plan de trabajo o continuidad clínica... (la transcripción de audio se agregará aquí automáticamente)"
           />
           <div className="audioRow" style={{ marginTop: 10 }}>
-            <button className={`pillBtn ${dictating ? "danger" : ""}`} onClick={toggleDictation} type="button" disabled={busy || transcribing || recording}>
-              {dictating ? "Detener dictado en vivo" : "Dictado en vivo"}
+            <button
+              className={`pillBtn ${dictatingField === "continuidad" ? "danger" : ""}`}
+              onClick={() => toggleDictation("continuidad")}
+              type="button"
+              disabled={busy || transcribing || recording || (dictatingField === "texto")}
+            >
+              {dictatingField === "continuidad" ? "Detener dictado en vivo" : "Dictado en vivo (Continuidad)"}
             </button>
-            {dictationPreview ? <span className="audioStatus">🗣️ {dictationPreview}</span> : null}
+            {dictationPreviewByField.continuidad ? <span className="audioStatus">🗣️ {dictationPreviewByField.continuidad}</span> : null}
           </div>
         </div>
 
@@ -5943,27 +5977,26 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <div ref={examMenuRef} style={{ position: "relative" }}>
+                  <div ref={examMenuRef} className="examMenuWrap">
                     <button
                       className="pillBtn primary"
                       onClick={() => setShowExamMenu((prev) => !prev)}
                       aria-expanded={showExamMenu}
                       type="button"
                     >
-                      + Exámenes ▾
+                      {showExamMenu ? "Cerrar exámenes" : "+ Exámenes"} {showExamMenu ? "▴" : "▾"}
                     </button>
                     {showExamMenu ? (
-                      <div className="card" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 360, zIndex: 30, padding: 10, maxHeight: 420, overflow: "auto" }}>
-                        <button className="smallBtn" style={{ width: "100%", marginBottom: 8 }} onClick={openMentalExamModal}>
+                      <div className="examDropdownPanel">
+                        <button className="smallBtn examPrimaryAction" onClick={openMentalExamModal}>
                           Examen mental formal
                         </button>
                         {EXAM_CATALOG.map((group) => {
                           const open = openExamCategory === group.category;
                           return (
-                            <div key={group.category} style={{ borderTop: "1px solid var(--line)", paddingTop: 8, marginTop: 8 }}>
+                            <div key={group.category} className="examCategoryBlock">
                               <button
-                                className="smallBtn"
-                                style={{ width: "100%", justifyContent: "space-between", display: "flex" }}
+                                className="smallBtn examCategoryBtn"
                                 type="button"
                                 onClick={() => setOpenExamCategory((prev) => (prev === group.category ? null : group.category))}
                               >
@@ -5971,11 +6004,11 @@ export default function App() {
                                 <span>{open ? "▴" : "▾"}</span>
                               </button>
                               {open ? (
-                                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                                <div className="examTestsGrid">
                                   {group.tests.map((test) => (
                                     <button
                                       key={`${group.category}-${test}`}
-                                      className="smallBtn"
+                                      className="smallBtn examTestBtn"
                                       type="button"
                                       onClick={() => createStructuredExam(group.category, test)}
                                     >
