@@ -360,7 +360,7 @@ function appointmentModalityLabel(value: Appointment["modality"] | undefined) {
   return value === "virtual" ? "Virtual" : "Presencial";
 }
 
-function buildVirtualSessionLink(patientName: string, startIso: string) {
+function buildVirtualSessionLinkJitsi(patientName: string, startIso: string) {
   const date = new Date(startIso);
   const token = patientName
     .toLowerCase()
@@ -375,9 +375,13 @@ function buildVirtualSessionLink(patientName: string, startIso: string) {
   return `https://meet.jit.si/nyou-${token || "sesion"}-${dt}`;
 }
 
-function buildVirtualLinkMessage(patientName: string, link: string) {
+function buildVirtualSessionLinkMeet() {
+  return "https://meet.google.com/new";
+}
+
+function buildVirtualLinkMessage(patientName: string, link: string, platformLabel = "sala virtual") {
   return `Hola ✨ ${patientName} ¿Cómo te encuentras?
-Este es el link para conectarte a nuestra sesión virtual: ${link}
+Este es el link para conectarte a nuestra sesión virtual (${platformLabel}): ${link}
 Te espero a la hora acordada. ¡Nos vemos! ✨`;
 }
 
@@ -4522,13 +4526,20 @@ function CitasSection(props: CitasSectionProps) {
     if (!start) return;
     const end = new Date(start.getTime() + mins * 60 * 1000);
 
-    const virtualLink = modality === "virtual" ? buildVirtualSessionLink(patient.name, start.toISOString()) : null;
+    const virtualLinks = modality === "virtual"
+      ? {
+          jitsi: buildVirtualSessionLinkJitsi(patient.name, start.toISOString()),
+          meet: buildVirtualSessionLinkMeet(),
+        }
+      : null;
 
     await onCreate({
       patient_id: patient.id,
       title: (title || "").trim() || `Cita - ${patient.name}`,
       modality,
-      virtual_link: virtualLink,
+      virtual_link: virtualLinks?.jitsi || null,
+      virtual_link_jitsi: virtualLinks?.jitsi || null,
+      virtual_link_meet: virtualLinks?.meet || null,
       start_iso: start.toISOString(),
       end_iso: end.toISOString(),
       notes: notes.trim() ? notes.trim() : null,
@@ -4614,9 +4625,12 @@ function CitasSection(props: CitasSectionProps) {
           <div className="list">
             {appointments.map((a) => {
               const isVirtual = a.modality === "virtual";
-              const linkMsg = isVirtual ? buildVirtualLinkMessage(patient.name, a.virtual_link || "") : "";
+              const jitsiLink = a.virtual_link_jitsi || a.virtual_link || "";
+              const meetLink = a.virtual_link_meet || "";
+              const jitsiMsg = isVirtual && jitsiLink ? buildVirtualLinkMessage(patient.name, jitsiLink, "Jitsi") : "";
+              const meetMsg = isVirtual && meetLink ? buildVirtualLinkMessage(patient.name, meetLink, "Google Meet") : "";
               const reminderPatient = buildPatientReminderMessage(patient.name, a.start_iso);
-              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, a.virtual_link);
+              const reminderPsych = buildPsychReminderMessage(psychologistName, patient.name, a.start_iso, a.modality, jitsiLink || meetLink || a.virtual_link);
               return (
               <div key={a.id} className="fileRow" style={{ alignItems: "flex-start" }}>
                 <div className="fileIcon">📅</div>
@@ -4626,16 +4640,36 @@ function CitasSection(props: CitasSectionProps) {
                     {fmt(a.start_iso)} → {fmt(a.end_iso)} · {appointmentModalityLabel(a.modality)}
                   </div>
                   {a.notes ? <div className="fileSub" style={{ marginTop: 4 }}>📝 {a.notes}</div> : null}
-                  {isVirtual && a.virtual_link ? (
+                  {isVirtual && jitsiLink ? (
                     <div className="fileSub" style={{ marginTop: 4 }}>
-                      🔗 <a href={a.virtual_link} target="_blank" rel="noreferrer">{a.virtual_link}</a>
+                      🔗 Jitsi: <a href={jitsiLink} target="_blank" rel="noreferrer">{jitsiLink}</a>
+                    </div>
+                  ) : null}
+                  {isVirtual && meetLink ? (
+                    <div className="fileSub" style={{ marginTop: 4 }}>
+                      🔗 Meet: <a href={meetLink} target="_blank" rel="noreferrer">{meetLink}</a>
                     </div>
                   ) : null}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                    {isVirtual && a.virtual_link ? (
-                      <button className="smallBtn" onClick={() => navigator.clipboard.writeText(linkMsg)}>
-                        Copiar mensaje link
-                      </button>
+                    {isVirtual && jitsiLink ? (
+                      <>
+                        <button className="smallBtn" onClick={() => window.open(jitsiLink, "_blank", "noopener,noreferrer")}>
+                          Iniciar Jitsi
+                        </button>
+                        <button className="smallBtn" onClick={() => navigator.clipboard.writeText(jitsiMsg)}>
+                          Copiar mensaje Jitsi
+                        </button>
+                      </>
+                    ) : null}
+                    {isVirtual && meetLink ? (
+                      <>
+                        <button className="smallBtn" onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}>
+                          Iniciar Meet
+                        </button>
+                        <button className="smallBtn" onClick={() => navigator.clipboard.writeText(meetMsg)}>
+                          Copiar mensaje Meet
+                        </button>
+                      </>
                     ) : null}
                     <button className="smallBtn" onClick={() => navigator.clipboard.writeText(reminderPatient)}>
                       Recordatorio paciente (24h)
