@@ -4678,7 +4678,7 @@ export default function App() {
       return "theme";
     }
   });
-  const [logoSrc, setLogoSrc] = useState("/nyou-icon-512.png");
+  const [logoSrc, setLogoSrc] = useState("/Nyou.png");
 
   const activePalette = APP_PALETTES[colorTheme]?.[theme] ?? APP_PALETTES.original[theme];
 
@@ -4720,14 +4720,14 @@ export default function App() {
       const primary = useOriginal ? "#1a5158" : activePalette.primary;
       const accent = useOriginal ? "#59e2e4" : activePalette.accent;
       const icon512 = useOriginal
-        ? "/nyou-icon-512.png"
-        : await tintPng("/nyou-icon-512.png", 512, primary, accent);
+        ? "/Nyou-icon-512.png"
+        : await tintPng("/Nyou-icon-512.png", 512, primary, accent);
       const icon192 = useOriginal
-        ? "/nyou-icon-192.png"
-        : await tintPng("/nyou-icon-512.png", 192, primary, accent);
+        ? "/Nyou-icon-192.png"
+        : await tintPng("/Nyou-icon-512.png", 192, primary, accent);
 
       if (cancelled) return;
-      setLogoSrc(icon512);
+      setLogoSrc("/Nyou.png");
 
       const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
       if (favicon) favicon.href = icon192;
