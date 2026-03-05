@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "tsc && node ./node_modules/vite/bin/vite.js build",
-    "preview": "node ./node_modules/vite/bin/vite.js preview"
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "predev": "node ./scripts/ensure-deps.mjs",
+    "prebuild": "node ./scripts/ensure-deps.mjs",
+    "prepreview": "node ./scripts/ensure-deps.mjs"
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2",
