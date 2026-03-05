@@ -13,6 +13,8 @@ import {
   updateMentalExam,
   updatePatientNote,
   createPatient,
+  importPatientsBulk,
+  ImportedPatientInput,
   deletePatient,
   deletePatientFile,
   importFiles,
@@ -80,7 +82,7 @@ function importedPatientsFromJson(raw: unknown): unknown[] {
   return [];
 }
 
-function normalizeImportedPatient(raw: unknown): PatientInput | null {
+function normalizeImportedPatient(raw: unknown): ImportedPatientInput | null {
   if (!raw || typeof raw !== "object") return null;
   const item = raw as Record<string, unknown>;
   const name = normImportText(item.name) ?? normImportText(item.nombre) ?? null;
@@ -109,6 +111,11 @@ function normalizeImportedPatient(raw: unknown): PatientInput | null {
     work_academic_situation: normImportText(item.work_academic_situation),
     judicial_situation: normImportText(item.judicial_situation),
     consent_json: normImportText(item.consent_json),
+    id: normImportText(item.id),
+    photo_path: normImportText(item.photo_path),
+    drive_folder_id: normImportText(item.drive_folder_id),
+    created_at: normImportText(item.created_at),
+    updated_at: normImportText(item.updated_at),
   };
 }
 
@@ -5370,15 +5377,8 @@ export default function App() {
       const rows = importedPatientsFromJson(parsed);
       if (!rows.length) throw new Error("El JSON no contiene un arreglo de pacientes.");
 
-      const existingKeys = new Set(
-        patients
-          .map((p) => `${(p.doc_type || "").trim().toLowerCase()}::${(p.doc_number || "").trim().toLowerCase()}`)
-          .filter((key) => key !== "::")
-      );
-
-      const toCreate: PatientInput[] = [];
+      const toImport: ImportedPatientInput[] = [];
       let skippedInvalid = 0;
-      let skippedDuplicated = 0;
 
       rows.forEach((row) => {
         const normalized = normalizeImportedPatient(row);
@@ -5386,41 +5386,24 @@ export default function App() {
           skippedInvalid++;
           return;
         }
-        const docType = (normalized.doc_type || "").trim().toLowerCase();
-        const docNumber = (normalized.doc_number || "").trim().toLowerCase();
-        const key = `${docType}::${docNumber}`;
-        if (key !== "::") {
-          if (existingKeys.has(key)) {
-            skippedDuplicated++;
-            return;
-          }
-          existingKeys.add(key);
-        }
-        toCreate.push(normalized);
+        toImport.push(normalized);
       });
 
-      if (!toCreate.length) {
-        pushToast({ type: "err", msg: `No hay pacientes nuevos para importar. Inválidos: ${skippedInvalid}. Duplicados: ${skippedDuplicated}.` });
+      if (!toImport.length) {
+        pushToast({ type: "err", msg: `No hay pacientes válidos para importar. Inválidos: ${skippedInvalid}.` });
         return;
       }
 
-      let firstCreatedId: string | null = null;
-      for (const payload of toCreate) {
-        const created = await createPatient(payload);
-        if (!firstCreatedId) firstCreatedId = created.id;
-      }
+      const result = await importPatientsBulk(toImport);
 
       await refreshPatients();
       await refreshAllFiles();
 
-      if (firstCreatedId) {
-        setPage("pacientes");
-        setSelectedId(firstCreatedId);
-      }
+      setPage("pacientes");
 
       pushToast({
         type: "ok",
-        msg: `Importación lista ✅ Nuevos: ${toCreate.length}. Inválidos: ${skippedInvalid}. Duplicados: ${skippedDuplicated}.`,
+        msg: `Importación lista ✅ Nuevos: ${result.created}. Actualizados por ID: ${result.updated}. Inválidos: ${result.skippedInvalid + skippedInvalid}.`,
       });
     } catch (err: any) {
       pushToast({ type: "err", msg: `No se pudo importar JSON: ${errMsg(err)}` });
