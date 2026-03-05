@@ -599,7 +599,7 @@ type ExamCatalogGroup = {
 };
 
 const EXAM_CATALOG: ExamCatalogGroup[] = [
-  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VADTRS", "WURS-25"] },
+  { category: "TDAH", tests: ["ACOS Clínico", "ACOS Yo", "ASRS", "ESQ-R", "SNAP-IV", "SWAN", "UPPS-P", "VDTRS", "WURS-25"] },
   { category: "Adicciones", tests: ["AUDIT", "DUDIT", "IRIS", "LDQ", "PGSI"] },
   { category: "Adolescente", tests: ["A-DES", "AQ-Adolescent", "ASSQ", "BEDSY", "CAT-Q", "CES-DS", "chEAT", "chOCI-R-P", "chOCI-R-S", "DASS-Y", "EAT-26", "EDE-Q 6.0", "FFMQ-15", "FMPS", "IPIP-NEO-120", "ITQ-CA", "MAIA-Y", "MFQ-self", "MID-60 A", "MSES-R", "PSS-10"] },
   { category: "Ansiedad", tests: ["DASS-10", "DASS-21", "DASS-42", "DASS-Y", "GAD-7", "K5", "PASS", "PDSS"] },
@@ -608,7 +608,7 @@ const EXAM_CATALOG: ExamCatalogGroup[] = [
   { category: "Depresión", tests: ["ATQ-B", "CES-DS", "CES-D", "CESD-R", "DASS-10", "DASS-21", "DASS-42", "DASS-Y", "MADRS-22", "MENO-D", "MFQ-parent", "PHQ-9"] },
   { category: "Trauma", tests: ["A-DES", "ACE-Q", "BCE-s", "CDC", "DAR-5", "DES-II", "IES-R", "ITQ-CA", "LEC-5", "PCL-5"] },
   { category: "TOC", tests: ["OCI-R"] },
-  { category: "Sueño", tests: ["ISI", "RIS"] },
+  { category: "Duereme", tests: ["ISI", "RIS"] },
   { category: "Otras categorías", tests: ["Diagnóstico", "Discapacidad", "Formulación", "Salud", "Trastorno de acaparamiento", "Monitoreo de resultados", "Personalidad", "Proyección", "Deporte"] },
 ];
 const PROFILE_COLORS: Record<string, string> = {
@@ -5943,27 +5943,26 @@ export default function App() {
                     <div style={{ fontWeight: 800 }}>Exámenes</div>
                     <div style={{ color: "var(--muted)", fontSize: 13 }}>Examen mental y otros (guardados como JSON).</div>
                   </div>
-                  <div ref={examMenuRef} style={{ position: "relative" }}>
+                  <div ref={examMenuRef} className="examMenuWrap">
                     <button
                       className="pillBtn primary"
                       onClick={() => setShowExamMenu((prev) => !prev)}
                       aria-expanded={showExamMenu}
                       type="button"
                     >
-                      + Exámenes ▾
+                      {showExamMenu ? "Cerrar exámenes" : "+ Exámenes"} {showExamMenu ? "▴" : "▾"}
                     </button>
                     {showExamMenu ? (
-                      <div className="card" style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: 360, zIndex: 30, padding: 10, maxHeight: 420, overflow: "auto" }}>
-                        <button className="smallBtn" style={{ width: "100%", marginBottom: 8 }} onClick={openMentalExamModal}>
+                      <div className="examDropdownPanel">
+                        <button className="smallBtn examPrimaryAction" onClick={openMentalExamModal}>
                           Examen mental formal
                         </button>
                         {EXAM_CATALOG.map((group) => {
                           const open = openExamCategory === group.category;
                           return (
-                            <div key={group.category} style={{ borderTop: "1px solid var(--line)", paddingTop: 8, marginTop: 8 }}>
+                            <div key={group.category} className="examCategoryBlock">
                               <button
-                                className="smallBtn"
-                                style={{ width: "100%", justifyContent: "space-between", display: "flex" }}
+                                className="smallBtn examCategoryBtn"
                                 type="button"
                                 onClick={() => setOpenExamCategory((prev) => (prev === group.category ? null : group.category))}
                               >
@@ -5971,11 +5970,11 @@ export default function App() {
                                 <span>{open ? "▴" : "▾"}</span>
                               </button>
                               {open ? (
-                                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                                <div className="examTestsGrid">
                                   {group.tests.map((test) => (
                                     <button
                                       key={`${group.category}-${test}`}
-                                      className="smallBtn"
+                                      className="smallBtn examTestBtn"
                                       type="button"
                                       onClick={() => createStructuredExam(group.category, test)}
                                     >
