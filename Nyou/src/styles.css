@@ -360,6 +360,35 @@ textarea {
   flex-wrap: wrap;
 }
 
+
+.sidebarMenuPillRow {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.sidebarMenuNavList {
+  width: 100%;
+  gap: 8px;
+}
+
+.sidebarMenuNavItem {
+  border-color: color-mix(in srgb, var(--border), transparent 10%);
+  background: color-mix(in srgb, var(--panel2), white 34%);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(38, 28, 16, .08);
+}
+
+.sidebarMenuNavItem:hover {
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 55%);
+  background: color-mix(in srgb, var(--panel), white 50%);
+}
+
+.sidebarMenuNavItem.isActive {
+  background: color-mix(in srgb, var(--profile-accent), white 72%);
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  color: var(--text);
+}
+
 .floatingMenuBtn{
   position: fixed;
   left: max(22px, env(safe-area-inset-left));
@@ -2923,16 +2952,34 @@ textarea {
 }
 
 .examDropdownPanel {
-  width: min(680px, 82vw);
-  max-height: min(62vh, 560px);
+  width: min(700px, 84vw);
+  max-height: min(64vh, 590px);
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 15%);
+  border-radius: 20px;
+  padding: 14px;
   background:
-    radial-gradient(180px 100px at 8% 0%, color-mix(in srgb, var(--profile-accent), transparent 85%), transparent 68%),
-    rgba(255, 252, 246, 0.96);
-  box-shadow: 0 18px 34px rgba(34, 28, 18, 0.16);
+    radial-gradient(220px 130px at 4% 0%, color-mix(in srgb, var(--profile-accent), transparent 84%), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel), white 18%), color-mix(in srgb, var(--panel2), white 6%));
+  box-shadow: 0 22px 38px rgba(20, 17, 12, 0.18);
+}
+
+.examDropdownHeader {
+  margin-bottom: 10px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line), transparent 30%);
+}
+
+.examDropdownTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.examDropdownHint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .examPrimaryAction {
@@ -2941,29 +2988,57 @@ textarea {
   font-weight: 700;
 }
 
+.examPrimaryAction--main {
+  min-height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--profile-accent), white 68%);
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 25%);
+}
+
 .examCategoryBlock + .examCategoryBlock {
-  border-top: 1px solid var(--line);
   margin-top: 10px;
-  padding-top: 10px;
 }
 
 .examCategoryBtn {
   width: 100%;
+  min-height: 42px;
   justify-content: space-between;
+  align-items: center;
   display: flex;
+  gap: 10px;
   font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 15%);
+  background: color-mix(in srgb, var(--panel2), white 28%);
+}
+
+.examCategoryName {
+  display: inline-flex;
+  align-items: center;
+  text-align: left;
+}
+
+.examCategoryChevron {
+  color: color-mix(in srgb, var(--muted), var(--text) 20%);
+  font-size: 12px;
 }
 
 .examTestsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 8px;
   margin-top: 9px;
+  padding: 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel), white 40%);
+  border: 1px solid color-mix(in srgb, var(--line), transparent 20%);
 }
 
 .examTestBtn {
   justify-content: flex-start;
   text-align: left;
+  border-radius: 10px;
+  min-height: 38px;
 }
 
 @media (max-width: 900px) {
