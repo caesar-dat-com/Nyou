@@ -4906,7 +4906,6 @@ export default function App() {
   // --- Update (GitHub) ---
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
   const [consultaTipoDefault, setConsultaTipoDefault] = useState<ConsultaTipo>("presencial");
   const [notesFilterTipo, setNotesFilterTipo] = useState<"all" | ConsultaTipo>("all");
   const [examsFilterTipo, setExamsFilterTipo] = useState<"all" | ConsultaTipo>("all");
@@ -5579,6 +5578,13 @@ export default function App() {
     return { label: emotionCounts.labels[idx], pct };
   }, [emotionCounts]);
 
+  const menuNavItems = [
+    { key: "home", label: "Inicio" },
+    { key: "pacientes", label: "Pacientes" },
+    { key: "errores", label: "Errores" },
+    { key: "agenda", label: "Agenda / Citas" },
+  ] as const;
+
   return (
     <div
       className="app"
@@ -5624,14 +5630,77 @@ export default function App() {
                   <div className="subtitle">Pacientes · Exámenes · Archivos (Web)</div>
                 </div>
               </div>
-
-              <div className="pillRow" />
             </div>
-          </div>
 
-          <div className="sidebarPatientActions">
-            <button className="iconBtn" onClick={beginCreatePatient}>➕ Nuevo paciente</button>
-            <button className="iconBtn" onClick={actionImportPatientsJson}>📥 Importar JSON</button>
+            <div className="sidebarTopMenuStack">
+              <div className="menuGlassSection sidebarMenuSection">
+                <div className="menuSectionTitle sidebarMenuSectionTitle">Acciones rápidas</div>
+                <div className="sidebarQuickActions">
+                  <button className="menuQuickBtn sidebarMenuBtn" onClick={beginCreatePatient}>
+                    <span className="menuIcon" aria-hidden="true">👤＋</span>
+                    <span>Nuevo paciente</span>
+                  </button>
+                  <button className="menuQuickBtn sidebarMenuBtn" onClick={actionImportPatientsJson}>
+                    <span className="menuIcon" aria-hidden="true">📥</span>
+                    <span>Importar JSON</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="menuGlassSection sidebarMenuSection">
+                <div className="menuSectionTitle sidebarMenuSectionTitle">Navegación</div>
+                <div className="pillRow sidebarMenuPillRow">
+                  <div className="menuNavList sidebarMenuNavList">
+                    {menuNavItems.map((item) => (
+                      <button
+                        key={`sidebar-${item.key}`}
+                        className={`menuNavItem sidebarMenuNavItem ${page === item.key ? "isActive" : ""}`}
+                        onClick={() => setPage(item.key as "home" | "pacientes" | "errores" | "agenda")}
+                      >
+                        <svg className="menuNavSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          {item.key === "home" ? <path d="M3 11.5L12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /> : null}
+                          {item.key === "pacientes" ? <><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19c.8-3 2.8-4.5 5.5-4.5S13.7 16 14.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
+                          {item.key === "errores" ? <><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></> : null}
+                          {item.key === "agenda" ? <><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3.8v2.8M16 3.8v2.8M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
+                        </svg>
+                        <span>{item.label}</span>
+                        {page === item.key ? <span className="menuNavCheck">✓</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="menuGlassSection sidebarMenuSection">
+                <div className="menuSectionTitle sidebarMenuSectionTitle">Preferencias</div>
+                <div className="menuPrefRow sidebarMenuPrefRow">
+                  <span>Tema oscuro / claro</span>
+                  <button className="menuToggle" type="button" onClick={toggleTheme} aria-label="Cambiar tema">
+                    <span className={`menuToggleKnob ${theme === "dark" ? "isDark" : ""}`} />
+                  </button>
+                </div>
+                <div className="menuPaletteRow" aria-label="Cambiar tema de color">
+                  {Object.entries(APP_PALETTES).map(([key, palette]) => (
+                    <button
+                      key={`sidebar-theme-${key}`}
+                      className={`menuPaletteDot ${colorTheme === key ? "isActive" : ""}`}
+                      style={{ background: palette[theme].primary }}
+                      onClick={() => setColorTheme(key as keyof typeof APP_PALETTES)}
+                      aria-label={`Tema ${palette.name}`}
+                      title={palette.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="menuGlassSection sidebarMenuSection">
+                <div className="menuSectionTitle sidebarMenuSectionTitle">Soporte</div>
+                {updateAvailable ? (
+                  <button className="menuSupportBtn sidebarMenuBtn" onClick={() => { handleUpdateClick(); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "Buscar actualización"}</button>
+                ) : null}
+              </div>
+            </div>
+
             <input
               ref={patientsJsonInputRef}
               type="file"
@@ -6121,7 +6190,11 @@ export default function App() {
                     </button>
                     {showExamMenu ? (
                       <div className="examDropdownPanel">
-                        <button className="smallBtn examPrimaryAction" onClick={openMentalExamModal}>
+                        <div className="examDropdownHeader">
+                          <div className="examDropdownTitle">Plantillas de examen</div>
+                          <div className="examDropdownHint">Usa una categoría para generar JSON clínico en segundos.</div>
+                        </div>
+                        <button className="smallBtn examPrimaryAction examPrimaryAction--main" onClick={openMentalExamModal}>
                           Examen mental formal
                         </button>
                         {EXAM_CATALOG.map((group) => {
@@ -6133,8 +6206,8 @@ export default function App() {
                                 type="button"
                                 onClick={() => setOpenExamCategory((prev) => (prev === group.category ? null : group.category))}
                               >
-                                <span>{group.category}</span>
-                                <span>{open ? "▴" : "▾"}</span>
+                                <span className="examCategoryName">{group.category}</span>
+                                <span className="examCategoryChevron" aria-hidden="true">{open ? "▴" : "▾"}</span>
                               </button>
                               {open ? (
                                 <div className="examTestsGrid">
@@ -6556,111 +6629,6 @@ export default function App() {
         </Modal>
       ) : null}
 
-
-      <button
-        className="floatingMenuBtn"
-        type="button"
-        onClick={() => setShowMenu(true)}
-        aria-label="Abrir menú"
-        title="Menú"
-      >
-        <span />
-        <span />
-        <span />
-      </button>
-
-      <button
-        className="floatingMenuBtn"
-        type="button"
-        onClick={() => setShowMenu(true)}
-        aria-label="Abrir menú"
-        title="Menú"
-      >
-        <span />
-        <span />
-        <span />
-      </button>
-
-      {showMenu ? (
-        <div className="menuGlassOverlay" onClick={() => setShowMenu(false)}>
-          <section className="menuGlassPanel" onClick={(e) => e.stopPropagation()} aria-label="Menú principal">
-            <header className="menuGlassHead">
-              <div>
-                <h3>Menú</h3>
-                <p>Acciones principales de Nyou</p>
-              </div>
-              <button className="menuGlassClose" type="button" onClick={() => setShowMenu(false)} aria-label="Cerrar menú">✕</button>
-            </header>
-
-            <div className="menuGlassSection">
-              <div className="menuSectionTitle">Acciones rápidas</div>
-              <button className="menuQuickBtn" onClick={() => { beginCreatePatient(); setShowMenu(false); }}>
-                <span className="menuIcon" aria-hidden="true">👤＋</span>
-                <span>Nuevo paciente</span>
-              </button>
-            </div>
-
-            <div className="menuGlassSection">
-              <div className="menuSectionTitle">Navegación</div>
-              <div className="menuNavList">
-                {[
-                  { key: "home", label: "Inicio" },
-                  { key: "pacientes", label: "Pacientes" },
-                  { key: "errores", label: "Errores" },
-                  { key: "agenda", label: "Agenda / Citas" },
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    className={`menuNavItem ${page === item.key ? "isActive" : ""}`}
-                    onClick={() => {
-                      setPage(item.key as "home" | "pacientes" | "errores" | "agenda");
-                      setShowMenu(false);
-                    }}
-                  >
-                    <svg className="menuNavSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      {item.key === "home" ? <path d="M3 11.5L12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /> : null}
-                      {item.key === "pacientes" ? <><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19c.8-3 2.8-4.5 5.5-4.5S13.7 16 14.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
-                      {item.key === "errores" ? <><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></> : null}
-                      {item.key === "agenda" ? <><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3.8v2.8M16 3.8v2.8M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
-                    </svg>
-                    <span>{item.label}</span>
-                    {page === item.key ? <span className="menuNavCheck">✓</span> : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="menuGlassSection">
-              <div className="menuSectionTitle">Preferencias</div>
-              <div className="menuPrefRow">
-                <span>Tema oscuro / claro</span>
-                <button className="menuToggle" type="button" onClick={toggleTheme} aria-label="Cambiar tema">
-                  <span className={`menuToggleKnob ${theme === "dark" ? "isDark" : ""}`} />
-                </button>
-              </div>
-              <div className="menuPaletteRow" aria-label="Cambiar tema de color">
-                {Object.entries(APP_PALETTES).map(([key, palette]) => (
-                  <button
-                    key={key}
-                    className={`menuPaletteDot ${colorTheme === key ? "isActive" : ""}`}
-                    style={{ background: palette[theme].primary }}
-                    onClick={() => setColorTheme(key as keyof typeof APP_PALETTES)}
-                    aria-label={`Tema ${palette.name}`}
-                    title={palette.name}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="menuGlassSection">
-              <div className="menuSectionTitle">Soporte</div>
-              {updateAvailable ? (
-                <button className="menuSupportBtn" onClick={() => { handleUpdateClick(); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "Buscar actualización"}</button>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
 
       {/* Toast simple */}
       {toast ? (
