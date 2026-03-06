@@ -389,80 +389,50 @@ textarea {
   color: var(--text);
 }
 
-.floatingMenuBtn{
-  position: fixed;
-  left: max(22px, env(safe-area-inset-left));
-  bottom: 22px;
-  width: 60px;
-  height: 60px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(10, 20, 36, .46);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, .22), inset 0 1px 2px rgba(255,255,255,.14);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  z-index: 80;
-  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast), background var(--t-fast);
-}
-.floatingMenuBtn span{
-  display: block;
-  width: 24px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.92);
-}
-.floatingMenuBtn:hover{
-  transform: translateY(-1px);
-  border-color: rgba(255,255,255,.35);
-  box-shadow: 0 14px 28px rgba(0,0,0,.28), inset 0 1px 2px rgba(255,255,255,.18);
-}
-.floatingMenuBtn:active{ transform: translateY(0); }
 
-.menuGlassOverlay{
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  background: rgba(2, 8, 20, .35);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-inline: 12px;
+.sidebarTopMenuStack {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
 }
-.menuGlassPanel{
-  width: min(560px, calc(100vw - 24px));
-  max-height: min(88vh, 860px);
-  overflow: auto;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.22);
-  background: linear-gradient(160deg, rgba(18,33,56,.72), rgba(12,24,44,.58));
-  box-shadow: 0 20px 44px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22);
-  padding: 18px;
-  color: #eef5ff;
+
+.sidebarMenuSection {
+  padding-top: 8px;
 }
-.menuGlassHead{
-  display:flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,.14);
+
+.sidebarMenuSectionTitle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
 }
-.menuGlassHead h3{ margin:0; font-size: 34px; line-height: 1; }
-.menuGlassHead p{ margin:6px 0 0; color: rgba(225,236,255,.78); }
-.menuGlassClose{
-  width: 40px; height: 40px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(255,255,255,.06);
-  color: #fff; cursor: pointer; font-size: 18px;
+
+.sidebarQuickActions {
+  display: grid;
+  gap: 8px;
 }
+
+.sidebarMenuBtn,
+.sidebarMenuBtn.menuSupportBtn {
+  border-color: color-mix(in srgb, var(--border), transparent 12%);
+  background: color-mix(in srgb, var(--panel2), white 30%);
+  color: var(--text);
+}
+
+.sidebarMenuBtn:hover,
+.sidebarMenuBtn.menuSupportBtn:hover {
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 55%);
+  background: color-mix(in srgb, var(--panel), white 45%);
+}
+
+.sidebarMenuPrefRow {
+  color: var(--text);
+}
+
+.sidebarMenuPrefRow .menuToggle {
+  border-color: color-mix(in srgb, var(--border), transparent 5%);
+  background: color-mix(in srgb, var(--panel2), white 18%);
+}
+
 .menuGlassSection{ padding-top: 14px; }
 .menuSectionTitle{ font-size: 26px; font-weight: 800; margin-bottom: 10px; }
 .menuQuickBtn,
@@ -521,6 +491,27 @@ textarea {
 .menuPaletteDot.isActive{ box-shadow: 0 0 0 2px rgba(255,255,255,.6); }
 .menuSupportBtn{ margin-bottom: 8px; }
 
+
+/* Sidebar adaptation of menu controls */
+.sidebarTopMenuStack .sidebarMenuSection {
+  padding-top: 8px;
+}
+
+.sidebarTopMenuStack .menuSectionTitle.sidebarMenuSectionTitle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sidebarTopMenuStack .menuPrefRow.sidebarMenuPrefRow {
+  color: var(--text);
+}
+
+.sidebarTopMenuStack .menuPaletteDot {
+  border-color: color-mix(in srgb, var(--border), transparent 20%);
+}
+
 .pillBtn {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, .7);
@@ -564,13 +555,6 @@ textarea {
 }
 
 /* Patient list */
-.sidebarPatientActions {
-  padding: 0 12px 8px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .patientList {
   min-height: 0;
   overflow: auto;
