@@ -360,6 +360,35 @@ textarea {
   flex-wrap: wrap;
 }
 
+
+.sidebarMenuPillRow {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.sidebarMenuNavList {
+  width: 100%;
+  gap: 8px;
+}
+
+.sidebarMenuNavItem {
+  border-color: color-mix(in srgb, var(--border), transparent 10%);
+  background: color-mix(in srgb, var(--panel2), white 34%);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(38, 28, 16, .08);
+}
+
+.sidebarMenuNavItem:hover {
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 55%);
+  background: color-mix(in srgb, var(--panel), white 50%);
+}
+
+.sidebarMenuNavItem.isActive {
+  background: color-mix(in srgb, var(--profile-accent), white 72%);
+  border-color: color-mix(in srgb, var(--profile-accent), var(--border) 30%);
+  color: var(--text);
+}
+
 .floatingMenuBtn{
   position: fixed;
   left: max(22px, env(safe-area-inset-left));
