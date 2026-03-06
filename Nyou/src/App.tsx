@@ -4869,7 +4869,7 @@ export default function App() {
   }
 
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [query] = useState("");
+  const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [files, setFiles] = useState<PatientFile[]>([]);
   const [allFiles, setAllFiles] = useState<PatientFile[]>([]);
@@ -4987,10 +4987,29 @@ export default function App() {
   );
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const normalize = (value: string) =>
+      value
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase();
+
+    const q = normalize(query.trim());
     if (!q) return patients;
+
     return patients.filter((p) => {
-      const hay = `${p.name} ${p.doc_type ?? ""} ${p.doc_number ?? ""} ${p.insurer ?? ""}`.toLowerCase();
+      const age = calcAge(p.birth_date);
+      const hay = normalize(
+        [
+          p.name,
+          p.doc_type ?? "",
+          p.doc_number ?? "",
+          p.insurer ?? "",
+          p.phone ?? "",
+          p.email ?? "",
+          p.birth_date ?? "",
+          age === null ? "" : `${age}`,
+        ].join(" ")
+      );
       return hay.includes(q);
     });
   }, [patients, query]);
@@ -5704,6 +5723,16 @@ export default function App() {
               accept="application/json,.json"
               style={{ display: "none" }}
               onChange={onPatientsJsonSelected}
+            />
+          </div>
+
+          <div className="searchWrap">
+            <input
+              className="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar paciente por nombre, documento, celular, seguro, edad..."
+              aria-label="Buscar paciente"
             />
           </div>
 
