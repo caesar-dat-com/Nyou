@@ -5580,7 +5580,6 @@ export default function App() {
 
   const menuNavItems = [
     { key: "home", label: "Inicio" },
-    { key: "pacientes", label: "Pacientes" },
     { key: "errores", label: "Errores" },
     { key: "agenda", label: "Agenda / Citas" },
   ] as const;
@@ -5659,7 +5658,6 @@ export default function App() {
                       >
                         <svg className="menuNavSvg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                           {item.key === "home" ? <path d="M3 11.5L12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /> : null}
-                          {item.key === "pacientes" ? <><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19c.8-3 2.8-4.5 5.5-4.5S13.7 16 14.5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
                           {item.key === "errores" ? <><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 7v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></> : null}
                           {item.key === "agenda" ? <><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 3.8v2.8M16 3.8v2.8M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></> : null}
                         </svg>
@@ -5694,7 +5692,6 @@ export default function App() {
               </div>
 
               <div className="menuGlassSection sidebarMenuSection">
-                <div className="menuSectionTitle sidebarMenuSectionTitle">Soporte</div>
                 {updateAvailable ? (
                   <button className="menuSupportBtn sidebarMenuBtn" onClick={() => { handleUpdateClick(); }} disabled={updateBusy}>{updateBusy ? "Actualizando…" : "Buscar actualización"}</button>
                 ) : null}
