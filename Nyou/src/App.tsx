@@ -6121,7 +6121,11 @@ export default function App() {
                     </button>
                     {showExamMenu ? (
                       <div className="examDropdownPanel">
-                        <button className="smallBtn examPrimaryAction" onClick={openMentalExamModal}>
+                        <div className="examDropdownHeader">
+                          <div className="examDropdownTitle">Plantillas de examen</div>
+                          <div className="examDropdownHint">Usa una categoría para generar JSON clínico en segundos.</div>
+                        </div>
+                        <button className="smallBtn examPrimaryAction examPrimaryAction--main" onClick={openMentalExamModal}>
                           Examen mental formal
                         </button>
                         {EXAM_CATALOG.map((group) => {
@@ -6133,8 +6137,8 @@ export default function App() {
                                 type="button"
                                 onClick={() => setOpenExamCategory((prev) => (prev === group.category ? null : group.category))}
                               >
-                                <span>{group.category}</span>
-                                <span>{open ? "▴" : "▾"}</span>
+                                <span className="examCategoryName">{group.category}</span>
+                                <span className="examCategoryChevron" aria-hidden="true">{open ? "▴" : "▾"}</span>
                               </button>
                               {open ? (
                                 <div className="examTestsGrid">
