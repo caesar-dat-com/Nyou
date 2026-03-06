@@ -26,6 +26,41 @@ if /i "%Nyou_AUTO_UPDATE%"=="0" set "DO_UPDATE=0"
 if "%DO_UPDATE%"=="1" (
   where git >nul 2>&1
   if !errorlevel!==0 (
+    if exist ".git\rebase-merge" (
+      echo [Nyou] Repo con rebase pendiente. Se omite auto-update.
+      goto :after_update
+    )
+    if exist ".git\rebase-apply" (
+      echo [Nyou] Repo con rebase pendiente. Se omite auto-update.
+      goto :after_update
+    )
+    if exist ".git\MERGE_HEAD" (
+      echo [Nyou] Repo con merge pendiente. Se omite auto-update.
+      goto :after_update
+    )
+
+    set "LOCK_REL="
+    for %%I in ("%APP_DIR%") do set "APP_NAME=%%~nxI"
+    set "LOCK_REL=!APP_NAME!\package-lock.json"
+
+    set "TRACKED_CHANGES="
+    set "HAS_LOCK="
+    set "HAS_NON_LOCK="
+    for /f "delims=" %%S in ('git status --porcelain --untracked-files=no') do (
+      set "TRACKED_CHANGES=1"
+      set "LINE=%%S"
+      set "FILE=!LINE:~3!"
+      if /i not "!FILE!"=="!LOCK_REL!" set "HAS_NON_LOCK=1"
+      if /i "!FILE!"=="!LOCK_REL!" set "HAS_LOCK=1"
+    )
+
+    if defined TRACKED_CHANGES if defined HAS_LOCK if not defined HAS_NON_LOCK (
+      echo [Nyou] Solo !LOCK_REL! cambio localmente. Restaurando lock para permitir auto-update...
+      git checkout -- "!LOCK_REL!"
+      set "TRACKED_CHANGES="
+      set "HAS_LOCK="
+    )
+
     set "DIRTY="
     for /f "delims=" %%S in ('git status --porcelain') do set "DIRTY=1"
     if defined DIRTY (
@@ -50,6 +85,7 @@ if "%DO_UPDATE%"=="1" (
   )
 )
 
+:after_update
 cd /d "%APP_DIR%"
 
 echo [Nyou] Verificando dependencias...

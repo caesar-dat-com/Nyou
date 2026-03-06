@@ -17,6 +17,45 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if exist ".git\rebase-merge" (
+  echo [Nyou] Repo con rebase pendiente.
+  echo [Nyou] Ejecuta: git rebase --abort
+  pause
+  exit /b 1
+)
+if exist ".git\rebase-apply" (
+  echo [Nyou] Repo con rebase pendiente.
+  echo [Nyou] Ejecuta: git rebase --abort
+  pause
+  exit /b 1
+)
+if exist ".git\MERGE_HEAD" (
+  echo [Nyou] Repo con merge pendiente.
+  echo [Nyou] Ejecuta: git merge --abort
+  pause
+  exit /b 1
+)
+
+set "LOCK_REL="
+for %%I in ("%APP_DIR%") do set "APP_NAME=%%~nxI"
+set "LOCK_REL=!APP_NAME!\package-lock.json"
+
+set "TRACKED_CHANGES="
+set "HAS_LOCK="
+set "HAS_NON_LOCK="
+for /f "delims=" %%S in ('git status --porcelain --untracked-files=no') do (
+  set "TRACKED_CHANGES=1"
+  set "LINE=%%S"
+  set "FILE=!LINE:~3!"
+  if /i not "!FILE!"=="!LOCK_REL!" set "HAS_NON_LOCK=1"
+  if /i "!FILE!"=="!LOCK_REL!" set "HAS_LOCK=1"
+)
+
+if defined TRACKED_CHANGES if defined HAS_LOCK if not defined HAS_NON_LOCK (
+  echo [Nyou] Solo !LOCK_REL! cambio localmente. Restaurando lock para permitir update...
+  git checkout -- "!LOCK_REL!"
+)
+
 set "DIRTY="
 for /f "delims=" %%S in ('git status --porcelain') do set "DIRTY=1"
 if defined DIRTY (
